@@ -5,9 +5,11 @@
 library stm32.stm32f411re_nucleo;
 
 import 'package:gpio/gpio.dart';
+import 'package:i2c/i2c.dart';
 import 'package:stm32/adc.dart';
 import 'package:stm32/dma.dart';
 import 'package:stm32/gpio.dart';
+import 'package:stm32/i2c.dart';
 import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
 
@@ -30,6 +32,9 @@ class STM32F411RENucleo {
   STM32Adc _adc;
   STM32Dma _dma1;
   STM32Dma _dma2;
+  I2CBus _i2c1;
+  I2CBus _i2c2;
+  I2CBus _i2c3;
 
   STM32F411RENucleo();
 
@@ -73,4 +78,8 @@ class STM32F411RENucleo {
     }
     return _dma2;
   }
+
+  I2CBus get i2c1 => _i2c1 ??= new I2CBusSTM('i2c1');
+  I2CBus get i2c2 => _i2c2 ??= new I2CBusSTM('i2c2');
+  I2CBus get i2c3 => _i2c3 ??= new I2CBusSTM('i2c3');
 }

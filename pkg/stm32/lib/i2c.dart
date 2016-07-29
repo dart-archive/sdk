@@ -33,7 +33,6 @@ class I2CBusSTM implements I2CBus {
 
   I2CBusSTM._(this._deviceName, this._handle) {
     _port = new Port(_channel);
-    print(_i2c_acknowledge_result);
   }
 
   factory I2CBusSTM(String deviceName) {
@@ -56,7 +55,7 @@ class I2CBusSTM implements I2CBus {
     if (rc == 1) {
       return oneByteBuffer[0];
     } else {
-      throw new I2CException("I2C error", rc);
+      throw new I2CException("Read error", rc);
     }
   }
 
@@ -65,7 +64,7 @@ class I2CBusSTM implements I2CBus {
     oneByteBuffer[0] = value;
     int rc = _writeBytes(slave, register, oneByteBuffer);
     if (rc != 1) {
-      throw new I2CException("I2C error", rc);
+      throw new I2CException("Write error", rc);
     }
   }
 
@@ -106,4 +105,3 @@ class I2CBusSTM implements I2CBus {
 
   toString() => 'I2CBusSTM $_deviceName';
 }
-

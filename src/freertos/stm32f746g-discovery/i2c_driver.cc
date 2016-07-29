@@ -71,9 +71,8 @@ int I2CDriverImpl::RequestReadRegisters(
   error_code_ = NO_ERROR;
 
   // Start the state machine preparing to write the register.
-  SetupTransfer(DIRECTION_WRITE,
-                1,  // TODO(sgjesse): Only 8-bit register size supported.
-                I2C_SOFTEND_MODE | I2C_GENERATE_START_WRITE);
+  SetupTransfer(I2C_SOFTEND_MODE | I2C_GENERATE_START_WRITE,
+                1);  // TODO(sgjesse): Only 8-bit register size supported.
   state_ = SEND_REGISTER_READ;
 
   // Enable TX interrupt for sending the register.
@@ -97,9 +96,8 @@ int I2CDriverImpl::RequestWriteRegisters(
   error_code_ = NO_ERROR;
 
   // Start the state machine preparing to write the register.
-  SetupTransfer(DIRECTION_WRITE,
-                1,  // TODO(sgjesse): Only 8-bit register size supported.
-                I2C_RELOAD_MODE | I2C_GENERATE_START_WRITE);
+  SetupTransfer(I2C_RELOAD_MODE | I2C_GENERATE_START_WRITE,
+                1);  // TODO(sgjesse): Only 8-bit register size supported.
   state_ = SEND_REGISTER_WRITE;
 
   // Enable TX interrupt for sending the register.
@@ -132,8 +130,7 @@ void I2CDriverImpl::Task() {
   }
 }
 
-void I2CDriverImpl::SetupTransfer(
-    Direction direction, uint8_t count, uint32_t flags) {
+void I2CDriverImpl::SetupTransfer(uint32_t flags, uint8_t count) {
   // Get the CR2 register value.
   uint32_t cr2 = i2c_->Instance->CR2;
 
@@ -141,9 +138,6 @@ void I2CDriverImpl::SetupTransfer(
   ResetCR2Value(&cr2);
   const int kNBytesShift = 16;
   ASSERT((count << kNBytesShift & ~I2C_CR2_NBYTES) == 0);
-  // TODO(sgjesse): Figure out why setting the read bit is not
-  // required/does not work.
-  // uint32_t address = (address_ << 1) | (direction == DIRECTION_READ) ? 1 : 0;
   uint32_t address = (address_ << 1);
   cr2 |= address | count << kNBytesShift | flags;
 
@@ -194,7 +188,7 @@ void I2CDriverImpl::SignalSuccess() {
 
 void I2CDriverImpl::SignalError(int error_code) {
   DisableInterrupts();
-  error_code = error_code;
+  error_code_ = error_code;
   uint32_t result = osSignalSet(signalThread_, kErrorBit);
   ASSERT(result == osOK);
 }
@@ -261,9 +255,7 @@ void I2CDriverImpl::InterruptHandler() {
   } else if (IsTC(it_flags, it_sources)) {
     if (state_ == PREPARE_READ_REGISTER) {
       // Prepare to read when transmission is complete.
-      SetupTransfer(DIRECTION_READ,
-                    count_,
-                    I2C_AUTOEND_MODE | I2C_GENERATE_START_READ);
+      SetupTransfer(I2C_AUTOEND_MODE | I2C_GENERATE_START_READ, count_);
       state_ = READ_DATA;
 
       // Switching direction from writing to reading.
@@ -282,9 +274,7 @@ void I2CDriverImpl::InterruptHandler() {
   } else if (IsTCR(it_flags, it_sources)) {
     if (state_ == PREPARE_WRITE_REGISTER) {
       // Prepare to write when transmission is complete.
-      SetupTransfer(DIRECTION_WRITE,
-                    count_,
-                    I2C_AUTOEND_MODE | I2C_NO_STARTSTOP);
+      SetupTransfer(I2C_AUTOEND_MODE | I2C_NO_STARTSTOP, count_);
       state_ = WRITE_DATA;
     } else {
       InternalStateError();
@@ -320,8 +310,7 @@ void I2CDriverImpl::ErrorInterruptHandler() {
   }
 
   if (error_code != NO_ERROR) {
-    error_code_ = error_code;
-    SignalError(error_code_);
+    SignalError(error_code);
   }
 }
 

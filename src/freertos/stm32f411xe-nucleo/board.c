@@ -13,12 +13,15 @@
 #include "src/freertos/device_manager_api.h"
 #include "src/freertos/page_alloc.h"
 
-
 UART_HandleTypeDef huart2;
-
 static UartDriver uart2;
 
+static I2CDriver i2c1;
+static I2CDriver i2c2;
+static I2CDriver i2c3;
+
 void FillUartDriver(UartDriver* driver);
+void FillI2CDriver(I2CDriver* driver, int i2c_no);
 
 /**
   * @brief  System Clock Configuration
@@ -155,6 +158,14 @@ extern int InitializeBoard() {
   // console. Should be registered as "uart2".
   FillUartDriver(&uart2);
   DeviceManagerRegisterUartDevice("uart1", &uart2);
+
+  // Register I2C drivers. Note: These will be configured on-demand when opened.
+  FillI2CDriver(&i2c1, 1);
+  FillI2CDriver(&i2c2, 2);
+  FillI2CDriver(&i2c3, 3);
+  DeviceManagerRegisterI2CDevice("i2c1", &i2c1);
+  DeviceManagerRegisterI2CDevice("i2c2", &i2c2);
+  DeviceManagerRegisterI2CDevice("i2c3", &i2c3);
 
   return 0;
 }

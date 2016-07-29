@@ -56,6 +56,7 @@ typedef struct ButtonDriver ButtonDriver;
 struct I2CDriver {
   uintptr_t context;
   uintptr_t device_id;
+  int i2c_no;
   void (*Initialize)(struct I2CDriver* driver);
   void (*DeInitialize)(struct I2CDriver* driver);
   int (*RequestReadRegisters)(struct I2CDriver* driver,

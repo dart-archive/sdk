@@ -51,11 +51,6 @@ class I2CDriverImpl {
     DONE = 7,
   };
 
-  enum Direction {
-    DIRECTION_WRITE = 0,
-    DIRECTION_READ = 1,
-  };
-
   enum ErrorCode {
     NO_ERROR = 0,
     INVALID_ARGUMENTS = -1,
@@ -66,11 +61,13 @@ class I2CDriverImpl {
     ARBITRATION_LOSS = -6,
     NO_PENDING_REQUEST = -7,
     RESULT_NOT_READY = -8,
+    DMA_ERROR = -9,
+    TIMEOUT = -10,
     INTERNAL_ERROR = -99,
   };
 
   void Task();
-  void SetupTransfer(Direction direction, uint8_t size, uint32_t flags);
+  void SetupTransfer(uint32_t flags, uint8_t size);
   void ResetCR2Value(uint32_t* cr2);
   void ResetCR2();
   void FlushTXDR();
