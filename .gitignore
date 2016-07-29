@@ -26,8 +26,12 @@ packages
 /dartino.xcodeproj/
 /jniLibs/
 /out/
+/pkg/mdns/lib/src/libmdns_extension_lib.so
+/pkg/mdns/lib/src/libmdns_extension_lib.dylib
 /pkg/mdns/lib/native/libmdns_extension_lib.so
 /pkg/mdns/lib/native/libmdns_extension_lib.dylib
+/pkg/power_management/lib/src/libpower_management_extension_lib.so
+/pkg/power_management/lib/src/libpower_management_extension_lib.dylib
 /pkg/power_management/lib/native/libpower_management_extension_lib.so
 /pkg/power_management/lib/native/libpower_management_extension_lib.dylib
 /samples/general/native-interop/ffi/
