@@ -75,7 +75,7 @@ class TcpConnection extends VmConnection {
         onConnectionError,
         test: (e) => e is SocketException);
     handleSocketErrors(socket, socketDescription, log: (String info) {
-      log("Connected to TCP $socketDescription  $info");
+      log("Connected to TCP $info");
     });
     // We send many small packages, so use no-delay.
     socket.setOption(SocketOption.TCP_NODELAY, true);

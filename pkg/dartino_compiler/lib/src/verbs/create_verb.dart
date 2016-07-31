@@ -108,9 +108,9 @@ Future<int> createSessionTask(
   SessionState state = createSessionState(name, base, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {
-    state.log("created session with $settingsUri $settings");
+    state.log("Created session with $settingsUri $settings");
   } else {
-    state.log("created session with settings $settings");
+    state.log("Created session with settings $settings");
   }
   return 0;
 }
