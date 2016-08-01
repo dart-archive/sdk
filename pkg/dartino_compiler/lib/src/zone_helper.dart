@@ -29,17 +29,17 @@ Future runGuarded(
   Completer completer = new Completer();
 
   handleUncaughtError(error, StackTrace stackTrace) {
-    if (isBatchMode) {
-      io.stderr.writeln("$error");
-      if (stackTrace != null) {
-        io.stderr.writeln("$stackTrace");
-      }
-    }
     if (!completer.isCompleted) {
       completer.completeError(error, stackTrace);
     } else if (handleLateError != null) {
       handleLateError(error, stackTrace);
     } else {
+      if (isBatchMode) {
+        io.stderr.writeln("$error");
+        if (stackTrace != null) {
+          io.stderr.writeln("$stackTrace");
+        }
+      }
       // Delegate to parent.
       throw error;
     }
