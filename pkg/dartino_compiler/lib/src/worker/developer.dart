@@ -1435,7 +1435,11 @@ const char *dartino_embedder_options[] = {$optionStrings
 
 Future<Device> readDeviceFromSettings(SessionState state) async {
   String deviceId = state.settings.device;
-  if (deviceId == null) deviceId = "stm32f746g-discovery";
+  if (deviceId == null) {
+    List<Device> devices = await discoverUsbDevices();
+    if (devices.length == 1) return devices.first;
+    deviceId = "stm32f746g-discovery";
+  }
   return await readDevice(deviceId);
 }
 
