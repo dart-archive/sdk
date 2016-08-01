@@ -26,6 +26,9 @@ packages
 /dartino.xcodeproj/
 /jniLibs/
 /out/
+/pkg/dartinodoc/.packages
+/pkg/dartinodoc/.pub/
+/pkg/dartinodoc/pubspec.lock
 /pkg/mdns/lib/src/libmdns_extension_lib.so
 /pkg/mdns/lib/src/libmdns_extension_lib.dylib
 /pkg/mdns/lib/native/libmdns_extension_lib.so
