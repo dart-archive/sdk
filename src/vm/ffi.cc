@@ -567,6 +567,9 @@ class FFIFrameBuilder {
       PushDouble(&stackArgs, v);
     }
   }
+#else
+#error \
+  "Define either DARTINO_TARGET_ARM_HARDFLOAT or DARTINO_TARGET_ARM_SOFTFLOAT"
 #endif  // DARTINO_TARGET_ARM_HARDFLOAT
   void Build() {
     // Round floating point args to pairs.
