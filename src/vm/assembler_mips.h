@@ -183,6 +183,8 @@ class Assembler {
   INSTRUCTION_2(lw, "lw %r, %s", Register, const char*);
 
   INSTRUCTION_2(move, "move %r, %r", Register, Register);
+  INSTRUCTION_3(movn, "movn %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(movz, "movz %r, %r, %r", Register, Register, Register);
   INSTRUCTION_2(mult, "mult %r, %r", Register, Register);
 
   INSTRUCTION_1(mfhi, "mfhi %r", Register);
@@ -212,6 +214,7 @@ class Assembler {
   INSTRUCTION_2(sw, "sw %r, %a", Register, const Address&);
 
   INSTRUCTION_3(xor_, "xor %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(xori, "xori %r, %r, %i", Register, Register, const Immediate&);
 
 
   // Align what follows to a 2^power address.
