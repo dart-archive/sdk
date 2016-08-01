@@ -13,7 +13,8 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import '../worker/developer.dart' show
-  discoverDevices,
+  discoverIpDevices,
+  discoverUsbDevices,
   showSessions,
   showSessionSettings;
 
@@ -73,7 +74,8 @@ class ShowDevicesTask extends SharedTask {
 }
 
 Future<int> showDevicesTask() async {
-  await discoverDevices();
+  await discoverUsbDevices();
+  await discoverIpDevices();
   return 0;
 }
 

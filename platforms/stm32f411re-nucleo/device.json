@@ -22,5 +22,7 @@
   // The linker script is located in this directory.
   "linker_script": "stm32f411retx-flash.ld",
   // Board name when flashing with OpenOCD.
-  "open_ocd_board": "st_nucleo_f4"
+  "open_ocd_board": "st_nucleo_f4",
+  // The name of the device specific sub directory in the media directory.
+  "media_dir": "NODE_F411RE"
 }

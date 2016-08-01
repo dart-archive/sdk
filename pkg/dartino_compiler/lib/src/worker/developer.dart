@@ -570,9 +570,9 @@ Future<Address> readAddressFromUser(
         String line = UTF8.decode(command.data).trim();
         if (line.isEmpty && devices.isEmpty) {
           commandSender.sendStdout("\n");
-          // [discoverDevices] will print out the list of device with their
+          // [discoverIpDevices] will print out the list of device with their
           // IP address, hostname, and agent version.
-          devices = await discoverDevices(prefixWithNumber: true);
+          devices = await discoverIpDevices(prefixWithNumber: true);
           if (devices.isEmpty) {
             commandSender.sendStdout(
                 "Couldn't find Dartino capable devices\n");
@@ -1351,6 +1351,23 @@ Future<Directory> locateBinDirectory() async {
   return binDirectory;
 }
 
+Future<List<String>> readDeviceIds() async {
+  Uri deviceDirectoryUri = executable.resolve('../platforms/');
+  Directory deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
+  if (!await deviceDirectory.exists()) {
+    deviceDirectoryUri = executable.resolve('../../platforms/');
+    deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
+  }
+  var deviceIds = <String>[];
+  await for (FileSystemEntity entity in deviceDirectory.list()) {
+    if (entity is Directory &&
+        await new File(join(entity.path, 'device.json')).exists()) {
+      deviceIds.add(basename(entity.path));
+    }
+  }
+  return deviceIds;
+}
+
 Future<Device> readDevice(String deviceId) async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
@@ -1735,7 +1752,79 @@ Future<String> getAgentVersion(InternetAddress host, int port) async {
   }
 }
 
-Future<List<InternetAddress>> discoverDevices(
+Future<List<Device>> discoverUsbDevices() async {
+  List<Device> devices = <Device>[];
+
+  Future<Device> readDeviceDetails(File file, Device device) async {
+    String version;
+    String build;
+    for (String line in (await file.readAsString()).split('\n')) {
+      line = line.trim();
+      if (line.startsWith('Version:')) version = line.substring(8).trim();
+      if (line.startsWith('Build:')) build = line.substring(6).trim();
+    }
+    return device.withVersion(version, build);
+  }
+
+  Future<Null> readMediaDirs(String path) async {
+    for (String deviceId in await readDeviceIds()) {
+      Device device = await readDevice(deviceId);
+      Directory dir = new Directory(join(path, device.mediaDir));
+      if (await dir.exists()) {
+        File file = new File(join(dir.path, 'DETAILS.TXT'));
+        if (await file.exists()) {
+          devices.add(await readDeviceDetails(file, device));
+        } else {
+          devices.add(device);
+        }
+      }
+    }
+  }
+
+  Future<Null> findLinuxDevices() async {
+    // Board media typically mounted in /media/<username>/<boardname>
+    String user = Platform.environment['USER'];
+    if (user == null || user.isEmpty) return;
+    String path = '/media/$user';
+    if (!await new Directory(path).exists()) return;
+    await readMediaDirs(path);
+  }
+
+  Future<Null> findMacDevices() async {
+    // Board media typically mounted in /Volumes/<boardname>
+    String path = '/Volumes';
+    if (!await new Directory(path).exists()) return;
+    await readMediaDirs(path);
+  }
+
+  void printResults() {
+    if (devices.isEmpty) {
+      print('No USB devices detected');
+    } else {
+      print('USB devices detected:');
+      for (Device device in devices) {
+        var line = new StringBuffer('  ${device.name}');
+        if (device.version != null) line.write(', version: ${device.version}');
+        if (device.build != null) line.write(', build: ${device.build}');
+        print(line.toString());
+      }
+    }
+  }
+
+  if (Platform.isLinux) {
+    await findLinuxDevices();
+    printResults();
+  } else if (Platform.isMacOS) {
+    await findMacDevices();
+    printResults();
+  } else {
+    //TODO(danrubel) add support for Windows
+    print('USB device detection not supported on this platform');
+  }
+  return devices;
+}
+
+Future<List<InternetAddress>> discoverIpDevices(
     {bool prefixWithNumber: false}) async {
   const ipV4AddressLength = 'xxx.xxx.xxx.xxx'.length;
   print("Looking for Dartino capable devices (will search for 5 seconds)...");
@@ -2153,6 +2242,7 @@ Device parseDevice(
   List<String> libraries;
   String linkerScript;
   String openOcdBoard;
+  String mediaDir;
 
   List<String> listOfStrings(value, String key) {
     List<String> result = new List<String>();
@@ -2238,6 +2328,10 @@ Device parseDevice(
         openOcdBoard = stringValue(value, key);
         break;
 
+      case "media_dir":
+        mediaDir = stringValue(value, key);
+        break;
+
       default:
         throwFatalError(
             DiagnosticKind.deviceConfigurationUnrecognizedKey, uri: deviceUri,
@@ -2257,7 +2351,8 @@ Device parseDevice(
       cflags,
       libraries,
       linkerScript,
-      openOcdBoard);
+      openOcdBoard,
+      mediaDir);
 }
 
 class Device {
@@ -2269,6 +2364,9 @@ class Device {
   final List<String> libraries;
   final String linkerScript;
   final String openOcdBoard;
+  final String mediaDir;
+  final String version;
+  final String build;
 
   const Device(
       this.id,
@@ -2277,7 +2375,8 @@ class Device {
       this.cflags,
       this.libraries,
       this.linkerScript,
-      this.openOcdBoard) : source = null;
+      this.openOcdBoard,
+      this.mediaDir) : source = null, version = null, build = null;
 
   const Device.fromSource(
       this.source,
@@ -2287,7 +2386,10 @@ class Device {
       this.cflags,
       this.libraries,
       this.linkerScript,
-      this.openOcdBoard);
+      this.openOcdBoard,
+      this.mediaDir,
+      {this.version,
+       this.build});
 
   String toString() {
     return "Device("
@@ -2316,7 +2418,14 @@ class Device {
     addIfNotNull("libraries", libraries);
     addIfNotNull("linker_script", linkerScript);
     addIfNotNull("open_ocd_board", openOcdBoard);
+    addIfNotNull("media_dir", mediaDir);
     return result;
+  }
+
+  Device withVersion(String version, String build) {
+    return new Device.fromSource(source, id, name, floatingPointSize, cflags,
+      libraries, linkerScript, openOcdBoard, mediaDir,
+      version: version, build: build);
   }
 }
 
