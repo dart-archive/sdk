@@ -444,6 +444,15 @@ Future<int> compile(
   return 0;
 }
 
+Future<ProjectSettings> readProjectSettings(Uri uri) async {
+  if (await new File.fromUri(uri).exists()) {
+    String content = await new File.fromUri(uri).readAsString();
+    return parseProjectSettings(content, uri);
+  } else {
+    return null;
+  }
+}
+
 Future<Settings> readSettings(Uri uri) async {
   if (await new File.fromUri(uri).exists()) {
     String jsonLikeData = await new File.fromUri(uri).readAsString();
@@ -499,6 +508,15 @@ Future<Settings> createSettings(
     Uri cwd,
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator) async {
+  ProjectSettings projectSettings;
+
+  // Try to find a dartino.yaml file starting from the
+  // current working directory and walking up its parent directories.
+  Uri projectUri = await findFile(cwd, 'dartino.yaml');
+  if (projectUri != null) {
+    projectSettings = await readProjectSettings(projectUri);
+  }
+
   String settingsFileName = '$sessionName.dartino-settings';
 
   if (uri == null) {
@@ -508,7 +526,12 @@ Future<Settings> createSettings(
   }
 
   if (uri != null) {
-    return await readSettings(uri);
+    Settings settings = await readSettings(uri);
+    if (projectSettings?.device != null) {
+      print("Using device specified in '${projectUri.toFilePath()}'");
+      settings = settings.copyWith(device: projectSettings.device);
+    }
+    return settings;
   }
 
   // If no settings file has been found, try to find the settings template file
@@ -543,6 +566,10 @@ Future<Settings> createSettings(
         "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
   }
 
+  if (projectSettings?.device != null) {
+    print("Using device specified in '${projectUri.toFilePath()}'");
+    settings = settings.copyWith(device: projectSettings.device);
+  }
   return settings;
 }
 
@@ -1920,6 +1947,16 @@ class Address {
   int get hashCode => host.hashCode ^ port.hashCode;
 }
 
+ProjectSettings parseProjectSettings(String content, Uri uri) {
+  String device;
+  // TODO(danrubel) replace this with call to yaml parser
+  for (String line in content.split('\n')) {
+    line = line.trim();
+    if (line.startsWith('device:')) device = line.substring(7).trim();
+  }
+  return new ProjectSettings(device);
+}
+
 /// See ../verbs/documentation.dart for a definition of this format.
 Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   String json = jsonLikeData.split("\n")
@@ -2096,6 +2133,12 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
       incrementalMode);
 }
 
+class ProjectSettings {
+  final String device;
+
+  ProjectSettings(this.device);
+}
+
 class Settings {
   final Uri source;
 
@@ -2144,7 +2187,7 @@ class Settings {
       Uri packages,
       List<String> compilerOptions,
       Map<String, String> constants,
-      List<String> vmOptions,
+      List<String> embedderOptions,
       String device,
       Address deviceAddress,
       DeviceType deviceType,
@@ -2159,8 +2202,8 @@ class Settings {
     if (constants == null) {
       constants = this.constants;
     }
-    if (vmOptions == null) {
-      compilerOptions = this.compilerOptions;
+    if (embedderOptions == null) {
+      embedderOptions = this.embedderOptions;
     }
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
@@ -2178,7 +2221,7 @@ class Settings {
         packages,
         compilerOptions,
         constants,
-        vmOptions,
+        embedderOptions,
         device,
         deviceAddress,
         deviceType,
