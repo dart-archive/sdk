@@ -97,16 +97,14 @@ def Main():
     local_docs = os.path.join(temp_dir, 'docs')
     with utils.ChangedWorkingDirectory(temp_dir):
       print 'Cloning the dartino-api repo'
-      Run(['git', 'clone', 'git@github.com:dartino/api.git'])
+      Run(['git', 'clone', 'git@github.com:dartino/api.dartino.org.git'])
       apidir = '.' if dryrun else os.path.join(temp_dir, 'api')
       with utils.ChangedWorkingDirectory(apidir):
-        print 'Checking out gh-pages which serves our documentation'
-        Run(['git', 'checkout', 'gh-pages'])
         print 'Cleaning out old version of docs locally'
-        Run(['git', 'rm', '-r', '*'])
+        Run(['git', 'rm', '-r', 'public/*'])
         # shell=True to allow us to expand the *.
         print 'Copying in new docs'
-        Run(['cp', '-r', os.path.join(local_docs, '*'), '.'], shell=True)
+        Run(['cp', '-r', os.path.join(local_docs, '*'), 'public'], shell=True)
         print 'Git adding all new docs'
         Run(['git', 'add', '*'])
         print 'Commiting docs locally'
