@@ -1836,7 +1836,9 @@ Future<List<Device>> discoverUsbDevices() async {
       for (Device device in devices) {
         var line = new StringBuffer('  ${device.name}');
         if (device.version != null) line.write(', version: ${device.version}');
-        if (device.build != null) line.write(', build: ${device.build}');
+        if (device.build != null) {
+          line.write(', ST-LINK/V2-1 build: ${device.build}');
+        }
         print(line.toString());
       }
     }
@@ -1849,7 +1851,7 @@ Future<List<Device>> discoverUsbDevices() async {
     await findMacDevices();
     printResults();
   } else {
-    //TODO(danrubel) add support for Windows
+    // TODO(danrubel) add support for Windows
     print('USB device detection not supported on this platform');
   }
   return devices;
