@@ -10,6 +10,6 @@
 ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
 regress_252_test: RuntimeError # We don't copy the ffi testing lib to the sdk
 
-# Flexible FFI only supported on ARM so far
-[ $arch != arm ]
+# Flexible FFI only supported on ARM and IA32 so far
+[ $arch != arm && $arch != ia32 ]
 ffi_extended_test: Skip, OK

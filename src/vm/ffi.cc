@@ -445,7 +445,7 @@ enum {
   FFI_FLOAT64
 };
 
-#if defined(DARTINO_TARGET_ARM)
+#if defined(DARTINO_TARGET_ARM) || defined(DARTINO_TARGET_IA32)
 
 static void PushFloat(Vector<word>* v, float f) {
   v->PushBack(*reinterpret_cast<word*>(&f));
@@ -456,6 +456,10 @@ static void PushDouble(Vector<word>* v, double d) {
   v->PushBack(src[0]);
   v->PushBack(src[1]);
 }
+
+#endif  // defined(DARTINO_TARGET_ARM) || defined(DARTINO_TARGET_IA32)
+
+#if defined(DARTINO_TARGET_ARM)
 
 extern "C" {
   void FfiBridge(word* regular, int regularSize, word* stack, int stackSize,
@@ -622,6 +626,78 @@ class FFIFrameBuilder {
   size_t nextCoreRegister;
   int floatingPointGap;  // A vacant place in floatingPointArgs due to padding.
 };
+
+#elif defined(DARTINO_TARGET_IA32)
+
+extern "C" {
+  void FfiBridge(word* stack, int stackSize, word foreign);
+}
+
+typedef word (*P_BRIDGE)(word*, int, word);
+typedef int32 (*I32_BRIDGE)(word*, int, word);
+typedef int64 (*I64_BRIDGE)(word*, int, word);
+typedef float (*F32_BRIDGE)(word*, int, word);
+typedef double (*F64_BRIDGE)(word*, int, word);
+typedef void (*V_BRIDGE)(word*, int, word);
+
+class FFIFrameBuilder {
+ public:
+  void WordArgument(word v) {
+    stackArgs.PushBack(v);
+  }
+
+  void Int64Argument(int64 v) {
+    stackArgs.PushBack(v & 0xffffffff);
+    stackArgs.PushBack(v >> 32);
+  }
+
+  void Float32Argument(float v) {
+    PushFloat(&stackArgs, v);
+  }
+
+  void Float64Argument(double v) {
+    PushDouble(&stackArgs, v);
+  }
+
+  void Build() {}
+
+  word PointerCall(word address) {
+    return reinterpret_cast<P_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+  void VoidCall(word address) {
+    reinterpret_cast<V_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+  int IntCall(word address) {
+    return reinterpret_cast<I32_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+  int64 Int64Call(word address) {
+    return reinterpret_cast<I64_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+  float Float32Call(word address) {
+    return reinterpret_cast<F32_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+  double Float64Call(word address) {
+    return reinterpret_cast<F64_BRIDGE>(FfiBridge)(
+      stackArgs.Data(), stackArgs.size(), address);
+  }
+
+ private:
+  Vector<word> stackArgs;
+};
+
+#endif  // DARTINO_TARGET_ARM
+
+#if defined(DARTINO_TARGET_ARM) || defined(DARTINO_TARGET_IA32)
 
 BEGIN_NATIVE(ForeignListCall) {
   word address = AsForeignWord(arguments[0]);
@@ -833,7 +909,7 @@ BEGIN_NATIVE(ForeignListCall) {
 }
 END_NATIVE()
 
-#endif  // DARTINO_TARGET_ARM
+#endif  // defined(DARTINO_TARGET_ARM) || defined(DARTINO_TARGET_IA32)
 
 typedef int64 (*LwLw)(word, int64, word);
 

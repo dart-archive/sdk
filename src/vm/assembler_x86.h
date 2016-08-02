@@ -210,6 +210,11 @@ class Label {
 #define INSTRUCTION_2(name, format, t0, t1) \
   void name(t0 a0, t1 a1) { Print(format, Wrap(a1), Wrap(a0)); }
 
+#define INSTRUCTION_3(name, format, t0, t1, t2) \
+  void name(t0 a0, t1 a1, t2 a2) { \
+    Print(format, Wrap(a2), Wrap(a1), Wrap(a0)); \
+  }
+
 class Assembler {
  public:
   INSTRUCTION_1(pushl, "pushl %rl", Register);
@@ -234,6 +239,10 @@ class Assembler {
   INSTRUCTION_2(movl, "movl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(movl, "movl %i, %a", const Address&, const Immediate&);
   INSTRUCTION_2(movl, "movl %rl, %rl", Register, Register);
+  INSTRUCTION_3(movl, "movl %m(%rl), %rl",
+    Register, Register, const Immediate&);
+  INSTRUCTION_3(movl, "movl %rl, %m(%rl)",
+    Register, const Immediate&, Register);
 
   INSTRUCTION_2(movl, "movl %a, %rl", Register, const Address&);
   INSTRUCTION_2(movl, "movl %rl, %a", const Address&, Register);

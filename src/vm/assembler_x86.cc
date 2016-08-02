@@ -95,6 +95,13 @@ void Assembler::Print(const char* format, ...) {
           break;
         }
 
+        case 'm': {
+          // 32-bit immediate without '$' prefix.
+          const Immediate* immediate = va_arg(arguments, const Immediate*);
+          printf("%d", immediate->value());
+          break;
+        }
+
         case 'b': {
           // 8-bit immediate.
           const Immediate* immediate = va_arg(arguments, const Immediate*);
