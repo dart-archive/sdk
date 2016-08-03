@@ -65,10 +65,8 @@ static const char* ToString(Register reg, RegisterSize size = kQuadRegister) {
   static const char* kQuadRegisterNames[] = {
       "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp", "%rsi", "%rdi",
       "%r8",  "%r9",  "%r10", "%r11", "%r12", "%r13", "%r14", "%r15",
-      "%rip", "%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6",
-      "%xmm7", "%xmm8", "%xmm9", "%xmm10", "%xmm11", "%xmm12", "%xmm13",
-      "%xmm14", "%xmm15" };
-  ASSERT(reg >= RAX && reg <= XMM15);
+      "%rip"};
+  ASSERT(reg >= RAX && reg <= RIP);
   switch (size) {
     case kLongRegister:
       return kLongRegisterNames[reg];
@@ -114,14 +112,6 @@ void Assembler::Print(const char* format, ...) {
           const Immediate* immediate = va_arg(arguments, const Immediate*);
           ASSERT(immediate->is_int32());
           printf("$%d", static_cast<int32>(immediate->value()));
-          break;
-        }
-
-        case 'm': {
-          // 32-bit immediate without $ prefix.
-          const Immediate* immediate = va_arg(arguments, const Immediate*);
-          ASSERT(immediate->is_int32());
-          printf("%d", static_cast<int32>(immediate->value()));
           break;
         }
 
