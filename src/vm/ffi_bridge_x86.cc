@@ -25,6 +25,9 @@ GENERATE(, FfiBridge) {
   // Allocate the stack space.
   __ movl(EDI, ECX);
   __ shll(EDI, Immediate(kWordSizeLog2));
+  // Round up to 4 word sizes, 16 bytes.
+  __ addl(EDI, Immediate(3*kWordSize));
+  __ andl(EDI, Immediate(~(4*kWordSize)));
   __ subl(ESP, EDI);
   // Copy arguments to the stack.
   __ cmpl(ECX, Immediate(0));
