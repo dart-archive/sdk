@@ -11,8 +11,8 @@ import '../worker/developer.dart' show
     createProject,
     createSessionState,
     createSettings,
-    findBoardNames,
     findProjectTemplate,
+    readDeviceIds,
     Settings;
 
 import 'documentation.dart' show
@@ -47,6 +47,10 @@ Future<int> performCreateProject(
   var type = await FileSystemEntity.typeSync(projectUri.toFilePath());
   if (type != FileSystemEntityType.NOT_FOUND) {
     throwFatalError(DiagnosticKind.projectAlreadyExists, uri: projectUri);
+  }
+
+  Future<List<String>> findBoardNames() async {
+    return (await readDeviceIds(includeRaspberryPi: true))..sort();
   }
 
   // Validate the specified board name

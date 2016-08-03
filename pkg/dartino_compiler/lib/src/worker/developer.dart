@@ -483,14 +483,6 @@ Future<Uri> findDirectory(Uri cwd, String directoryName) async {
   }
 }
 
-/// Return a list of board names or `null` if none can be found
-Future<List<String>> findBoardNames() async {
-  Uri platformsUri = await findDirectory(executable, 'platforms');
-  if (platformsUri == null) return null;
-  return new Directory.fromUri(platformsUri).list()
-      .map((FileSystemEntity e) => basename(e.path)).toList();
-}
-
 /// Return the [Uri] of the project template for the specified board.
 /// Return `null` if it cannot be found.
 Future<Uri> findProjectTemplate(String boardName, [String templateName]) async {
@@ -1378,18 +1370,19 @@ Future<Directory> locateBinDirectory() async {
   return binDirectory;
 }
 
-Future<List<String>> readDeviceIds() async {
-  Uri deviceDirectoryUri = executable.resolve('../platforms/');
-  Directory deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
-  if (!await deviceDirectory.exists()) {
-    deviceDirectoryUri = executable.resolve('../../platforms/');
-    deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
-  }
+/// Return a list of device ids or `null` if none can be found
+Future<List<String>> readDeviceIds({bool includeRaspberryPi: false}) async {
+  Uri platformsUri = await findDirectory(executable, 'platforms');
+  if (platformsUri == null) return null;
+  Directory platformsDir = new Directory.fromUri(platformsUri);
   var deviceIds = <String>[];
-  await for (FileSystemEntity entity in deviceDirectory.list()) {
-    if (entity is Directory &&
-        await new File(join(entity.path, 'device.json')).exists()) {
-      deviceIds.add(basename(entity.path));
+  await for (FileSystemEntity entity in platformsDir.list()) {
+    if (entity is Directory) {
+      String name = basename(entity.path);
+      if ((includeRaspberryPi && name.startsWith('raspberry-pi')) ||
+          await new File(join(entity.path, 'device.json')).exists()) {
+        deviceIds.add(name);
+      }
     }
   }
   return deviceIds;
