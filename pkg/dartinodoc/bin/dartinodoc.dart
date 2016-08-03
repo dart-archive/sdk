@@ -11,8 +11,6 @@ import 'dart:io';
 import 'package:args/args.dart';
 
 import 'package:dartdoc/dartdoc.dart';
-import 'package:dartdoc/src/config.dart';
-import 'package:dartdoc/src/package_meta.dart';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/generated/sdk.dart';
@@ -23,9 +21,6 @@ import 'package:analyzer/src/generated/source_io.dart';
 import 'package:analyzer/analyzer.dart';
 
 import 'package:compiler/src/platform_configuration.dart';
-
-import 'package:dartdoc/src/generator.dart';
-import 'package:dartdoc/src/html/html_generator.dart';
 
 class DartinoSdk extends DartSdk {
   final Map<String, Uri> mapping;
@@ -105,7 +100,8 @@ class CustomNamedLibraryElement implements LibraryElement {
   CompilationUnit get unit => _element.unit;
   accept(ElementVisitor visitor) => _element.accept(visitor);
   @deprecated
-  String computeDocumentationComment() => _element.computeDocumentationComment();
+  String computeDocumentationComment() =>
+      _element.computeDocumentationComment();
   AstNode computeNode() => _element.computeNode();
   Element getAncestor(predicate) {
     return _element.getAncestor(predicate);
@@ -354,13 +350,10 @@ Future<Null> main(List<String> arguments) async {
   // Create the out directory.
   if (!outputDir.existsSync()) outputDir.createSync(recursive: true);
 
-  Generator generator = await HtmlGenerator.create(
-      url: hostedUrl,
-      headers: headerFilePaths,
-      footers: footerFilePaths,
-      relCanonicalPrefix: null,
-      toolVersion: "",
-      faviconPath: null,
+  var generators = await initGenerators(
+      hostedUrl, headerFilePaths, footerFilePaths, null,
       useCategories: true);
-  await generator.generate(package, outputDir);
+  for (var g in generators) {
+    await g.generate(package, outputDir);
+  }
 }

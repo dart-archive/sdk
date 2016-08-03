@@ -61,6 +61,7 @@ packages
 /third_party/crypto/
 /third_party/dart/
 /third_party/dart2js_info/
+/third_party/dartdoc/
 /third_party/dartdoc_deps/dart-sdk
 /third_party/dartdoc_deps/dart-sdk.tar.gz
 /third_party/freertos/freertos_labs

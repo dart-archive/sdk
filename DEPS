@@ -24,6 +24,8 @@ vars = {
 
   "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
+  "dartdoc_rev": "@ceb8893c3cffddde43d83911ebf77c8262a0e5a4",
+
   "dart_rev": "@9fff9a162914b97dd4bc48f5c2386f01a1232bad",
 
   # Please copy these package revisions from third_party/dart/DEPS when
@@ -64,6 +66,9 @@ deps = {
   # Stuff needed for GYP to run.
   "sdk/third_party/gyp":
       Var('chromium_git') + '/external/gyp.git' + Var("gyp_rev"),
+
+  "sdk/third_party/dartdoc":
+      (Var("github_mirror") % "dartdoc") + Var("dartdoc_rev"),
 
   "sdk/third_party/dart":
       (Var("github_mirror") % "sdk") + Var("dart_rev"),
