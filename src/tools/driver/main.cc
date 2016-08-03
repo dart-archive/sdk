@@ -695,7 +695,8 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
   }
 }
 
-static void SendArgv(DriverConnection* connection, int argc, char** argv) {
+static void SendArgv(DriverConnection* connection, int argc, char** argv,
+                     bool is_interactive) {
   WriteBuffer buffer;
   buffer.WriteInt(argc + 3);  // Also version and current directory
                               // and whether the app is run interactively
@@ -714,10 +715,7 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   free(path);
   path = NULL;
 
-  // Determine if the app is being run interactively.
-  int stdintty = isatty(fileno(stdin));
-  int stdouttty = isatty(fileno(stdout));
-  if (stdintty && stdouttty) {
+  if (is_interactive) {
     buffer.WriteInt(strlen(interactive_token));
     buffer.WriteString(interactive_token);
   } else {
@@ -934,7 +932,12 @@ static int Main(int argc, char** argv) {
 
   DriverConnection* connection = new DriverConnection(control_socket);
 
-  SendArgv(connection, argc, argv);
+  // Determine if the app is being run interactively.
+  int stdintty = isatty(fileno(stdin));
+  int stdouttty = isatty(fileno(stdout));
+  bool is_interactive = stdintty && stdouttty;
+
+  SendArgv(connection, argc, argv, is_interactive);
 
   FlushAllStreams();
 
@@ -1005,7 +1008,13 @@ static int Main(int argc, char** argv) {
     }
   }
 
-  if (daemon_pid != -1) WaitForDaemon(daemon_pid);
+  // Analytics (among other things) cause dartino daemon to take an additional
+  // 800 to 1500ms after the loop above completes and before it shuts down.
+  // Because of this delay, waiting for the daemon to exit
+  // makes the command line feel sluggish.
+  // If this program is being run interactively, then
+  // do not wait for the daemon to exit so that the cmdline feels responsive.
+  if (!is_interactive && daemon_pid != -1) WaitForDaemon(daemon_pid);
 
   Exit(exit_code);
   return exit_code;
