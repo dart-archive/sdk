@@ -226,7 +226,7 @@ hooks = [
       '--bucket',
       'dartino-dependencies',
       '-d',
-      'sdk/third_party/serial_port/lib/src/',
+      'sdk/third_party/serial_port/lib/',
     ],
   },
   {

@@ -5,5 +5,6 @@ License File: LICENSE
 Description:
 SerialPort is a Dart Api to provide access read and write access to serial port.
 Local Modifications:
-Added functionality to write binary data instead of strings.
-Throw FileSystemExceptions instead of Strings.
+* Added functionality to write binary data instead of strings.
+* Throw FileSystemExceptions instead of Strings.
+* Moved the native library out to the lib directory
