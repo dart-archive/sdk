@@ -80,6 +80,9 @@ def CopyBinaries(bundle_dir, build_dir):
            join(bin_dir, 'dartino-flashify'))
   # The driver for the sdk is specially named dartino_for_sdk.
   CopyFile(join(build_dir, 'dartino_for_sdk'), join(bin_dir, 'dartino'))
+  # Copy the dartino tab completion
+  CopyFile(join('src', 'tools', 'driver', 'dartino-completion.sh'),
+           join(bin_dir, 'dartino-completion.sh'))
   # We move the dart vm to internal to not put it on the path of users
   CopyFile(join(build_dir, 'dart'), join(internal, 'dart'))
   # natives.json is read relative to the dart binary

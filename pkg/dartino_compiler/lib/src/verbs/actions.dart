@@ -49,6 +49,9 @@ import 'help_verb.dart' show
 import 'run_verb.dart' show
     runAction;
 
+import 'x_complete_verb.dart' show
+    completeAction;
+
 import 'x_end_verb.dart' show
     endAction;
 
@@ -165,6 +168,7 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "enable": enableAction,
   "export": exportAction,
   "flash": flashAction,
+  "x-complete": completeAction,
   "x-download-tools": downloadToolsAction,
   "x-emulate": emulateAction,
   "x-end": endAction,

@@ -936,6 +936,7 @@ static int Main(int argc, char** argv) {
   int stdintty = isatty(fileno(stdin));
   int stdouttty = isatty(fileno(stdout));
   bool is_interactive = stdintty && stdouttty;
+  bool is_complete_command = (argc >= 2 && strcmp("x-complete", argv[1]) == 0);
 
   SendArgv(connection, argc, argv, is_interactive);
 
@@ -1014,7 +1015,9 @@ static int Main(int argc, char** argv) {
   // makes the command line feel sluggish.
   // If this program is being run interactively, then
   // do not wait for the daemon to exit so that the cmdline feels responsive.
-  if (!is_interactive && daemon_pid != -1) WaitForDaemon(daemon_pid);
+  if (!is_interactive && !is_complete_command && daemon_pid != -1) {
+    WaitForDaemon(daemon_pid);
+  }
 
   Exit(exit_code);
   return exit_code;

@@ -12,6 +12,8 @@ import 'self_tests.dart' as self;
 
 import 'verb_tests.dart' as verbs;
 
+import 'dartino_complete_tests.dart' as complete;
+
 import '../dartino_compiler/incremental/production_mode.dart' as
     incremental_production;
 
@@ -102,6 +104,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'analyze_samples/*': analyze_samples.listTests,
 
   'analyze_tests': analyze_tests.main,
+
+  'complete_tests': complete.main,
 
   'snapshot_stacktrace_tests/*': snapshot_stacktrace_tests.listTests,
 

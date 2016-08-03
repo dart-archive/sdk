@@ -117,6 +117,11 @@ const String downloadToolsDocumentation = """
              This is currently GCC ARM Embedded and OpenOCD.
 """;
 
+const String completeDocumentation = """
+   x-complete <command>
+             Used internally for command line tab completion.
+""";
+
 const String buildDocumentation = """
    build <file>
              Build flashable image containing the Dart code in <file>.
