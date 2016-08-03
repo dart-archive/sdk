@@ -19,6 +19,7 @@ import 'documentation.dart' show
     createDocumentation;
 
 import 'infrastructure.dart';
+import 'package:dartino_compiler/src/worker/developer.dart';
 
 const Action createProjectAction = const Action(
     performCreateProject, createDocumentation,
@@ -56,8 +57,14 @@ Future<int> performCreateProject(
   // Validate the specified board name
   String boardName = sentence.forName;
   if (boardName == null) {
-    throwFatalError(DiagnosticKind.missingForName,
+    // If no board specified, then attempt to auto-detect
+    List<Device> connectedDevices = await discoverUsbDevices();
+    if (connectedDevices?.length == 1) {
+      boardName = connectedDevices[0].id;
+    } else {
+      throwFatalError(DiagnosticKind.missingForName,
         boardNames: await findBoardNames());
+    }
   }
   Uri templateUri = await findProjectTemplate(boardName);
   if (templateUri == null) {

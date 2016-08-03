@@ -376,8 +376,9 @@ Future<int> createProject(Uri projectUri, String boardName,
       }
     }
   }
-  recursiveCopy(
-    new Directory.fromUri(templateUri), new Directory.fromUri(projectUri));
+  Directory projDir = new Directory.fromUri(projectUri);
+  print('Creating project for $boardName in ${projDir.path}');
+  recursiveCopy(new Directory.fromUri(templateUri), projDir);
   return 0;
 }
 
