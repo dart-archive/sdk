@@ -726,7 +726,7 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv,
   }
 
   char millisStr[20];
-  snprintf(millisStr, sizeof(millisStr), "%lu", startTimeMillis);
+  snprintf(millisStr, sizeof(millisStr), "%" PRIu64, startTimeMillis);
   buffer.WriteInt(strlen(millisStr));
   buffer.WriteString(millisStr);
 
