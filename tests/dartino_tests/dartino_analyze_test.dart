@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dartino_compiler/src/hub/hub_main.dart';
 import 'package:dartino_compiler/src/hub/session_manager.dart';

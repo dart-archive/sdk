@@ -358,6 +358,7 @@ class MockAnalytics implements Analytics {
   logErrorMessage(String userErrMsg) { /* ignored */ }
   logRequest(String version, String currentDirectory, bool interactive,
       List<String> arguments) { /* ignored */ }
+  logResponse(String responseType, List<String> arguments) { /* ignored */}
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }
   logVersion() { /* ignored */ }

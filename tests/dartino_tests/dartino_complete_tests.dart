@@ -8,7 +8,6 @@ import 'package:dartino_compiler/src/hub/hub_main.dart';
 import 'package:dartino_compiler/src/hub/session_manager.dart';
 import 'package:dartino_compiler/src/verbs/create_verb.dart';
 import 'package:dartino_compiler/src/worker/developer.dart';
-import 'package:dartino_compiler/src/zone_helper.dart';
 import 'package:expect/expect.dart';
 
 import 'message_tests.dart';

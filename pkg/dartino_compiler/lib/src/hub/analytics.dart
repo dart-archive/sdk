@@ -32,8 +32,12 @@ const String TAG_COMPLETE = 'complete';
 const String TAG_ERROR = 'error';
 const String TAG_ERRMSG = 'errmsg';
 const String TAG_REQUEST = 'request';
+const String TAG_RESPONSE = 'response';
 const String TAG_SHUTDOWN = 'shutdown';
 const String TAG_STARTUP = 'startup';
+
+// Tags indicating the type of response
+const String TAG_RESPONSE_COMPLETION = 'completion';
 
 class Analytics {
   static const String optOutValue = 'opt-out';
@@ -157,6 +161,9 @@ class Analytics {
       _send(<String>[TAG_REQUEST, version, hash(currentDirectory)]
         ..add(interactive ? 'interactive' : 'detached')
         ..addAll(hashAllUris(arguments)));
+
+  void logResponse(String responseType, List<String> arguments) => _send(
+      <String>[TAG_RESPONSE, responseType]..addAll(hashAllUris(arguments)));
 
   void logShutdown() => _send([TAG_SHUTDOWN]);
 

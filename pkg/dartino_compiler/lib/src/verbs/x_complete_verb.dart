@@ -4,6 +4,7 @@
 
 library dartino_compiler.verbs.complete_verb;
 
+import '../hub/analytics.dart';
 import 'actions.dart';
 import 'documentation.dart' show completeDocumentation;
 import 'infrastructure.dart';
@@ -30,5 +31,10 @@ Future<int> performComplete(
   completions
     ..sort()
     ..forEach((word) => print(word));
+
+  // log the returned values
+  context.clientConnection.analytics
+      .logResponse(TAG_RESPONSE_COMPLETION, completions);
+
   return 0;
 }

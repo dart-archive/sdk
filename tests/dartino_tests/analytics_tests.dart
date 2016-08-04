@@ -138,6 +138,7 @@ main() async {
     analytics.logRequest('0.0.0', dartPath, true, ['help']);
     analytics.logRequest('0.0.0', dartPath, true, ['help', 'all']);
     analytics.logRequest('0.0.0', dartPath, false, ['analyze', dartPath]);
+    analytics.logResponse('responseType45', ['analyze', dartPath]);
     analytics.logErrorMessage('$dartPath not found');
     analytics.logError('error1');
     analytics.logError('error2', null);
@@ -178,6 +179,8 @@ main() async {
       'analyze',
       dartPathHash
     ]);
+    await mockServer.expectMessage(
+        [TAG_RESPONSE, 'responseType45', 'analyze', dartPathHash]);
     await mockServer.expectMessage([TAG_ERRMSG, '$dartPathHash not found']);
     await mockServer.expectMessage([TAG_ERROR, 'error1', 'null']);
     await mockServer.expectMessage([TAG_ERROR, 'error2', 'null']);
