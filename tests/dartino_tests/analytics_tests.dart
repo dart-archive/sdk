@@ -134,10 +134,11 @@ main() async {
 
     analytics.writeNewUuid();
     analytics.logStartup();
-    analytics.logRequest('1.2.3', dartPath, false, []);
-    analytics.logRequest('0.0.0', dartPath, true, ['help']);
-    analytics.logRequest('0.0.0', dartPath, true, ['help', 'all']);
-    analytics.logRequest('0.0.0', dartPath, false, ['analyze', dartPath]);
+    analytics.logRequest('1.2.3', dartPath, false, '123', []);
+    analytics.logRequest('0.0.0', dartPath, true, '098765432', ['help']);
+    analytics.logRequest('0.0.0', dartPath, true, '098765433', ['help', 'all']);
+    analytics.logRequest(
+        '0.0.0', dartPath, false, '098765434', ['analyze', dartPath]);
     analytics.logResponse('responseType45', ['analyze', dartPath]);
     analytics.logErrorMessage('$dartPath not found');
     analytics.logError('error1');
@@ -165,16 +166,17 @@ main() async {
     Expect.listEquals(expectedStartupMsg, actualStartupMsg,
         '\nexpected: $expectedStartupMsg\nactual:   $actualStartupMsg\n');
 
-    await mockServer
-        .expectMessage([TAG_REQUEST, '1.2.3', dartPathHash, 'detached']);
-    await mockServer.expectMessage(
-        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help']);
-    await mockServer.expectMessage(
-        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help', 'all']);
+    await mockServer.expectMessage([TAG_REQUEST, '1.2.3',
+          dartPathHash, '123', 'detached']);
+    await mockServer.expectMessage([TAG_REQUEST, '0.0.0',
+          dartPathHash, '098765432', 'interactive', 'help']);
+    await mockServer.expectMessage([TAG_REQUEST, '0.0.0',
+          dartPathHash, '098765433', 'interactive', 'help', 'all']);
     await mockServer.expectMessage([
       TAG_REQUEST,
       '0.0.0',
       dartPathHash,
+      '098765434',
       'detached',
       'analyze',
       dartPathHash

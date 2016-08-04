@@ -279,10 +279,12 @@ Future<Null> handleVerb(
       // Fast fail if arguments do not meet expectations.
       throw 'unexpected arguments from driver';
     }
-    // arguments[3] is the program name and is ignored
-    List<String> remaining = arguments.sublist(4);
+    String startTimeMillis = arguments[3];
+    // arguments[4] is the program name and is ignored
+    List<String> remaining = arguments.sublist(5);
 
-    analytics?.logRequest(version, currentDirectory, interactive, remaining);
+    analytics?.logRequest(
+        version, currentDirectory, interactive, startTimeMillis, remaining);
     clientConnection.parseArguments(
         version, currentDirectory, interactive, remaining);
     String sessionName = clientConnection.sentence.sessionName;

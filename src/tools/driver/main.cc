@@ -15,6 +15,7 @@
 #include <sys/file.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/wait.h>
@@ -696,10 +697,11 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 }
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv,
-                     bool is_interactive) {
+                     bool is_interactive, uint64 startTimeMillis) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc + 3);  // Also version and current directory
-                              // and whether the app is run interactively
+  buffer.WriteInt(argc + 4);  // Also version and current directory
+                              // whether the app is run interactively
+                              // and start time in millisecondsSinceEpoch
 
   buffer.WriteInt(strlen(GetVersion()));
   buffer.WriteString(GetVersion());
@@ -722,6 +724,11 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv,
     buffer.WriteInt(strlen(detached_token));
     buffer.WriteString(detached_token);
   }
+
+  char millisStr[20];
+  snprintf(millisStr, sizeof(millisStr), "%d", startTimeMillis);
+  buffer.WriteInt(strlen(millisStr));
+  buffer.WriteString(millisStr);
 
   for (int i = 0; i < argc; i++) {
     buffer.WriteInt(strlen(argv[i]));
@@ -894,7 +901,14 @@ static bool IsBatchCommand(int argc, char** argv) {
   return true;
 }
 
+static uint64 millisecondsSinceEpoch() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 static int Main(int argc, char** argv) {
+  uint64 startTimeMillis = millisecondsSinceEpoch();
   program_name = argv[0];
   is_batch_command = IsBatchCommand(argc, argv);
   DetectConfiguration();
@@ -938,7 +952,7 @@ static int Main(int argc, char** argv) {
   bool is_interactive = stdintty && stdouttty;
   bool is_complete_command = (argc >= 2 && strcmp("x-complete", argv[1]) == 0);
 
-  SendArgv(connection, argc, argv, is_interactive);
+  SendArgv(connection, argc, argv, is_interactive, startTimeMillis);
 
   FlushAllStreams();
 

@@ -157,8 +157,13 @@ class Analytics {
       _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
 
   void logRequest(String version, String currentDirectory, bool interactive,
-          List<String> arguments) =>
-      _send(<String>[TAG_REQUEST, version, hash(currentDirectory)]
+          String startTimeMillis, List<String> arguments) =>
+      _send(<String>[
+        TAG_REQUEST,
+        version,
+        hash(currentDirectory),
+        startTimeMillis
+      ]
         ..add(interactive ? 'interactive' : 'detached')
         ..addAll(hashAllUris(arguments)));
 
