@@ -33,7 +33,23 @@ enum Register {
   R13 = 13,
   R14 = 14,
   R15 = 15,
-  RIP = 16
+  RIP = 16,
+  XMM0 = 17,
+  XMM1 = 18,
+  XMM2 = 19,
+  XMM3 = 20,
+  XMM4 = 21,
+  XMM5 = 22,
+  XMM6 = 23,
+  XMM7 = 24,
+  XMM8 = 25,
+  XMM9 = 26,
+  XMM10 = 27,
+  XMM11 = 28,
+  XMM12 = 29,
+  XMM13 = 30,
+  XMM14 = 31,
+  XMM15 = 32
 };
 
 enum ScaleFactor {
@@ -229,6 +245,11 @@ class Label {
 #define INSTRUCTION_2(name, format, t0, t1) \
   void name(t0 a0, t1 a1) { Print(format, Wrap(a1), Wrap(a0)); }
 
+#define INSTRUCTION_3(name, format, t0, t1, t2) \
+  void name(t0 a0, t1 a1, t2 a2) { \
+    Print(format, Wrap(a2), Wrap(a1), Wrap(a0)); \
+  }
+
 class Assembler {
  public:
   INSTRUCTION_1(pushq, "pushq %rq", Register);
@@ -253,6 +274,18 @@ class Assembler {
   INSTRUCTION_2(movq, "movq %a, %rq", Register, const Address&);
   INSTRUCTION_2(movq, "movq %rq, %a", const Address&, Register);
   INSTRUCTION_2(movq, "movq %l, %a", const Address&, const Immediate&);
+  INSTRUCTION_3(movq, "movq %m(%rq), %rq",
+    Register, Register, const Immediate&);
+  INSTRUCTION_3(movq, "movq %rq, %m(%rq)",
+    Register, const Immediate&, Register);
+  INSTRUCTION_3(movss, "movss %m(%rq), %rq",
+    Register, Register, const Immediate&);
+  INSTRUCTION_3(movss, "movss %rq, %m(%rq)",
+    Register, const Immediate&, Register);
+  INSTRUCTION_3(movsd, "movsd %m(%rq), %rq",
+    Register, Register, const Immediate&);
+  INSTRUCTION_3(movsd, "movsd %rq, %m(%rq)",
+    Register, const Immediate&, Register);
 
   INSTRUCTION_2(movb, "movb %b, %a", const Address&, const Immediate&);
 

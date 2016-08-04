@@ -319,6 +319,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
 
 GENERATE(, Interpret) {
   InterpreterGeneratorX64 generator(assembler);
+  assembler->AlignToPowerOfTwo(4);
   assembler->LocalBind("LocalInterpret");
   generator.Generate();
 }
