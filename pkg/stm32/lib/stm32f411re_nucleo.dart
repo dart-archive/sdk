@@ -27,6 +27,21 @@ class STM32F411RENucleo {
   static const Pin A4 = STM32Pin.PC1;
   static const Pin A5 = STM32Pin.PC0;
 
+  static const Pin D0 = STM32Pin.PA3;
+  static const Pin D1 = STM32Pin.PA2;
+  static const Pin D2 = STM32Pin.PA10;
+  static const Pin D3 = STM32Pin.PB3;
+  static const Pin D4 = STM32Pin.PB5;
+  static const Pin D5 = STM32Pin.PB4;
+  static const Pin D6 = STM32Pin.PB10;
+  static const Pin D7 = STM32Pin.PA8;
+  static const Pin D8 = STM32Pin.PA9;
+  static const Pin D9 = STM32Pin.PC7;
+  static const Pin D10 = STM32Pin.PB6;
+  static const Pin D11 = STM32Pin.PA7;
+  static const Pin D12 = STM32Pin.PA6;
+  static const Pin D13 = STM32Pin.PA5;
+
   STM32Gpio _gpio;
   Uart _uart;
   STM32Adc _adc;

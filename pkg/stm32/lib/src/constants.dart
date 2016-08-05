@@ -42,6 +42,22 @@ const int ADC2_BASE = APB2PERIPH_BASE + 0x2100;
 const int ADC3_BASE = APB2PERIPH_BASE + 0x2200;
 const int ADC_COMMON_BASE = APB2PERIPH_BASE + 0x2300;
 
+const int TIM2_BASE = APB1PERIPH_BASE + 0x0000;
+const int TIM3_BASE = APB1PERIPH_BASE + 0x0400;
+const int TIM4_BASE = APB1PERIPH_BASE + 0x0800;
+const int TIM5_BASE = APB1PERIPH_BASE + 0x0C00;
+const int TIM6_BASE = APB1PERIPH_BASE + 0x1000;
+const int TIM7_BASE = APB1PERIPH_BASE + 0x1400;
+const int TIM12_BASE = APB1PERIPH_BASE + 0x1800;
+const int TIM13_BASE = APB1PERIPH_BASE + 0x1C00;
+const int TIM14_BASE = APB1PERIPH_BASE + 0x2000;
+const int TIM1_BASE = APB2PERIPH_BASE + 0x0000;
+const int TIM8_BASE = APB2PERIPH_BASE + 0x0400;
+const int TIM9_BASE = APB2PERIPH_BASE + 0x4000;
+const int TIM10_BASE = APB2PERIPH_BASE + 0x4400;
+const int TIM11_BASE = APB2PERIPH_BASE + 0x4800;
+
+
 // Reset and Clock Control (RCC) registers.
 //
 // These are offsets into the peripheral registers from offset RCC_BASE.
@@ -134,6 +150,37 @@ const int RCC_APB2ENR_SPI6EN = 0x00200000;
 const int RCC_APB2ENR_SAI1EN = 0x00400000;
 const int RCC_APB2ENR_SAI2EN = 0x00800000;
 const int RCC_APB2ENR_LTDCEN = 0x04000000;
+
+// Bit definition for RCC_APB1ENR register
+const int RCC_APB1ENR_TIM2EN = 0x00000001;
+const int RCC_APB1ENR_TIM3EN = 0x00000002;
+const int RCC_APB1ENR_TIM4EN = 0x00000004;
+const int RCC_APB1ENR_TIM5EN = 0x00000008;
+const int RCC_APB1ENR_TIM6EN = 0x00000010;
+const int RCC_APB1ENR_TIM7EN = 0x00000020;
+const int RCC_APB1ENR_TIM12EN = 0x00000040;
+const int RCC_APB1ENR_TIM13EN = 0x00000080;
+const int RCC_APB1ENR_TIM14EN = 0x00000100;
+const int RCC_APB1ENR_LPTIM1EN = 0x00000200;
+const int RCC_APB1ENR_WWDGEN = 0x00000800;
+const int RCC_APB1ENR_SPI2EN = 0x00004000;
+const int RCC_APB1ENR_SPI3EN = 0x00008000;
+const int RCC_APB1ENR_SPDIFRXEN = 0x00010000;
+const int RCC_APB1ENR_USART2EN = 0x00020000;
+const int RCC_APB1ENR_USART3EN = 0x00040000;
+const int RCC_APB1ENR_UART4EN = 0x00080000;
+const int RCC_APB1ENR_UART5EN = 0x00100000;
+const int RCC_APB1ENR_I2C1EN = 0x00200000;
+const int RCC_APB1ENR_I2C2EN = 0x00400000;
+const int RCC_APB1ENR_I2C3EN = 0x00800000;
+const int RCC_APB1ENR_I2C4EN = 0x01000000;
+const int RCC_APB1ENR_CAN1EN = 0x02000000;
+const int RCC_APB1ENR_CAN2EN = 0x04000000;
+const int RCC_APB1ENR_CECEN = 0x08000000;
+const int RCC_APB1ENR_PWREN = 0x10000000;
+const int RCC_APB1ENR_DACEN = 0x20000000;
+const int RCC_APB1ENR_UART7EN = 0x40000000;
+const int RCC_APB1ENR_UART8EN = 0x80000000;
 
 // Offset to GPIO registers for each GPIO port.
 //
@@ -542,3 +589,385 @@ const int DMA_IFCR_CHTIF = 0x00000010;
 const int DMA_IFCR_CTEIF = 0x00000008;
 const int DMA_IFCR_CDMEIF = 0x00000004;
 const int DMA_IFCR_CFEIF = 0x00000001;
+
+// Bit definitions taken from stm32f746xx.h CMSIS 
+// Device Peripheral Access Layer Header File.
+
+// TIMx peripheral registers.
+class TIM {
+  static const int CR1 = 0x00;  // TIM control register 1.
+  static const int CR2 = 0x04;  // TIM control register 2.
+  static const int SMCR = 0x08;  // TIM slave mode control register.
+  static const int DIER = 0x0C;  // TIM DMA/interrupt enable register.
+  static const int SR = 0x10;  // TIM status register.
+  static const int EGR = 0x14;  // TIM event generation register.
+  static const int CCMR1 = 0x18;  // TIM capture/compare mode register 1.
+  static const int CCMR2 = 0x1C;  // TIM capture/compare mode register 2.
+  static const int CCER = 0x20;  // TIM capture/compare enable register.
+  static const int CNT = 0x24;  // TIM counter register.
+  static const int PSC = 0x28;  // TIM prescaler.
+  static const int ARR = 0x2C;  // TIM auto-reload register.
+  static const int RCR = 0x30;  // TIM repetition counter register.
+  static const int CCR1 = 0x34;  // TIM capture/compare register 1.
+  static const int CCR2 = 0x38;  // TIM capture/compare register 2.
+  static const int CCR3 = 0x3C;  // TIM capture/compare register 3.
+  static const int CCR4 = 0x40;  // TIM capture/compare register 4.
+  static const int BDTR = 0x44;  // TIM break and dead-time register.
+  static const int DCR = 0x48;  // TIM DMA control register.
+  static const int DMAR = 0x4C;  // TIM DMA address for full transfer.
+  static const int OR = 0x50;  // TIM option register.
+  static const int CCMR3 = 0x54;  // TIM capture/compare mode register 3.
+  static const int CCR5 = 0x58;  // TIM capture/compare mode register 5.
+  static const int CCR6 = 0x5C;  // TIM capture/compare mode register 6.
+}
+
+// Bit definition for TIM_CR1 register.
+const int TIM_CR1_CEN = 0x0001;  // Counter enable
+const int TIM_CR1_UDIS = 0x0002;  // Update disable.
+const int TIM_CR1_URS = 0x0004;  // Update request source.
+const int TIM_CR1_OPM = 0x0008;  // One pulse mode.
+const int TIM_CR1_DIR = 0x0010;  // Direction.
+// CMS[1:0] bits (Center-aligned mode selection).
+const int TIM_CR1_CMS = 0x0060;
+const int TIM_CR1_CMS_0 = 0x0020;  // Bit 0.
+const int TIM_CR1_CMS_1 = 0x0040;  // Bit 1.
+
+const int TIM_CR1_ARPE = 0x0080;  // Auto-reload preload enable.
+
+const int TIM_CR1_CKD = 0x0300;  // CKD[1:0] bits (clock division).
+const int TIM_CR1_CKD_0 = 0x0100;  // Bit 0.
+const int TIM_CR1_CKD_1 = 0x0200;  // Bit 1.
+const int TIM_CR1_UIFREMAP = 0x0800;  // UIF status bit.
+
+// Bit definition for TIM_CR2 register.
+// Capture/Compare Preloaded Control.
+const int TIM_CR2_CCPC = 0x00000001;
+// Capture/Compare Control Update Selection.
+const int TIM_CR2_CCUS = 0x00000004;
+// Capture/Compare DMA Selection.
+const int TIM_CR2_CCDS = 0x00000008;
+
+const int TIM_CR2_OIS5 = 0x00010000;  // Output Idle state 4 (OC4 output).
+const int TIM_CR2_OIS6 = 0x00040000;  // Output Idle state 4 (OC4 output).
+
+const int TIM_CR2_MMS = 0x0070;  // MMS[2:0] bits (Master Mode Selection).
+const int TIM_CR2_MMS_0 = 0x0010;  // Bit 0.
+const int TIM_CR2_MMS_1 = 0x0020;  // Bit 1.
+const int TIM_CR2_MMS_2 = 0x0040;  // Bit 2.
+
+const int TIM_CR2_MMS2 = 0x00F00000;  // MMS[2:0] bits (Master Mode Selection).
+const int TIM_CR2_MMS2_0 = 0x00100000;  // Bit 0.
+const int TIM_CR2_MMS2_1 = 0x00200000;  // Bit 1.
+const int TIM_CR2_MMS2_2 = 0x00400000;  // Bit 2.
+const int TIM_CR2_MMS2_3 = 0x00800000;  // Bit 2.
+
+const int TIM_CR2_TI1S = 0x0080;  // TI1 Selection.
+const int TIM_CR2_OIS1 = 0x0100;  // Output Idle state 1 (OC1 output).
+const int TIM_CR2_OIS1N = 0x0200;  // Output Idle state 1 (OC1N output).
+const int TIM_CR2_OIS2 = 0x0400;  // Output Idle state 2 (OC2 output).
+const int TIM_CR2_OIS2N = 0x0800;  // Output Idle state 2 (OC2N output).
+const int TIM_CR2_OIS3 = 0x1000;  // Output Idle state 3 (OC3 output).
+const int TIM_CR2_OIS3N = 0x2000;  // Output Idle state 3 (OC3N output).
+const int TIM_CR2_OIS4 = 0x4000;  // Output Idle state 4 (OC4 output).
+
+// Bit definition for TIM_SMCR register.
+// SMS[2:0] bits (Slave mode selection).
+const int TIM_SMCR_SMS = 0x00010007;
+const int TIM_SMCR_SMS_0 = 0x00000001;  // Bit 0.
+const int TIM_SMCR_SMS_1 = 0x00000002;  // Bit 1.
+const int TIM_SMCR_SMS_2 = 0x00000004;  // Bit 2.
+const int TIM_SMCR_SMS_3 = 0x00010000;  // Bit 3.
+const int TIM_SMCR_OCCS = 0x00000008;  //  OCREF clear selection.
+
+const int TIM_SMCR_TS = 0x0070;  // TS[2:0] bits (Trigger selection).
+const int TIM_SMCR_TS_0 = 0x0010;  // Bit 0.
+const int TIM_SMCR_TS_1 = 0x0020;  // Bit 1.
+const int TIM_SMCR_TS_2 = 0x0040;  // Bit 2.
+
+const int TIM_SMCR_MSM = 0x0080;  // Master/slave mode.
+
+const int TIM_SMCR_ETF = 0x0F00;  // ETF[3:0] bits (External trigger filter).
+const int TIM_SMCR_ETF_0 = 0x0100;  // Bit 0.
+const int TIM_SMCR_ETF_1 = 0x0200;  // Bit 1.
+const int TIM_SMCR_ETF_2 = 0x0400;  // Bit 2.
+const int TIM_SMCR_ETF_3 = 0x0800;  // Bit 3.
+// ETPS[1:0] bits (External trigger prescaler).
+const int TIM_SMCR_ETPS = 0x3000;
+const int TIM_SMCR_ETPS_0 = 0x1000;  // Bit 0.
+const int TIM_SMCR_ETPS_1 = 0x2000;  // Bit 1.
+
+const int TIM_SMCR_ECE = 0x4000;  // External clock enable.
+const int TIM_SMCR_ETP = 0x8000;  // External trigger polarity.
+
+// Bit definition for TIM_DIER register.
+const int TIM_DIER_UIE = 0x0001;  // Update interrupt enable.
+const int TIM_DIER_CC1IE = 0x0002;  // Capture/Compare 1 interrupt enable.
+const int TIM_DIER_CC2IE = 0x0004;  // Capture/Compare 2 interrupt enable.
+const int TIM_DIER_CC3IE = 0x0008;  // Capture/Compare 3 interrupt enable.
+const int TIM_DIER_CC4IE = 0x0010;  // Capture/Compare 4 interrupt enable.
+const int TIM_DIER_COMIE = 0x0020;  // COM interrupt enable.
+const int TIM_DIER_TIE = 0x0040;  // Trigger interrupt enable.
+const int TIM_DIER_BIE = 0x0080;  // Break interrupt enable.
+const int TIM_DIER_UDE = 0x0100;  // Update DMA request enable.
+const int TIM_DIER_CC1DE = 0x0200;  // Capture/Compare 1 DMA request enable.
+const int TIM_DIER_CC2DE = 0x0400;  // Capture/Compare 2 DMA request enable.
+const int TIM_DIER_CC3DE = 0x0800;  // Capture/Compare 3 DMA request enable.
+const int TIM_DIER_CC4DE = 0x1000;  // Capture/Compare 4 DMA request enable.
+const int TIM_DIER_COMDE = 0x2000;  // COM DMA request enable.
+const int TIM_DIER_TDE = 0x4000;  // Trigger DMA request enable.
+
+// Bit definition for TIM_SR register.
+const int TIM_SR_UIF = 0x0001;  // Update interrupt Flag.
+const int TIM_SR_CC1IF = 0x0002;  // Capture/Compare 1 interrupt Flag.
+const int TIM_SR_CC2IF = 0x0004;  // Capture/Compare 2 interrupt Flag.
+const int TIM_SR_CC3IF = 0x0008;  // Capture/Compare 3 interrupt Flag.
+const int TIM_SR_CC4IF = 0x0010;  // Capture/Compare 4 interrupt Flag.
+const int TIM_SR_COMIF = 0x0020;  // COM interrupt Flag.
+const int TIM_SR_TIF = 0x0040;  // Trigger interrupt Flag.
+const int TIM_SR_BIF = 0x0080;  // Break interrupt Flag.
+const int TIM_SR_B2IF = 0x0100;  // Break2 interrupt Flag.
+const int TIM_SR_CC1OF = 0x0200;  // Capture/Compare 1 Overcapture Flag.
+const int TIM_SR_CC2OF = 0x0400;  // Capture/Compare 2 Overcapture Flag.
+const int TIM_SR_CC3OF = 0x0800;  // Capture/Compare 3 Overcapture Flag.
+const int TIM_SR_CC4OF = 0x1000;  // Capture/Compare 4 Overcapture Flag.
+
+// Bit definition for TIM_EGR register.
+// Update Generation.
+const int TIM_EGR_UG = 0x00000001;
+// Capture/Compare 1 Generation.
+const int TIM_EGR_CC1G = 0x00000002;
+// Capture/Compare 2 Generation.
+const int TIM_EGR_CC2G = 0x00000004;
+// Capture/Compare 3 Generation.
+const int TIM_EGR_CC3G = 0x00000008;
+// Capture/Compare 4 Generation.
+const int TIM_EGR_CC4G = 0x00000010;
+// Capture/Compare Control Update Generation.
+const int TIM_EGR_COMG = 0x00000020;
+// Trigger Generation.
+const int TIM_EGR_TG = 0x00000040;
+// Break Generation.
+const int TIM_EGR_BG = 0x00000080;
+// Break2 Generation.
+const int TIM_EGR_B2G = 0x00000100;
+
+// Bit definition for TIM_CCMR1 register.
+// CC1S[1:0] bits (Capture/Compare 1 Selection).
+const int TIM_CCMR1_CC1S = 0x00000003;
+const int TIM_CCMR1_CC1S_0 = 0x00000001;  // Bit 0.
+const int TIM_CCMR1_CC1S_1 = 0x00000002;  // Bit 1.
+// Output Compare 1 Fast enable.
+const int TIM_CCMR1_OC1FE = 0x00000004;
+// Output Compare 1 Preload enable.
+const int TIM_CCMR1_OC1PE = 0x00000008;
+
+// OC1M[2:0] bits (Output Compare 1 Mode).
+const int TIM_CCMR1_OC1M = 0x00010070;
+const int TIM_CCMR1_OC1M_0 = 0x00000010;  // Bit 0.
+const int TIM_CCMR1_OC1M_1 = 0x00000020;  // Bit 1.
+const int TIM_CCMR1_OC1M_2 = 0x00000040;  // Bit 2.
+const int TIM_CCMR1_OC1M_3 = 0x00010000;  // Bit 3.
+// Output Compare 1Clear Enable.
+const int TIM_CCMR1_OC1CE = 0x00000080;
+// CC2S[1:0] bits (Capture/Compare 2 Selection).
+const int TIM_CCMR1_CC2S = 0x00000300;
+const int TIM_CCMR1_CC2S_0 = 0x00000100;  // Bit 0.
+const int TIM_CCMR1_CC2S_1 = 0x00000200;  // Bit 1.
+// Output Compare 2 Fast enable.
+const int TIM_CCMR1_OC2FE = 0x00000400;
+// Output Compare 2 Preload enable.
+const int TIM_CCMR1_OC2PE = 0x00000800;
+// OC2M[2:0] bits (Output Compare 2 Mode).
+const int TIM_CCMR1_OC2M = 0x01007000;
+const int TIM_CCMR1_OC2M_0 = 0x00001000;  // Bit 0.
+const int TIM_CCMR1_OC2M_1 = 0x00002000;  // Bit 1.
+const int TIM_CCMR1_OC2M_2 = 0x00004000;  // Bit 2.
+const int TIM_CCMR1_OC2M_3 = 0x01000000;  // Bit 3.
+
+const int TIM_CCMR1_OC2CE = 0x00008000;  // Output Compare 2 Clear Enable.
+
+/*----------------------------------------------------------------------------*/
+// IC1PSC[1:0] bits (Input Capture 1 Prescaler).
+const int TIM_CCMR1_IC1PSC = 0x000C;
+const int TIM_CCMR1_IC1PSC_0 = 0x0004;  // Bit 0.
+const int TIM_CCMR1_IC1PSC_1 = 0x0008;  // Bit 1.
+// IC1F[3:0] bits (Input Capture 1 Filter).
+const int TIM_CCMR1_IC1F = 0x00F0;
+const int TIM_CCMR1_IC1F_0 = 0x0010;  // Bit 0.
+const int TIM_CCMR1_IC1F_1 = 0x0020;  // Bit 1.
+const int TIM_CCMR1_IC1F_2 = 0x0040;  // Bit 2.
+const int TIM_CCMR1_IC1F_3 = 0x0080;  // Bit 3.
+// IC2PSC[1:0] bits (Input Capture 2 Prescaler).
+const int TIM_CCMR1_IC2PSC = 0x0C00;
+const int TIM_CCMR1_IC2PSC_0 = 0x0400;  // Bit 0.
+const int TIM_CCMR1_IC2PSC_1 = 0x0800;  // Bit 1.
+// IC2F[3:0] bits (Input Capture 2 Filter).
+const int TIM_CCMR1_IC2F = 0xF000;
+const int TIM_CCMR1_IC2F_0 = 0x1000;  // Bit 0.
+const int TIM_CCMR1_IC2F_1 = 0x2000;  // Bit 1.
+const int TIM_CCMR1_IC2F_2 = 0x4000;  // Bit 2.
+const int TIM_CCMR1_IC2F_3 = 0x8000;  // Bit 3.
+
+// Bit definition for TIM_CCMR2 register.
+// CC3S[1:0] bits (Capture/Compare 3 Selection).
+const int TIM_CCMR2_CC3S = 0x00000003;
+const int TIM_CCMR2_CC3S_0 = 0x00000001;  // Bit 0.
+const int TIM_CCMR2_CC3S_1 = 0x00000002;  // Bit 1.
+// Output Compare 3 Fast enable.
+const int TIM_CCMR2_OC3FE = 0x00000004;
+// Output Compare 3 Preload enable.
+const int TIM_CCMR2_OC3PE = 0x00000008;
+// OC3M[2:0] bits (Output Compare 3 Mode).
+const int TIM_CCMR2_OC3M = 0x00010070;
+const int TIM_CCMR2_OC3M_0 = 0x00000010;  // Bit 0.
+const int TIM_CCMR2_OC3M_1 = 0x00000020;  // Bit 1.
+const int TIM_CCMR2_OC3M_2 = 0x00000040;  // Bit 2.
+const int TIM_CCMR2_OC3M_3 = 0x00010000;  // Bit 3.
+
+const int TIM_CCMR2_OC3CE = 0x00000080;  // Output Compare 3 Clear Enable.
+// CC4S[1:0] bits (Capture/Compare 4 Selection).
+const int TIM_CCMR2_CC4S = 0x00000300;
+const int TIM_CCMR2_CC4S_0 = 0x00000100;  // Bit 0.
+const int TIM_CCMR2_CC4S_1 = 0x00000200;  // Bit 1.
+
+const int TIM_CCMR2_OC4FE = 0x00000400;  // Output Compare 4 Fast enable.
+const int TIM_CCMR2_OC4PE = 0x00000800;  // Output Compare 4 Preload enable.
+// OC4M[2:0] bits (Output Compare 4 Mode).
+const int TIM_CCMR2_OC4M = 0x01007000;
+const int TIM_CCMR2_OC4M_0 = 0x00001000;  // Bit 0.
+const int TIM_CCMR2_OC4M_1 = 0x00002000;  // Bit 1.
+const int TIM_CCMR2_OC4M_2 = 0x00004000;  // Bit 2.
+const int TIM_CCMR2_OC4M_3 = 0x01000000;  // Bit 3.
+
+const int TIM_CCMR2_OC4CE = 0x8000;  // Output Compare 4 Clear Enable.
+
+/*----------------------------------------------------------------------------*/
+// IC3PSC[1:0] bits (Input Capture 3 Prescaler).
+const int TIM_CCMR2_IC3PSC = 0x000C;
+const int TIM_CCMR2_IC3PSC_0 = 0x0004;  // Bit 0.
+const int TIM_CCMR2_IC3PSC_1 = 0x0008;  // Bit 1.
+
+const int TIM_CCMR2_IC3F = 0x00F0;  // IC3F[3:0] bits (Input Capture 3 Filter).
+const int TIM_CCMR2_IC3F_0 = 0x0010;  // Bit 0.
+const int TIM_CCMR2_IC3F_1 = 0x0020;  // Bit 1.
+const int TIM_CCMR2_IC3F_2 = 0x0040;  // Bit 2.
+const int TIM_CCMR2_IC3F_3 = 0x0080;  // Bit 3.
+// IC4PSC[1:0] bits (Input Capture 4 Prescaler).
+const int TIM_CCMR2_IC4PSC = 0x0C00;
+const int TIM_CCMR2_IC4PSC_0 = 0x0400;  // Bit 0.
+const int TIM_CCMR2_IC4PSC_1 = 0x0800;  // Bit 1.
+
+const int TIM_CCMR2_IC4F = 0xF000;  // IC4F[3:0] bits (Input Capture 4 Filter).
+const int TIM_CCMR2_IC4F_0 = 0x1000;  // Bit 0.
+const int TIM_CCMR2_IC4F_1 = 0x2000;  // Bit 1.
+const int TIM_CCMR2_IC4F_2 = 0x4000;  // Bit 2.
+const int TIM_CCMR2_IC4F_3 = 0x8000;  // Bit 3.
+
+// Bit definition for TIM_CCER register.
+const int TIM_CCER_CC1E = 0x00000001;  // Capture/Compare 1 output enable.
+const int TIM_CCER_CC1P = 0x00000002;  // Capture/Compare 1 output Polarity.
+// Capture/Compare 1 Complementary output enable.
+const int TIM_CCER_CC1NE = 0x00000004;
+// Capture/Compare 1 Complementary output Polarity.
+const int TIM_CCER_CC1NP = 0x00000008;
+const int TIM_CCER_CC2E = 0x00000010;  // Capture/Compare 2 output enable.
+const int TIM_CCER_CC2P = 0x00000020;  // Capture/Compare 2 output Polarity.
+// Capture/Compare 2 Complementary output enable.
+const int TIM_CCER_CC2NE = 0x00000040;
+// Capture/Compare 2 Complementary output Polarity.
+const int TIM_CCER_CC2NP = 0x00000080;
+const int TIM_CCER_CC3E = 0x00000100;  // Capture/Compare 3 output enable.
+const int TIM_CCER_CC3P = 0x00000200;  // Capture/Compare 3 output Polarity.
+// Capture/Compare 3 Complementary output enable.
+const int TIM_CCER_CC3NE = 0x00000400;
+// Capture/Compare 3 Complementary output Polarity.
+const int TIM_CCER_CC3NP = 0x00000800;
+const int TIM_CCER_CC4E = 0x00001000;  // Capture/Compare 4 output enable.
+const int TIM_CCER_CC4P = 0x00002000;  // Capture/Compare 4 output Polarity.
+// Capture/Compare 4 Complementary output Polarity.
+const int TIM_CCER_CC4NP = 0x00008000;
+const int TIM_CCER_CC5E = 0x00010000;  // Capture/Compare 5 output enable.
+const int TIM_CCER_CC5P = 0x00020000;  // Capture/Compare 5 output Polarity.
+const int TIM_CCER_CC6E = 0x00100000;  // Capture/Compare 6 output enable.
+const int TIM_CCER_CC6P = 0x00200000;  // Capture/Compare 6 output Polarity.
+
+// Bit definition for TIM_BDTR register.
+// DTG[0:7] bits (Dead-Time Generator set-up).
+const int TIM_BDTR_DTG = 0x000000FF;
+const int TIM_BDTR_DTG_0 = 0x00000001;  // Bit 0.
+const int TIM_BDTR_DTG_1 = 0x00000002;  // Bit 1.
+const int TIM_BDTR_DTG_2 = 0x00000004;  // Bit 2.
+const int TIM_BDTR_DTG_3 = 0x00000008;  // Bit 3.
+const int TIM_BDTR_DTG_4 = 0x00000010;  // Bit 4.
+const int TIM_BDTR_DTG_5 = 0x00000020;  // Bit 5.
+const int TIM_BDTR_DTG_6 = 0x00000040;  // Bit 6.
+const int TIM_BDTR_DTG_7 = 0x00000080;  // Bit 7.
+
+const int TIM_BDTR_LOCK = 0x00000300;  // LOCK[1:0] bits (Lock Configuration).
+const int TIM_BDTR_LOCK_0 = 0x00000100;  // Bit 0.
+const int TIM_BDTR_LOCK_1 = 0x00000200;  // Bit 1.
+
+const int TIM_BDTR_OSSI = 0x00000400;  // Off-State Selection for Idle mode.
+const int TIM_BDTR_OSSR = 0x00000800;  // Off-State Selection for Run mode.
+const int TIM_BDTR_BKE = 0x00001000;  // Break enable.
+const int TIM_BDTR_BKP = 0x00002000;  // Break Polarity.
+const int TIM_BDTR_AOE = 0x00004000;  // Automatic Output enable.
+const int TIM_BDTR_MOE = 0x00008000;  // Main Output enable.
+const int TIM_BDTR_BKF = 0x000F0000;  // Break Filter for Break1.
+const int TIM_BDTR_BK2F = 0x00F00000;  // Break Filter for Break2.
+const int TIM_BDTR_BK2E = 0x01000000;  // Break enable for Break2.
+const int TIM_BDTR_BK2P = 0x02000000;  // Break Polarity for Break2.
+
+// Bit definition for TIM_DCR register.
+const int TIM_DCR_DBA = 0x001F;  // DBA[4:0] bits (DMA Base Address).
+const int TIM_DCR_DBA_0 = 0x0001;  // Bit 0.
+const int TIM_DCR_DBA_1 = 0x0002;  // Bit 1.
+const int TIM_DCR_DBA_2 = 0x0004;  // Bit 2.
+const int TIM_DCR_DBA_3 = 0x0008;  // Bit 3.
+const int TIM_DCR_DBA_4 = 0x0010;  // Bit 4.
+
+const int TIM_DCR_DBL = 0x1F00;  // DBL[4:0] bits (DMA Burst Length).
+const int TIM_DCR_DBL_0 = 0x0100;  // Bit 0.
+const int TIM_DCR_DBL_1 = 0x0200;  // Bit 1.
+const int TIM_DCR_DBL_2 = 0x0400;  // Bit 2.
+const int TIM_DCR_DBL_3 = 0x0800;  // Bit 3.
+const int TIM_DCR_DBL_4 = 0x1000;  // Bit 4.
+
+// Bit definition for TIM_OR regiter.
+// TI4_RMP[1:0] bits (TIM5 Input 4 remap).
+const int TIM_OR_TI4_RMP = 0x00C0;
+const int TIM_OR_TI4_RMP_0 = 0x0040;  // Bit 0.
+const int TIM_OR_TI4_RMP_1 = 0x0080;  // Bit 1.
+// ITR1_RMP[1:0] bits (TIM2 Internal trigger 1 remap).
+const int TIM_OR_ITR1_RMP = 0x0C00;
+const int TIM_OR_ITR1_RMP_0 = 0x0400;  // Bit 0.
+const int TIM_OR_ITR1_RMP_1 = 0x0800;  // Bit 1.
+
+// Bit definition for TIM_CCMR3 register.
+const int TIM_CCMR3_OC5FE = 0x00000004;  // Output Compare 5 Fast enable.
+const int TIM_CCMR3_OC5PE = 0x00000008;  // Output Compare 5 Preload enable.
+// OC5M[2:0] bits (Output Compare 5 Mode).
+const int TIM_CCMR3_OC5M = 0x00010070;
+const int TIM_CCMR3_OC5M_0 = 0x00000010;  // Bit 0.
+const int TIM_CCMR3_OC5M_1 = 0x00000020;  // Bit 1.
+const int TIM_CCMR3_OC5M_2 = 0x00000040;  // Bit 2.
+const int TIM_CCMR3_OC5M_3 = 0x00010000;  // Bit 3.
+
+const int TIM_CCMR3_OC5CE = 0x00000080;  // Output Compare 5 Clear Enable.
+
+const int TIM_CCMR3_OC6FE = 0x00000400;  // Output Compare 4 Fast enable.
+const int TIM_CCMR3_OC6PE = 0x00000800;  // Output Compare 4 Preload enable.
+// OC4M[2:0] bits (Output Compare 4 Mode).
+const int TIM_CCMR3_OC6M = 0x01007000;
+const int TIM_CCMR3_OC6M_0 = 0x00001000;  // Bit 0.
+const int TIM_CCMR3_OC6M_1 = 0x00002000;  // Bit 1.
+const int TIM_CCMR3_OC6M_2 = 0x00004000;  // Bit 2.
+const int TIM_CCMR3_OC6M_3 = 0x01000000;  // Bit 3.
+
+const int TIM_CCMR3_OC6CE = 0x00008000;  // Output Compare 4 Clear Enable.
+
+// Bit definition for TIM_CCR5 register.
+const int TIM_CCR5_GC5C1 = 0x20000000;  // Group Channel 5 and Channel 1.
+const int TIM_CCR5_GC5C2 = 0x40000000;  // Group Channel 5 and Channel 2.
+const int TIM_CCR5_GC5C3 = 0x80000000;  // Group Channel 5 and Channel 3.
+

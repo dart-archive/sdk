@@ -29,6 +29,24 @@ class STM32F746GDiscovery {
   static const Pin A4 = STM32Pin.PF7;
   static const Pin A5 = STM32Pin.PF6;
 
+  static const Pin D0 = STM32Pin.PC7;
+  static const Pin D1 = STM32Pin.PC6;
+  static const Pin D2 = STM32Pin.PG6;
+  static const Pin D3 = STM32Pin.PB4;
+  static const Pin D4 = STM32Pin.PG7;
+  static const Pin D5 = STM32Pin.PA8;
+  static const Pin D6 = STM32Pin.PH6;
+  static const Pin D7 = STM32Pin.PI3;
+  static const Pin D8 = STM32Pin.PI2;
+  static const Pin D9 = STM32Pin.PA15;
+  static const Pin D10 = STM32Pin.PI0;
+  static const Pin D11 = STM32Pin.PB15;
+  static const Pin D12 = STM32Pin.PB14;
+  static const Pin D13 = STM32Pin.PI1;
+  static const Pin D14 = STM32Pin.PB9;
+  static const Pin D15 = STM32Pin.PB8;
+  
+
   STM32Gpio _gpio;
   Uart _uart;
   I2CBus _i2c1;
