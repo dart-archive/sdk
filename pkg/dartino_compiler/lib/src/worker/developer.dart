@@ -1829,9 +1829,8 @@ Future<List<Device>> discoverUsbDevices() async {
       print('USB devices detected:');
       for (Device device in devices) {
         var line = new StringBuffer('  ${device.name}');
-        if (device.version != null) line.write(', version: ${device.version}');
         if (device.build != null) {
-          line.write(', ST-LINK/V2-1 build: ${device.build}');
+          line.write(', Firmware Build: ${device.build}');
         }
         print(line.toString());
       }

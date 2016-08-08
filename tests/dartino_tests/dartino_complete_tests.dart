@@ -75,7 +75,7 @@ Future<MockClientConnection> testComplete(List<String> arguments) async {
 
   var exitCode = await runZoned(() {
     return client.sentence.performVerb(context);
-  }, zoneSpecification: new ZoneSpecification(print: (z1, zd, z2, line) {
+  }, zoneSpecification: new ZoneSpecification(print: (_1, _2, _3, line) {
     client.printLineOnStdout(line);
   }), onError: (e, s) {
     Expect.fail('$e\n$s');
