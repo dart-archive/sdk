@@ -156,16 +156,16 @@ abstract class GpioOutputPin extends GpioPin {
 /// Pin on a MCU/SoC configured for PWM output.
 abstract class GpioPwmOutputPin extends GpioPin {
   /// Gets current PWM frequency. 
-  double get frequency;
+  num get frequency;
   
   /// Sets the pin to generate PWM signal with given frequency.
-  void set frequency(double freq);
+  void set frequency(num freq);
   
   /// Gets current PWM pulse length in percent.
-  double get pulse;
+  num get pulse;
 
   /// Sets current PWM pulse length in percent.
-  void set pulse(double percent);
+  void set pulse(num percent);
 }
 
 /// Pin on a MCU/SoC configured for GPIO input.

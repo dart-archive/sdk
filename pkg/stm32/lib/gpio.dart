@@ -325,8 +325,8 @@ class Stm32PwmOutputPin extends GpioPwmOutputPin {
   final STM32Pin _pin;
   final int _busClock;
   int _period;
-  double _pulse;
-  double _frequency;
+  num _pulse;
+  num _frequency;
 
   Stm32PwmOutputPin._(this._pin, this._busClock) {
     _pin._pwm.timer.setup();
@@ -343,9 +343,9 @@ class Stm32PwmOutputPin extends GpioPwmOutputPin {
     output((_period * _pulse / 100.0).round());
   }
 
-  double get frequency => _frequency;
+  num get frequency => _frequency;
 
-  void set frequency(double freq) {
+  void set frequency(num freq) {
     _frequency = freq;
     int ticks = (_busClock / freq).round();
     int err = ticks;
@@ -368,9 +368,9 @@ class Stm32PwmOutputPin extends GpioPwmOutputPin {
     _outputPulse();
   }
 
-  double get pulse => _pulse;
+  num get pulse => _pulse;
 
-  void set pulse(double value) {
+  void set pulse(num value) {
     _pulse = value;
     _outputPulse();
   }
