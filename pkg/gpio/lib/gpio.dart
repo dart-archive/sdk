@@ -153,6 +153,21 @@ abstract class GpioOutputPin extends GpioPin {
   bool toggle() => state = !state;
 }
 
+/// Pin on a MCU/SoC configured for PWM output.
+abstract class GpioPwmOutputPin extends GpioPin {
+  /// Gets current PWM frequency. 
+  double get frequency;
+  
+  /// Sets the pin to generate PWM signal with given frequency.
+  void set frequency(double freq);
+  
+  /// Gets current PWM pulse length in percent.
+  double get pulse;
+
+  /// Sets current PWM pulse length in percent.
+  void set pulse(double percent);
+}
+
 /// Pin on a MCU/SoC configured for GPIO input.
 abstract class GpioInputPin extends GpioPin {
   /// Gets the state of the GPIO pin.

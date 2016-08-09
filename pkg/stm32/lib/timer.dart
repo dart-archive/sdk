@@ -37,7 +37,7 @@ class StmTimer {
   static const StmTimer timer12 =
     const StmTimer(9, TIM12_BASE, RCC.APB1ENR, RCC_APB1ENR_TIM12EN);
 
-  const StmTimer(this.alternativeFunction, this._base, 
+  const StmTimer(this.alternativeFunction, this._base,
     this._enableReg, this._enableMask);
 
   int _read(int offset) {
@@ -67,6 +67,11 @@ class StmTimer {
 
   setPeriod(int period) {
     _write(TIM.ARR, period);
+  }
+
+  // Pick appropriate clock for this timer.
+  int busClock(int apb1Clock, int apb2Clock) {
+    return _enableReg == RCC.APB2ENR ? apb2Clock : apb1Clock;
   }
 
   setup() {

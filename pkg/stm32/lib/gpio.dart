@@ -321,14 +321,58 @@ class _STM32GpioOutputPin extends GpioOutputPin {
 }
 
 /// Pin on the STM32 MCU configured for PWM output.
-class Stm32PwmOutputPin extends GpioPin {
+class Stm32PwmOutputPin extends GpioPwmOutputPin {
   final STM32Pin _pin;
-  Stm32PwmOutputPin._(this._pin) {
+  final int _busClock;
+  int _period;
+  double _pulse;
+  double _frequency;
+
+  Stm32PwmOutputPin._(this._pin, this._busClock) {
     _pin._pwm.timer.setup();
+    _pulse = 0.0;
+    _frequency = 0.0;
+    _period = 0;
   }
   
   Pin get pin {
-    return pin;
+    return _pin;
+  }
+
+  void _outputPulse() {
+    output((_period * _pulse / 100.0).round());
+  }
+
+  double get frequency => _frequency;
+
+  void set frequency(double freq) {
+    _frequency = freq;
+    int ticks = (_busClock / freq).round();
+    int err = ticks;
+    int bestP = 0, bestQ = 0;
+    for (int p = 0; p < 65535; p++) {
+      int q = (ticks / (p + 1)).round() - 1;
+      if(q > 65535) continue;
+      int n = (p + 1) * (q + 1);
+      int newErr = (ticks - n).abs();
+      if (newErr < err) {
+        err = newErr;
+        bestP = p;
+        bestQ = q;
+      }
+      if (err == 0) break;
+    }
+    prescaler = bestP;
+    period = bestQ;
+    // Reset the pwm output with new prescaler and period.
+    _outputPulse();
+  }
+
+  double get pulse => _pulse;
+
+  void set pulse(double value) {
+    _pulse = value;
+    _outputPulse();
   }
 
   /// Set the prescaler value, controls the duration of the timer's tick.
@@ -338,6 +382,7 @@ class Stm32PwmOutputPin extends GpioPin {
 
   /// Set the period value, which is upper bound for the counting.
   void set period(int period) {
+    _period = period;
     _pin._pwm.timer.setPeriod(period);
   }
 
@@ -365,6 +410,11 @@ class _STM32GpioInputPin extends GpioInputPin {
 
 /// Access to STM32 MCU GPIO interface to configure GPIO pins.
 class STM32Gpio extends Gpio {
+  int _apb1Clock;
+  int _apb2Clock;
+
+  STM32Gpio(this._apb1Clock, this._apb2Clock);
+
   GpioOutputPin initOutput(Pin pin) {
     _init(pin, GPIO_MODE_OUTPUT_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH);
     return new _STM32GpioOutputPin._(pin);
@@ -387,7 +437,8 @@ class STM32Gpio extends Gpio {
     }
     _init(pin, GPIO_MODE_AF_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH);
     sp.setAlternateFunction(sp._pwm.timer.alternativeFunction);
-    return new Stm32PwmOutputPin._(pin);
+    return new Stm32PwmOutputPin._(pin, 
+      sp._pwm.timer.busClock(_apb1Clock, _apb2Clock));
   }
 
   /// Initializes a STM32 pin for analog mode. Disables output buffer, Schmitt

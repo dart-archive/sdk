@@ -14,6 +14,8 @@ import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
 
 class STM32F411RENucleo {
+  static const int apb1Clock = 100000000;
+  static const int apb2Clock = 100000000;
   /// GPIO pin for on-board green LED.
   static const Pin LED2 = STM32Pin.PA5;
   /// GPIO pin for on-board blue button.
@@ -55,7 +57,7 @@ class STM32F411RENucleo {
 
   Gpio get gpio {
     if (_gpio == null) {
-      _gpio = new STM32Gpio();
+      _gpio = new STM32Gpio(apb1Clock, apb2Clock);
     }
     return _gpio;
   }

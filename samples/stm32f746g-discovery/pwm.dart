@@ -14,12 +14,11 @@ main() {
     gpio.initPwmOutput(STM32F746GDiscovery.D10),
     gpio.initPwmOutput(STM32F746GDiscovery.D11)
   ];
-  // Set different frequences on each pin.
+  // Set different frequences and pulses on each pin.
   // Note: these that share a timer will share the frequency.
   for(int i = 0; i < pins.length; i++){
-    pins[i].prescaler = (i + 1) * 100 - 1;
-    pins[i].period = 9999;
-    pins[i].output(i * 1000 + 1000);
+    pins[i].frequency = (i + 1) * 100;
+    pins[i].pulse = (i+1) * 10;
   }
   while(true){
     sleep(1);

@@ -16,6 +16,8 @@ import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
 
 class STM32F746GDiscovery {
+  static const int apb1Clock = 100000000;
+  static const int apb2Clock = 200000000;
   /// GPIO pin for on-board green LED.
   static const Pin LED1 = STM32Pin.PI1;
   /// GPIO pin for on-board blue button.
@@ -34,12 +36,12 @@ class STM32F746GDiscovery {
   static const Pin D2 = STM32Pin.PG6;
   static const Pin D3 = STM32Pin.PB4;
   static const Pin D4 = STM32Pin.PG7;
-  static const Pin D5 = STM32Pin.PA8;
+  static const Pin D5 = STM32Pin.PI0;
   static const Pin D6 = STM32Pin.PH6;
   static const Pin D7 = STM32Pin.PI3;
   static const Pin D8 = STM32Pin.PI2;
   static const Pin D9 = STM32Pin.PA15;
-  static const Pin D10 = STM32Pin.PI0;
+  static const Pin D10 = STM32Pin.PA8;
   static const Pin D11 = STM32Pin.PB15;
   static const Pin D12 = STM32Pin.PB14;
   static const Pin D13 = STM32Pin.PI1;
@@ -63,7 +65,7 @@ class STM32F746GDiscovery {
 
   Gpio get gpio {
     if (_gpio == null) {
-      _gpio = new STM32Gpio();
+      _gpio = new STM32Gpio(apb1Clock, apb2Clock);
     }
     return _gpio;
   }
