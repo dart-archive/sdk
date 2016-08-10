@@ -162,7 +162,7 @@ class Socket extends _SocketBase implements system.Socket {
       int events = _waitForEvent(SOCKET_READ | SOCKET_CLOSED);
       int read = 0;
       if ((events & SOCKET_READ) != 0) {
-        read = _recv.icall$4(_socket, address + offset, bytes - offset);
+        read = _recv.icall$3(_socket, address + offset, bytes - offset);
       }
       if (read == 0 || (events & SOCKET_CLOSED) != 0) {
         if (offset + read < bytes) return null;
