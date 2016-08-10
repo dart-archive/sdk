@@ -189,6 +189,9 @@ abstract class Gpio {
   /// Initialize a GPIO pin for output.
   GpioOutputPin initOutput(Pin pin);
 
+  /// Initialize a GPIO pin for PWM output.
+  GpioPwmOutputPin initPwmOutput(Pin pin);
+
   /// Initialize a GPIO pin for input.
   GpioInputPin initInput(
       Pin pin, {GpioPullUpDown pullUpDown, GpioInterruptTrigger trigger});

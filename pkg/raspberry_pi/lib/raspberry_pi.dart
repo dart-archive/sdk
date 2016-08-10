@@ -132,17 +132,36 @@ class RaspberryPi {
   }
 }
 
+const int _fselInput = 0;
+const int _fselOutput = 1;
+const int _fselAlternativeFn0 = 4;
+const int _fselAlternativeFn1 = 4 + 1;
+const int _fselAlternativeFn2 = 4 + 2;
+const int _fselAlternativeFn3 = 4 + 3;
+const int _fselAlternativeFn4 = 3;
+const int _fselAlternativeFn5 = 2;
+
+class _PwmChannel {
+  final int channel;
+  final int alternativeFunction;
+  const _PwmChannel(this.channel, this.alternativeFunction);
+}
+
 /// Concrete pins on the Raspberry Pi.
 class RaspberryPiPin implements Pin {
   static const Pin GPIO4 = const RaspberryPiPin('GPIO4', 4);
   static const Pin GPIO5 = const RaspberryPiPin('GPIO5', 5);
   static const Pin GPIO6 = const RaspberryPiPin('GPIO6', 6);
-  static const Pin GPIO12 = const RaspberryPiPin('GPIO12', 12);
-  static const Pin GPIO13 = const RaspberryPiPin('GPIO13', 13);
+  static const Pin GPIO12 = const RaspberryPiPin('GPIO12', 12,
+    const _PwmChannel(0, _fselAlternativeFn0));
+  static const Pin GPIO13 = const RaspberryPiPin('GPIO13', 13,
+    const _PwmChannel(1, _fselAlternativeFn0));
   static const Pin GPIO16 = const RaspberryPiPin('GPIO16', 16);
   static const Pin GPIO17 = const RaspberryPiPin('GPIO17', 17);
-  static const Pin GPIO18 = const RaspberryPiPin('GPIO18', 18);
-  static const Pin GPIO19 = const RaspberryPiPin('GPIO19', 19);
+  static const Pin GPIO18 = const RaspberryPiPin('GPIO18', 18,
+    const _PwmChannel(0, _fselAlternativeFn5));
+  static const Pin GPIO19 = const RaspberryPiPin('GPIO19', 19,
+    const _PwmChannel(1, _fselAlternativeFn5));
   static const Pin GPIO20 = const RaspberryPiPin('GPIO20', 20);
   static const Pin GPIO21 = const RaspberryPiPin('GPIO21', 21);
   static const Pin GPIO22 = const RaspberryPiPin('GPIO22', 22);
@@ -154,8 +173,9 @@ class RaspberryPiPin implements Pin {
 
   final String name;
   final int pin;
+  final _PwmChannel _pwm;
 
-  const RaspberryPiPin(this.name, this.pin);
+  const RaspberryPiPin(this.name, this.pin, [this._pwm]);
   String toString() => 'GPIO pin $name';
 }
 
@@ -170,6 +190,62 @@ class _RaspberryPiGpioOutputPin extends GpioOutputPin {
 
   void set state(bool newState) {
     _gpio._setState(pin, newState);
+  }
+}
+
+/// Pins on the Raspberry Pi configured for hardware PWM output.
+class _RaspberryPiPwmOutputPin extends GpioPwmOutputPin {
+  static const int _pwmClock = 19200000;  // PWM Clock speed in Hz.
+  final RaspberryPiMemoryMappedGpio _gpio;
+  final Pin _pin;
+  final int _channel;
+  int _divisor;
+  int _period;
+  num _frequency;
+  num _pulse;
+
+  _RaspberryPiPwmOutputPin(this._gpio, this._pin, this._channel)
+      : _divisor = 0,
+        _period = 0,
+        _frequency = 0,
+        _pulse = 0;
+
+  Pin get pin => _pin;
+
+  num get frequency => _frequency;
+
+  void set frequency (num freq) {
+    _frequency = freq;
+    int ticks = (_pwmClock / freq).round();
+    int err = ticks;
+    for(int p = 2; p < 4096; p++) {
+      int q = (ticks / p).round();
+      int newErr = (ticks - p * q).abs();
+      if(newErr < err) {
+        err = newErr;
+        _divisor = p;
+        _period = q;
+      }
+      if(err == 0) {
+        break;
+      }
+    }
+    _gpio._setPwmClock(_divisor);
+    _gpio._enablePwm(_channel);
+    _gpio._setPeriod(_channel, _period);
+    _outPulse();
+  }
+
+  num get pulse => _pulse;
+
+  void set pulse (num length) {
+    _pulse = length;
+    _outPulse();
+  }
+
+  _outPulse() {
+    int out = (_pulse * _period / 100.0).round();
+    _gpio._setLevel(_channel, out);
   }
 }
 
@@ -220,6 +296,8 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
   static const int _baseAddressModel1 = 0x20000000;
   static const int _baseAddressModel2 = 0x3F000000;
   static const int _baseAddressGPIOOffset = 0x00200000;
+  static const int _baseAddressClockOffset = 0x00101000;
+  static const int _baseAddressPwmOffset = 0x0020C000;
 
   // Size of the peripherals area.
   static const int _blockSize = 4096;
@@ -232,9 +310,38 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
   static const int _gpioPullUpPullDown = 37 << 2;
   static const int _gpioPullUpPullDownClockBase = 38 << 2;
 
+  // Offsets for PWM clock registers.
+  static const int _PWMCLK_CNTL = 40 << 2;
+  static const int _PWMCLK_DIV = 41 << 2;
+
+  // Offsets for PWM registers.
+  static const int _PWM_CTL = 0;
+  static const int _PWM_RNG0 = 4 << 2;
+  static const int _PWM_DAT0 = 5 << 2;
+  static const int _PWM_RNG1 = 8 << 2;
+  static const int _PWM_DAT1 = 9 << 2;
+
+  static const int _PWM_PASSWRD = 0x5A << 24;
+
+  // Bit masks for PWM control register.
+  static const int _PWM1_MS_MODE = 0x8000;  // Run in Mark/Space mode.
+  static const int _PWM1_USEFIFO = 0x2000;  // Data from FIFO.
+  static const int _PWM1_REVPOLAR = 0x1000;  // Reverse polarity.
+  static const int _PWM1_OFFSTATE = 0x0800;  // Output Off state.
+  static const int _PWM1_REPEATFF = 0x0400;  // Repeat last value if FIFO empty.
+  static const int _PWM1_SERIAL = 0x0200;  // Run in serial mode.
+  static const int _PWM1_ENABLE = 0x0100;  // Channel enable.
+  static const int _PWM0_MS_MODE = 0x0080;  // Run in Mark/Space mode.
+  static const int _PWM0_CLEAR_FIFO = 0x0040;  // Clear FIFO.
+  static const int _PWM0_USEFIFO = 0x0020;  // Data from FIFO.
+  static const int _PWM0_REVPOLAR = 0x0010;  // Reverse polarity.
+  static const int _PWM0_OFFSTATE = 0x0008;  // Output Off state.
+  static const int _PWM0_REPEATFF = 0x0004;  // Repeat last value if FIFO empty.
+  static const int _PWM0_SERIAL = 0x0002;  // Run in serial mode.
+  static const int _PWM0_ENABLE = 0x0001;  // Channel enable.
+
   int _fd;  // File descriptor for /dev/mem.
-  ForeignPointer _addr;
-  ForeignMemory _mem;
+  ForeignMemory _gpioMem, _pwmMem, _clockMem;
 
   RaspberryPiMemoryMappedGpio() {
     // From /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h.
@@ -255,13 +362,59 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
     const int protWrite = 0x2;  // PROT_WRITE.
     const int mapShared = 0x01;  // MAP_SHARED.
 
-    _addr = _mmap.pcall$6(0, _blockSize, protRead | protWrite, mapShared,
-                          _fd, _baseAddressModel2 + _baseAddressGPIOOffset);
-    _mem = new ForeignMemory.fromAddress(_addr.address, _blockSize);
+    ForeignMemory mapMemory(int offset) {
+      ForeignPointer _addr = _mmap.pcall$6(0, _blockSize, protRead | protWrite,
+        mapShared, _fd, _baseAddressModel2 + offset);
+      return new ForeignMemory.fromAddress(_addr.address, _blockSize);
+    }
+
+    _gpioMem = mapMemory(_baseAddressGPIOOffset);
+    _clockMem = mapMemory(_baseAddressClockOffset);
+    _pwmMem = mapMemory(_baseAddressPwmOffset);
+  }
+
+  void _setPwmClock(int divisor) {
+    // Stop PWM Clock.
+    if (divisor < 0 || divisor > 4096) {
+      throw new ArgumentError("Invalid divisor for RaspberryPi");
+    }
+    _clockMem.setUint32(_PWMCLK_CNTL, _PWM_PASSWRD | 0x01);
+    sleep(1);
+    // Wait for clock busy status to clear.
+    while (_clockMem.getUint32(_PWMCLK_CNTL) & 0x80 != 0) {
+      sleep(1);
+    }
+    _clockMem.setUint32(_PWMCLK_DIV, _PWM_PASSWRD | (divisor << 12));
+    _clockMem.setUint32(_PWMCLK_CNTL, _PWM_PASSWRD | 0x11);
+  }
+
+  void _enablePwm(int channel) {
+    int control = _pwmMem.getUint32(_PWM_CTL);
+    if (channel == 0) {
+      _pwmMem.setUint32(_PWM_CTL, control | _PWM0_MS_MODE | _PWM0_ENABLE);
+    } else if(channel == 1) {
+      _pwmMem.setUint32(_PWM_CTL, control | _PWM1_MS_MODE | _PWM1_ENABLE);
+    }
+  }
+
+  void _setPeriod(int channel, int period) {
+    if (channel == 0) {
+      _pwmMem.setUint32(_PWM_RNG0, period);
+    } else if (channel == 1) {
+      _pwmMem.setUint32(_PWM_RNG1, period);
+    }
+  }
+
+  void _setLevel(int channel, int value) {
+    if (channel == 0) {
+      _pwmMem.setUint32(_PWM_DAT0, value);
+    } else if (channel == 1) {
+      _pwmMem.setUint32(_PWM_DAT1, value);
+    }
   }
 
   GpioOutputPin initOutput(Pin pin) {
-    _init(pin, true, GpioPullUpDown.floating);
+    _init(pin, _fselOutput, GpioPullUpDown.floating);
     return new _RaspberryPiGpioOutputPin(this, pin);
   }
 
@@ -271,11 +424,23 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
       throw new UnsupportedError(
           'trigger not supported for Raspberry Pi memory mapped GPIO');
     }
-    _init(pin, false, pullUpDown);
+    _init(pin, _fselInput, pullUpDown);
     return new _RaspberryPiGpioInputPin(this, pin);
   }
 
-  void _init(Pin pin, bool output, GpioPullUpDown pullUpDown) {
+  GpioPwmOutputPin initPwmOutput(Pin pin){
+    if (pin is! RaspberryPiPin) {
+      throw new ArgumentError('Illegal pin type');
+    }
+    RaspberryPiPin p = pin;
+    if (p._pwm == null) {
+      throw new ArgumentError('PWM not supported on pin ${pin}');
+    }
+    _init(pin, p._pwm.alternativeFunction, GpioPullUpDown.floating);
+    return new _RaspberryPiPwmOutputPin(this, pin, p._pwm.channel);
+  }
+
+  void _init(Pin pin, int function, GpioPullUpDown pullUpDown) {
     if (pin is! RaspberryPiPin) {
       throw new ArgumentError('Illegal pin type');
     }
@@ -284,14 +449,13 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
     // GPIO function select registers each have 3 bits for 10 pins.
     int fsel = (p.pin ~/ 10);
     int shift = (p.pin % 10) * 3;
-    int function = output ? 1 : 0;
     int offset = _gpioFunctionSelectBase + (fsel << 2);
-    int value = _mem.getUint32(offset);
+    int value = _gpioMem.getUint32(offset);
     value = (value & ~(0x07 << shift)) | function << shift;
-    _mem.setUint32(offset, value);
+    _gpioMem.setUint32(offset, value);
 
     // Configure pull-up/pull-down for input.
-    if (!output) {
+    if (function == _fselInput) {
       // Use 0 for floating, 1 for pull down and 2 for pull-up.
       int register = p.pin ~/ 32;
       int shift = p.pin % 32;
@@ -300,15 +464,15 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
         value = pullUpDown == GpioPullUpDown.pullDown ? 1 : 2;
       }
       // First set the value in the update register.
-      _mem.setUint32(_gpioPullUpPullDown, value);
+      _gpioMem.setUint32(_gpioPullUpPullDown, value);
       sleep(1);  // Datasheet says: "Wait for 150 cycles".
       // Then set the clock bit.
-      _mem.setUint32(
+      _gpioMem.setUint32(
           _gpioPullUpPullDownClockBase + (register << 2), 1 << shift);
       sleep(1);  // Datasheet says: "Wait for 150 cycles".
       // Clear value and clock bit.
-      _mem.setUint32(_gpioPullUpPullDown, 0);
-      _mem.setUint32(_gpioPullUpPullDownClockBase + (register << 2), 0);
+      _gpioMem.setUint32(_gpioPullUpPullDown, 0);
+      _gpioMem.setUint32(_gpioPullUpPullDownClockBase + (register << 2), 0);
     }
   }
 
@@ -322,9 +486,9 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
     int register = p.pin ~/ 32;
     int shift = p.pin % 32;
     if (value) {
-      _mem.setUint32(_gpioOutputSetBase + (register << 2), 1 << shift);
+      _gpioMem.setUint32(_gpioOutputSetBase + (register << 2), 1 << shift);
     } else {
-      _mem.setUint32(_gpioOutputClearBase + (register << 2), 1 << shift);
+      _gpioMem.setUint32(_gpioOutputClearBase + (register << 2), 1 << shift);
     }
   }
 
@@ -337,8 +501,9 @@ class RaspberryPiMemoryMappedGpio implements Gpio {
     // GPIO pin level registers each have 1 bits for 32 pins.
     int register = p.pin ~/ 32;
     int shift = p.pin % 32;
-    return
-        (_mem.getUint32(_gpioPinLevelBase + (register << 2)) & 1 << shift) != 0;
+    int state = 
+      _gpioMem.getUint32(_gpioPinLevelBase + (register << 2)) & (1 << shift);
+    return state != 0;
   }
 }
 
