@@ -23,6 +23,7 @@ class FileSystem {
   static const int kMaxOpenFiles = 20;
 
   FileSystem();
+  ~FileSystem();
 
   // Mount a file system at the given root path.
   int Mount(const char* path, FileSystemDriver* driver);

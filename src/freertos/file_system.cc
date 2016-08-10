@@ -19,6 +19,15 @@ FileSystem::FileSystem() : mutex_(new Mutex()) {
   memset(&open_files_, 0, sizeof(open_files_));
 }
 
+FileSystem::~FileSystem() {
+  delete mutex_;
+  for (int i = 0; i < kMaxMounts; i++) {
+    if (mounts_[i].path != NULL) {
+      free(mounts_[i].path);
+    }
+  }
+}
+
 int FileSystem::Mount(const char* path, FileSystemDriver* driver) {
   ScopedLock locker(mutex_);
 

@@ -25,7 +25,7 @@ class DymmyFileSystemDriver : public FileSystemDriver {
   }
 
   int Close(int handle) {
-    return -EBADFD;
+    return -EBADF;
   }
 
   int Read(int handle, void* buffer, size_t length) {
@@ -80,6 +80,7 @@ TEST_CASE(MountLimit) {
     EXPECT_EQ(-EMFILE, fs->Mount(path, dummy_driver));
   }
   delete fs;
+  delete dummy_driver;
 }
 
 TEST_CASE(DummyFileSystem) {
@@ -88,6 +89,7 @@ TEST_CASE(DummyFileSystem) {
   EXPECT_EQ(0, fs->Mount("/test", dummy_driver));
   EXPECT_EQ(-ENOENT, fs->Open("test"));
   delete fs;
+  delete dummy_driver;
 }
 
 class FixedOneFileFileSystemDriver : public FileSystemDriver {

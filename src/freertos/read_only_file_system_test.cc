@@ -62,8 +62,15 @@ static const char* ro_file_system_content[kRoFileSystemFiles] = {
   "01234567"
 };
 
+static uint8_t* GetAlignedReadOnlyFileSystemData() {
+  uint8_t* aligned = reinterpret_cast<uint8_t*>(malloc(sizeof(ro_file_system)));
+  memcpy(aligned, ro_file_system, sizeof(ro_file_system));
+  return aligned;
+}
+
 TEST_CASE(ReadOnlyFileSystemDriverOpen) {
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   int expected_handle = 0;
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < kRoFileSystemFiles; j++) {
@@ -73,10 +80,12 @@ TEST_CASE(ReadOnlyFileSystemDriverOpen) {
     }
   }
   delete driver;
+  free(data);
 }
 
 TEST_CASE(ReadOnlyFileSystemDriverOpenClose) {
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   int expected_handle = 0;
   for (int i = 0; i < 10; i++) {
     for (int j = 0; j < kRoFileSystemFiles; j++) {
@@ -90,11 +99,13 @@ TEST_CASE(ReadOnlyFileSystemDriverOpenClose) {
     expected_handle = 0;
   }
   delete driver;
+  free(data);
 }
 
 TEST_CASE(ReadOnlyFileSystemOpenClose) {
   FileSystem* fs = new FileSystem();
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   EXPECT_EQ(0, fs->Mount("/fs", driver));
 
   const int kFdOffset = 3;
@@ -113,13 +124,16 @@ TEST_CASE(ReadOnlyFileSystemOpenClose) {
     }
     expected_handle = kFdOffset;
   }
+  delete fs;
   delete driver;
+  free(data);
 }
 
 TEST_CASE(ReadOnlyFileSystemEmptyFile) {
   int fd;
   FileSystem* fs = new FileSystem();
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   EXPECT_EQ(0, fs->Mount("/fs", driver));
 
   fd = fs->Open("/fs/empty");
@@ -142,12 +156,14 @@ TEST_CASE(ReadOnlyFileSystemEmptyFile) {
 
   delete driver;
   delete fs;
+  free(data);
 }
 
 TEST_CASE(ReadOnlyFileSystemNonExistingFile) {
   int fd;
   FileSystem* fs = new FileSystem();
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   EXPECT_EQ(0, fs->Mount("/fs", driver));
 
   fd = fs->Open("/fs/");
@@ -161,6 +177,7 @@ TEST_CASE(ReadOnlyFileSystemNonExistingFile) {
 
   delete driver;
   delete fs;
+  free(data);
 }
 
 static void TestReadFile(
@@ -214,7 +231,8 @@ static void TestReadFile(
 
 TEST_CASE(ReadOnlyFileSystemRead) {
   FileSystem* fs = new FileSystem();
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   EXPECT_EQ(0, fs->Mount("/fs", driver));
 
   const int kPathBufferSize = 32;
@@ -226,6 +244,7 @@ TEST_CASE(ReadOnlyFileSystemRead) {
 
   delete driver;
   delete fs;
+  free(data);
 }
 
 static void TestSeekFile(
@@ -263,7 +282,8 @@ static void TestSeekFile(
 
 TEST_CASE(ReadOnlyFileSystemSeek) {
   FileSystem* fs = new FileSystem();
-  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(ro_file_system);
+  uint8_t* data = GetAlignedReadOnlyFileSystemData();
+  FileSystemDriver* driver = new ReadOnlyFileSystemDriver(data);
   EXPECT_EQ(0, fs->Mount("/fs", driver));
 
   const int kPathBufferSize = 32;
@@ -275,6 +295,7 @@ TEST_CASE(ReadOnlyFileSystemSeek) {
 
   delete driver;
   delete fs;
+  free(data);
 }
 
 }  // namespace dartino

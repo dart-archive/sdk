@@ -16,6 +16,7 @@ namespace dartino {
 
 ReadOnlyFileSystemDriver::ReadOnlyFileSystemDriver(const uint8_t* data)
     : data_(data) {
+  ASSERT((reinterpret_cast<uintptr_t>(data) & 0x00000003) == 0)
   for (int handle = 0; handle < kMaxOpenFiles; handle++) {
     open_files_[handle].MarkClosed();
   }
@@ -26,7 +27,7 @@ int ReadOnlyFileSystemDriver::Open(const char* path) {
 
   // Search for the file.
   uint32_t length;
-  size_t file_size;
+  uint32_t file_size;
   const char* file_path;
   uint8_t* p = const_cast<uint8_t*>(data_);
 
@@ -42,9 +43,8 @@ int ReadOnlyFileSystemDriver::Open(const char* path) {
     p = reinterpret_cast<uint8_t*>(ROUNDUP(reinterpret_cast<uintptr_t>(p), 4));
 
     // Read the length of the file.
-    ASSERT(sizeof(size_t) == 4);
-    file_size = *reinterpret_cast<size_t*>(p);
-    p += sizeof(size_t);
+    file_size = *reinterpret_cast<uint32_t*>(p);
+    p += sizeof(uint32_t);
 
     // The passed in path has a leading /.
     if (length == static_cast<uint32_t>(path_length) - 1 &&
