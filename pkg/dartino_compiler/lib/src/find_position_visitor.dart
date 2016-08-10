@@ -67,6 +67,8 @@ class FindFunctionAtPositionVisitor extends BaseElementVisitor {
   visitElement(Element element, _) {}
 
   bool containsPosition(Node node) {
+    // TODO(sigurdm): Find out when [node] is null.
+    if (node == null) return false;
     return node.getBeginToken().charOffset <= position &&
         position < node.getEndToken().charEnd;
   }
