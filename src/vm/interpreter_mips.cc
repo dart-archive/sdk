@@ -72,11 +72,6 @@ void InterpreterGenerator::Generate() {
   INTRINSICS_DO(V)
 #undef V
 
-#define V(name, branching, format, size, stack_diff, print) \
-  assembler()->DefineLong("BC_" #name);
-  BYTECODES_DO(V)
-#undef V
-
   __ SwitchToData();
   __ BindWithPowerOfTwoAlignment("Interpret_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print) \
