@@ -307,9 +307,9 @@ class GCMetadata {
 
   static uword heap_extent() { return singleton_.heap_extent_; }
 
-  static bool InMetadataRange(uword start) {
+  static bool InMetadataRange(uword address) {
     uword lowest = singleton_.lowest_address_;
-    return start >= lowest && start - lowest < singleton_.heap_extent_;
+    return address >= lowest && address - lowest <= singleton_.heap_extent_;
   }
 
   static uword remembered_set_bias() { return singleton_.remembered_set_bias_; }
