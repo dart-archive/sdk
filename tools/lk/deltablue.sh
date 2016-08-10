@@ -14,4 +14,4 @@ cp DeltaBlue.S third_party/lk/dartino/app/dartino-fixed/dartino_program.S
 
 PROJECT=stm32f746g-disco-fixed-snapshot DEBUG= make -C third_party/lk -j8
 
-./tools/lk/flash-image.sh out/build-stm32f746g-disco-fixed-snapshot/lk.bin
+./tools/embedded/flash-image.sh out/build-stm32f746g-disco-fixed-snapshot/lk.bin

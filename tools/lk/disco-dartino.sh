@@ -7,4 +7,4 @@ set -e
 
 PROJECT=stm32f746g-disco-dartino make -C third_party/lk -j8
 
-./tools/lk/flash-image.sh out/build-stm32f746g-disco-dartino/lk.bin
+./tools/embedded/flash-image.sh out/build-stm32f746g-disco-dartino/lk.bin
