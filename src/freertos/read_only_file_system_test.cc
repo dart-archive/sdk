@@ -47,11 +47,11 @@ static const uint8_t ro_file_system[] = {
 
 static const int kRoFileSystemFiles = 5;
 static const char* ro_file_system_file_names[kRoFileSystemFiles] = {
-  "ABC",
-  "empty",
-  "ABCD",
-  "ABCDE",
-  "ABC/DE"
+  "/ABC",
+  "/empty",
+  "/ABCD",
+  "/ABCDE",
+  "/ABC/DE"
 };
 
 static const char* ro_file_system_content[kRoFileSystemFiles] = {
@@ -103,7 +103,7 @@ TEST_CASE(ReadOnlyFileSystemOpenClose) {
   int expected_handle = kFdOffset;
   for (int i = 0; i < 1; i++) {
     for (int j = 0; j < kRoFileSystemFiles; j++) {
-      snprintf(path, kPathBufferSize, "/fs/%s", ro_file_system_file_names[j]);
+      snprintf(path, kPathBufferSize, "/fs%s", ro_file_system_file_names[j]);
       int handle = fs->Open(path);
       EXPECT_EQ(expected_handle, handle);
       expected_handle++;
@@ -220,7 +220,7 @@ TEST_CASE(ReadOnlyFileSystemRead) {
   const int kPathBufferSize = 32;
   char path[kPathBufferSize];
   for (int i = 0; i < kRoFileSystemFiles; i++) {
-    snprintf(path, kPathBufferSize, "/fs/%s", ro_file_system_file_names[i]);
+    snprintf(path, kPathBufferSize, "/fs%s", ro_file_system_file_names[i]);
     TestReadFile(fs, path, ro_file_system_content[i]);
   }
 
@@ -269,7 +269,7 @@ TEST_CASE(ReadOnlyFileSystemSeek) {
   const int kPathBufferSize = 32;
   char path[kPathBufferSize];
   for (int i = 0; i < kRoFileSystemFiles; i++) {
-    snprintf(path, kPathBufferSize, "/fs/%s", ro_file_system_file_names[i]);
+    snprintf(path, kPathBufferSize, "/fs%s", ro_file_system_file_names[i]);
     TestSeekFile(fs, path, ro_file_system_content[i]);
   }
 

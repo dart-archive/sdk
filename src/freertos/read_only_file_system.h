@@ -28,7 +28,6 @@ class ReadOnlyFileSystemDriver : public FileSystemDriver {
     void MarkClosed();
     bool IsOpen();
 
-   private:
     const char* path;
     size_t size;
     uint8_t* data;

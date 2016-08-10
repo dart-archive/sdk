@@ -15,7 +15,11 @@
 namespace dartino {
 
 ReadOnlyFileSystemDriver::ReadOnlyFileSystemDriver(const uint8_t* data)
-    : data_(data) {}
+    : data_(data) {
+  for (int handle = 0; handle < kMaxOpenFiles; handle++) {
+    open_files_[handle].MarkClosed();
+  }
+}
 
 int ReadOnlyFileSystemDriver::Open(const char* path) {
   int path_length = strlen(path);
@@ -113,13 +117,14 @@ bool ReadOnlyFileSystemDriver::IsValidOpenHandle(int handle) {
 
 void ReadOnlyFileSystemDriver::OpenFile::MarkOpen(
     const char* path, size_t size, uint8_t* data) {
-  this->path = file_path;
-  this->size = file_size;
-  this->data = p;
+  this->path = path;
+  this->size = size;
+  this->data = data;
   position = 0;
 }
 
 void ReadOnlyFileSystemDriver::OpenFile::MarkClosed() {
+  path = NULL;
 }
 
 bool ReadOnlyFileSystemDriver::OpenFile::IsOpen() {
