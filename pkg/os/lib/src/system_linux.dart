@@ -10,19 +10,21 @@ class LinuxSystem extends PosixSystem {
   static final ForeignFunction _openLinux =
       ForeignLibrary.main.lookup("open64");
 
+  static final bool isMips = sys.info().machine == 'mips';
+
   int get AF_INET6 => 10;
 
-  int get O_CREAT => 64;
+  int get O_CREAT => isMips ? 256 : 64;
   int get O_TRUNC => 512;
-  int get O_APPEND => 1024;
-  int get O_NONBLOCK => 2048;
+  int get O_APPEND => isMips ? 8 : 1024;
+  int get O_NONBLOCK => isMips ? 128 : 2048;
   int get O_CLOEXEC => 524288;
 
-  int get FIONREAD => 0x541B;
+  int get FIONREAD => isMips ? 0x467f : 0x541b;
 
-  int get SOL_SOCKET => 1;
+  int get SOL_SOCKET => isMips ? 65535 : 1;
 
-  int get SO_REUSEADDR => 2;
+  int get SO_REUSEADDR => isMips ? 4 : 2;
 
   // The size of fields and the struct used by uname.
   // From /usr/include/sys/utsname.h

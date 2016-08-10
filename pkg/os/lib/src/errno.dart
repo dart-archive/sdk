@@ -101,8 +101,9 @@ abstract class _PosixErrnos extends Errnos {
 }
 
 class _LinuxErrnos extends _PosixErrnos {
-  int get EADDRNOTAVAIL => 99;
-  int get EINPROGRESS => 115;
+  static final bool isMips = sys.info().machine == 'mips';
+  int get EADDRNOTAVAIL => isMips ? 126 : 99;
+  int get EINPROGRESS => isMips ? 150 : 115;
 }
 
 class _MacOSErrnos extends _PosixErrnos {

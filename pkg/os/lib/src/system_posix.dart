@@ -59,11 +59,13 @@ abstract class PosixSystem implements System {
   static final ForeignFunction _uname =
       ForeignLibrary.main.lookup("uname");
 
+  static final bool isMips = sys.info().machine == 'mips';
+
   int get AF_INET => 2;
   int get AF_INET6;
 
-  int get SOCK_STREAM => 1;
-  int get SOCK_DGRAM => 2;
+  int get SOCK_STREAM => isMips ? 2 : 1;
+  int get SOCK_DGRAM => isMips ? 1 : 2;
 
   int get O_RDONLY => 0;
   int get O_WRONLY => 1;
