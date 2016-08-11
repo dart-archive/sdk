@@ -6,10 +6,12 @@
 [ $system == lk ]
 *: Skip, OK
 
+ # We don't copy the ffi testing lib to the SDK
 [ $use_sdk ]
-ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
-regress_252_test: RuntimeError # We don't copy the ffi testing lib to the sdk
+ffi_extended_test: Skip, OK
+ffi_test: Skip, OK
+regress_252_test: Skip, OK
 
-# Flexible FFI only supported on ARM and IA32 so far
+# Flexible FFI only supported on ARM, X64, and IA32 so far
 [ $arch != arm && $arch != ia32 && $arch != x64 ]
 ffi_extended_test: Skip, OK
