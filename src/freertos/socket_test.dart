@@ -77,6 +77,10 @@ void tcpSocketTest() {
 }
 
 void udpSocketTest() {
+  // Try that we can bind to INADDR_ANY
+  new DatagramSocket.bind(IP_INADDR_ANY, 0).close();
+
+  // Try to connect to the remote server
   try {
       DatagramSocket s = new DatagramSocket.bind(HOST_IP_STRING,
           UDP_LOCAL_PORT);

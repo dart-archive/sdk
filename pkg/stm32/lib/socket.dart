@@ -51,6 +51,8 @@ const int IPPROTO_TCP = 6;
 const int IPPROTO_UDP = 17;
 const int SHUTDOWN_READ_WRITE = 2;
 
+const String IP_INADDR_ANY = "0.0.0.0";
+
 class _SocketBase {
   int _socket;
   int _handle;
@@ -188,15 +190,19 @@ class DatagramSocket extends _SocketBase implements system.DatagramSocket {
     if (!ethernet.isInitialized) {
       throw new SocketException("network stack not initialized");
     }
-    ForeignMemory string = new ForeignMemory.fromStringAsUTF8(host);
     int address;
-    try {
-      address = _lookupHost.icall$1(string.address);
-    } finally {
-      string.free();
-    }
-    if (address == 0) {
-      throw new SocketException("Unable to find $host");
+    if (host == IP_INADDR_ANY) {
+      address = 0;
+    } else {
+      ForeignMemory string = new ForeignMemory.fromStringAsUTF8(host);
+      try {
+        address = _lookupHost.icall$1(string.address);
+      } finally {
+        string.free();
+      }
+      if (address == 0) {
+        throw new SocketException("Unable to find $host");
+      }
     }
     _socket = _createSocket.icall$3(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (_socket == -1) {
