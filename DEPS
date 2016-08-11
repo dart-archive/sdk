@@ -26,17 +26,17 @@ vars = {
 
   "dartdoc_rev": "@ceb8893c3cffddde43d83911ebf77c8262a0e5a4",
 
-  "dart_rev": "@9fff9a162914b97dd4bc48f5c2386f01a1232bad",
+  "dart_rev": "@d5bd7045e2984d22b0df05f448ff83814081bf11",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:
-  "package_config_tag": "@0.1.3",
+  "package_config_tag": "@1.0.0",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
-  "args_tag": "@0.13.4",
+  "args_tag": "@0.13.5",
   "dart2js_info_rev" : "@0a221eaf16aec3879c45719de656680ccb80d8a1",
-  "pub_semver_tag": "@1.2.1",
-  "collection_tag": "@1.6.0",
+  "pub_semver_tag": "@1.3.0",
+  "collection_tag": "@1.8.0",
 
   "lk_rev": "@0f0b4959ad25cb1a2bffd1a2eba487b88a602c96",
 

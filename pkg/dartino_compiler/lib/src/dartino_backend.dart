@@ -71,9 +71,6 @@ import 'package:compiler/src/common.dart' show
 import 'package:compiler/src/elements/modelx.dart' show
     FunctionElementX;
 
-import 'package:compiler/src/dart_backend/dart_backend.dart' show
-    DartConstantTask;
-
 import 'package:compiler/src/constants/constant_system.dart' show
     ConstantSystem;
 
@@ -116,6 +113,8 @@ import 'dartino_class_builder.dart' show
 import 'dartino_system_builder.dart' show
     DartinoSystemBuilder,
     SchemaChange;
+
+import 'dartino_constant_task.dart';
 
 import '../dartino_class_base.dart' show
     DartinoClassBase;
@@ -217,7 +216,7 @@ class DartinoBackend extends Backend
 
   final DartinoContext context;
 
-  final DartConstantTask constantCompilerTask;
+  final DartinoConstantTask constantCompilerTask;
 
   /// Constructors that need to have an initilizer compiled. See
   /// [compilePendingConstructorInitializers].
@@ -272,7 +271,7 @@ class DartinoBackend extends Backend
 
   DartinoBackend(DartinoCompilerImplementation compiler)
       : this.context = compiler.context,
-        this.constantCompilerTask = new DartConstantTask(compiler),
+        this.constantCompilerTask = new DartinoConstantTask(compiler),
         this.systemBuilder = new DartinoSystemBuilder(DartinoSystem.base),
         super(compiler) {
     this.impactTransformer = new DartinoImpactTransformer(this);
