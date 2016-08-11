@@ -5,8 +5,7 @@
 library dartino_compiler.dartino_constants;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue,
-    ConstantValueKind;
+    ConstantValue;
 
 import 'package:compiler/src/core_types.dart' show
     CoreTypes;
@@ -26,10 +25,6 @@ class DartinoFunctionConstant extends ConstantValue {
 
   accept(visitor, arg) {
     throw new UnsupportedError("DartinoFunctionConstant.accept");
-  }
-
-  ConstantValueKind get kind {
-    throw new UnsupportedError("DartinoFunctionConstant.kind");
   }
 
   String toDartText() => toStructuredText();
@@ -52,10 +47,6 @@ class DartinoClassConstant extends ConstantValue {
     throw new UnsupportedError("DartinoClassConstant.accept");
   }
 
-  ConstantValueKind get kind {
-    throw new UnsupportedError("DartinoClassConstant.kind");
-  }
-
   String toDartText() => toStructuredText();
 
   String toStructuredText() {
@@ -74,10 +65,6 @@ class DartinoClassInstanceConstant extends ConstantValue {
 
   accept(visitor, arg) {
     throw new UnsupportedError("DartinoClassInstanceConstant.accept");
-  }
-
-  ConstantValueKind get kind {
-    throw new UnsupportedError("DartinoClassInstanceConstant.kind");
   }
 
   String toDartText() => toStructuredText();
