@@ -30,6 +30,7 @@ class Device {
     I2C_DEVICE = 2,
     // TODO(karlklose): IO endpoints are not really devices.
     SOCKET_DEVICE = 3,
+    DMA_STREAM = 4,
   };
 
   Device(const char* name, Type type) :

@@ -122,7 +122,7 @@ class STM32F746GDiscovery {
 
   STM32Dma get dma1 {
     if (_dma1 == null) {
-      _dma1 = new STM32Dma('DMA1', DMA1_BASE, RCC_AHB1ENR_DMA1EN);
+      _dma1 = new STM32Dma('DMA1', 1, DMA1_BASE, RCC_AHB1ENR_DMA1EN);
       // Enable DMA clock - assuming no-one asks for the DMA unless they want to
       // use it.
       _dma1.enableClock();
@@ -132,7 +132,7 @@ class STM32F746GDiscovery {
 
   STM32Dma get dma2 {
     if (_dma2 == null) {
-      _dma2 = new STM32Dma('DMA2', DMA2_BASE, RCC_AHB1ENR_DMA2EN);
+      _dma2 = new STM32Dma('DMA2', 2, DMA2_BASE, RCC_AHB1ENR_DMA2EN);
       // Enable DMA clock - assuming no-one asks for the DMA unless they want to
       // use it.
       _dma2.enableClock();

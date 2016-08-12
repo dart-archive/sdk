@@ -4,19 +4,35 @@
 
 library stm32.dma;
 
+import 'dart:dartino';
 import 'dart:dartino.ffi';
+import 'dart:dartino.os';
 
 import 'package:stm32/src/constants.dart';
 import 'package:stm32/src/peripherals.dart';
 
+final _dmaOpen = ForeignLibrary.main.lookup('dma_open');
+final _dmaAcknowledgeInterrupt =
+    ForeignLibrary.main.lookup('dma_acknowledge_interrupt');
+
 class STM32DmaStream {
+  final int _controller;
   final int _dmaBase;
   final int _streamBase;
+  Channel _channel;
+  Port _port;
   int _isReg;
   int _ifcReg;
   int _irShift;
+  int _dmaHandle;
 
-  STM32DmaStream(int controllerBase, int stream)
+  static const int _transferCompleteFlag = 1 << 0;
+  static const int _halfTransferCompleteFlag = 1 << 1;
+  static const int _transferErrorFlag = 1 << 3;
+  static const int _directModeErrorFlag = 1 << 4;
+  static const int _fifoErrorFlag = 1 << 5;
+
+  STM32DmaStream(this._controller, int controllerBase, int stream)
       : _dmaBase = controllerBase,
         _streamBase = controllerBase + DMA.STREAM_OFFSET * stream {
     if (stream > 3) {
@@ -30,6 +46,10 @@ class STM32DmaStream {
     if (stream & 0x10 != 0) irShift += 16;
     if (stream & 0x01 != 0) irShift += 6;
     _irShift = irShift;
+
+    _channel = new Channel();
+    _port = new Port(_channel);
+    _dmaHandle = _dmaOpen.icall$2(_controller, stream);
   }
 
   bool _areBitsSet(int base, int reg, int mask) =>
@@ -178,10 +198,23 @@ class STM32DmaStream {
   void clearInterruptFlag(int flag) {
     peripherals.setUint32(_dmaBase + _ifcReg, flag << _irShift);
   }
+  void enableInterrupts(int interrupts) {
+    _setBits(_streamBase, DMA.SxCR, interrupts);
+  }
+
+  void waitForTransferComplete() {
+    eventHandler.registerPortForNextEvent(_dmaHandle, _port,
+        _transferCompleteFlag);
+    // Enable Transfer Complete interrupt
+    enableInterrupts(DMA_SxCR_TCIE);
+    int event = _channel.receive();
+    _dmaAcknowledgeInterrupt.vcall$2(_dmaHandle, event);
+  }
 }
 
 class STM32Dma {
   final String name;
+  final int _controller;
   final int _base;
   final int _ahb1enr;
 
@@ -194,24 +227,32 @@ class STM32Dma {
   STM32DmaStream _stream6;
   STM32DmaStream _stream7;
 
-  STM32Dma(this.name, int base, this._ahb1enr)
+  STM32Dma(this.name, this._controller, int base, this._ahb1enr)
       : this._base = base - PERIPH_BASE;
 
-  STM32DmaStream get stream0 => _stream0 ??= new STM32DmaStream(_base, 0);
+  STM32DmaStream get stream0 =>
+      _stream0 ??= new STM32DmaStream(_controller, _base, 0);
 
-  STM32DmaStream get stream1 => _stream1 ??= new STM32DmaStream(_base, 1);
+  STM32DmaStream get stream1 =>
+      _stream1 ??= new STM32DmaStream(_controller, _base, 1);
 
-  STM32DmaStream get stream2 => _stream2 ??= new STM32DmaStream(_base, 2);
+  STM32DmaStream get stream2 =>
+      _stream2 ??= new STM32DmaStream(_controller, _base, 2);
 
-  STM32DmaStream get stream3 => _stream3 ??= new STM32DmaStream(_base, 3);
+  STM32DmaStream get stream3 =>
+      _stream3 ??= new STM32DmaStream(_controller, _base, 3);
 
-  STM32DmaStream get stream4 => _stream4 ??= new STM32DmaStream(_base, 4);
+  STM32DmaStream get stream4 =>
+      _stream4 ??= new STM32DmaStream(_controller, _base, 4);
 
-  STM32DmaStream get stream5 => _stream5 ??= new STM32DmaStream(_base, 5);
+  STM32DmaStream get stream5 =>
+      _stream5 ??= new STM32DmaStream(_controller, _base, 5);
 
-  STM32DmaStream get stream6 => _stream6 ??= new STM32DmaStream(_base, 6);
+  STM32DmaStream get stream6 =>
+      _stream6 ??= new STM32DmaStream(_controller, _base, 6);
 
-  STM32DmaStream get stream7 => _stream7 ??= new STM32DmaStream(_base, 7);
+  STM32DmaStream get stream7 =>
+      _stream7 ??= new STM32DmaStream(_controller, _base, 7);
 
   String toString() => name;
 

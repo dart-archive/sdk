@@ -119,6 +119,8 @@
         '<(source_path)/board.c',
 
         # Device drivers.
+        '<(source_path)/dma.cc',
+        '<(source_path)/dma.h',
         '<(source_path)/i2c_driver.cc',
         '<(source_path)/i2c_driver.h',
         '<(source_path)/uart_driver.cc',
