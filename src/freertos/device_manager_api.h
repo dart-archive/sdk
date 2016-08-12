@@ -59,6 +59,11 @@ struct I2CDriver {
   int i2c_no;
   void (*Initialize)(struct I2CDriver* driver);
   void (*DeInitialize)(struct I2CDriver* driver);
+  int (*IsDeviceReady)(struct I2CDriver* driver, uint16_t address);
+  int (*RequestRead)(struct I2CDriver* driver, uint16_t address,
+                              uint8_t* buffer, size_t count);
+  int (*RequestWrite)(struct I2CDriver* driver, uint16_t address,
+                               uint8_t* buffer, size_t count);
   int (*RequestReadRegisters)(struct I2CDriver* driver,
                               uint16_t address, uint16_t reg,
                               uint8_t* buffer, size_t count);

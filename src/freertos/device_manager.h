@@ -168,6 +168,18 @@ class I2CDevice: public Device {
     driver_->Initialize(driver_);
   }
 
+  int IsDeviceReady(uint16_t address) {
+    return driver_->IsDeviceReady(driver_, address);
+  }
+
+  int RequestRead(uint16_t address, uint8_t* buffer, size_t count) {
+    return driver_->RequestRead(driver_, address, buffer, count);
+  }
+
+  int RequestWrite(uint16_t address, uint8_t* buffer, size_t count) {
+    return driver_->RequestWrite(driver_, address, buffer, count);
+  }
+
   int RequestReadRegisters(uint16_t address, uint16_t reg,
                            uint8_t* buffer, size_t count) {
     return driver_->RequestReadRegisters(driver_, address, reg, buffer, count);

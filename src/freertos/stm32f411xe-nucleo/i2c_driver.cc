@@ -111,6 +111,55 @@ void I2CDriverImpl::DeInitialize() {
   FATAL("NOT IMPLEMENTED");
 }
 
+int I2CDriverImpl::IsDeviceReady(uint16_t address) {
+  dartino::ScopedLock lock(mutex_);
+  if (state_ != IDLE) return INVALID_ARGUMENTS;
+  if (address > 0x7f) return INVALID_ARGUMENTS;
+
+  HAL_StatusTypeDef result = HAL_I2C_IsDeviceReady(&i2c_, address << 1, 1, 1);
+  return result == HAL_OK ? NO_ERROR : TIMEOUT;
+}
+
+int I2CDriverImpl::RequestRead(
+    uint16_t address, uint8_t* buffer, size_t count) {
+  dartino::ScopedLock lock(mutex_);
+  if (state_ != IDLE) return INVALID_ARGUMENTS;
+  if (address > 0x7f) return INVALID_ARGUMENTS;
+
+  error_code_ = NO_ERROR;
+  state_ = ACTIVE;
+
+  HAL_StatusTypeDef result =
+      HAL_I2C_Master_Receive_IT(&i2c_, address << 1, buffer, count);
+
+  if (result != HAL_OK) {
+    state_ = DONE;
+    return TIMEOUT;
+  }
+
+  return NO_ERROR;
+}
+
+int I2CDriverImpl::RequestWrite(
+    uint16_t address, uint8_t* buffer, size_t count) {
+  dartino::ScopedLock lock(mutex_);
+  if (state_ != IDLE) return INVALID_ARGUMENTS;
+  if (address > 0x7f) return INVALID_ARGUMENTS;
+
+  error_code_ = NO_ERROR;
+  state_ = ACTIVE;
+
+  HAL_StatusTypeDef result =
+      HAL_I2C_Master_Transmit_IT(&i2c_, address << 1, buffer, count);
+
+  if (result != HAL_OK) {
+    state_ = DONE;
+    return TIMEOUT;
+  }
+
+  return NO_ERROR;
+}
+
 int I2CDriverImpl::RequestReadRegisters(
     uint16_t address, uint16_t reg, uint8_t* buffer, size_t count) {
   dartino::ScopedLock lock(mutex_);
@@ -280,6 +329,23 @@ static void DeInitialize(I2CDriver* driver) {
   driver->context = 0;
 }
 
+static int IsDeviceReady(I2CDriver* driver, uint16_t address) {
+  I2CDriverImpl* i2c = reinterpret_cast<I2CDriverImpl*>(driver->context);
+  return i2c->IsDeviceReady(address);
+}
+
+static int RequestRead(I2CDriver* driver, uint16_t address,
+                       uint8_t* buffer, size_t count) {
+  I2CDriverImpl* i2c = reinterpret_cast<I2CDriverImpl*>(driver->context);
+  return i2c->RequestRead(address, buffer, count);
+}
+
+static int RequestWrite(I2CDriver* driver, uint16_t address,
+                        uint8_t* buffer, size_t count) {
+  I2CDriverImpl* i2c = reinterpret_cast<I2CDriverImpl*>(driver->context);
+  return i2c->RequestWrite(address, buffer, count);
+}
+
 static int RequestReadRegisters(I2CDriver* driver,
                                 uint16_t address, uint16_t reg,
                                 uint8_t* buffer, size_t count) {
@@ -305,6 +371,9 @@ extern "C" void FillI2CDriver(I2CDriver* driver, int i2c_no) {
   driver->device_id = kIllegalDeviceId;
   driver->Initialize = Initialize;
   driver->DeInitialize = DeInitialize;
+  driver->IsDeviceReady = IsDeviceReady;
+  driver->RequestRead = RequestRead;
+  driver->RequestWrite = RequestWrite;
   driver->RequestReadRegisters = RequestReadRegisters;
   driver->RequestWriteRegisters = RequestWriteRegisters;
   driver->AcknowledgeResult = AcknowledgeResult;

@@ -30,6 +30,9 @@ class I2CDriverImpl {
   void Initialize(uintptr_t device_id, int i2c_no);
   void DeInitialize();
 
+  int IsDeviceReady(uint16_t address);
+  int RequestRead(uint16_t address, uint8_t* buffer, size_t count);
+  int RequestWrite(uint16_t address, uint8_t* buffer, size_t count);
   int RequestReadRegisters(
       uint16_t address, uint16_t reg, uint8_t* buffer, size_t count);
   int RequestWriteRegisters(

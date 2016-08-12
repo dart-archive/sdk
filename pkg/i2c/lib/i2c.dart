@@ -44,6 +44,7 @@ library i2c;
 
 import 'dart:dartino';
 import 'dart:dartino.ffi';
+import 'dart:typed_data';
 
 import 'src/process_object.dart';
 
@@ -51,6 +52,8 @@ import 'src/process_object.dart';
 final ForeignFunction _open = ForeignLibrary.main.lookup('open');
 final ForeignFunction _close = ForeignLibrary.main.lookup('close');
 final ForeignFunction _ioctl = ForeignLibrary.main.lookup('ioctl');
+final ForeignFunction _read = ForeignLibrary.main.lookup('read');
+final ForeignFunction _write = ForeignLibrary.main.lookup('write');
 
 /// Address of an I2C bus.
 ///
@@ -77,6 +80,9 @@ class I2CDevice {
   /// Create a I2C device with address [address] on the I2C bus [bus].
   const I2CDevice(this.address, this._bus);
 
+  /// Check if this device is ready.
+  bool isReady() => _bus.isDeviceReady(address);
+
   /// Read a byte from register [register].
   int readByte(int register) => _bus.readByte(address, register);
 
@@ -84,15 +90,34 @@ class I2CDevice {
   void writeByte(int register, int value) {
     _bus.writeByte(address, register, value);
   }
+
+  /// Read bytes from this device into [buffer].
+  void receive(ByteBuffer buffer, int size) {
+    _bus.receive(address, buffer, size);
+  }
+
+  /// Write [size] bytes from [buffer] to this device.
+  void transmit(ByteBuffer buffer, int size) {
+    _bus.transmit(address, buffer, size);
+  }
 }
 
 /// I2C bus connection.
 abstract class I2CBus {
+  /// Check is slave device [slave] is ready.
+  bool isDeviceReady(int slave);
+
   /// Read one byte from register [register] on slave device [slave].
   int readByte(int slave, int register);
 
   /// Write one byte to register [register] on slave device [slave].
   void writeByte(int slave, int register, int value);
+
+  /// Read [size] bytes from slave device [slave] into [buffer].
+  void receive(int slave, ByteBuffer buffer, int size);
+
+  /// Write [size] bytes from [buffer] to slave device [slave].
+  void transmit(int slave, ByteBuffer buffer, int size);
 }
 
 /// Linux I2C bus connection.
@@ -138,6 +163,10 @@ class I2CBusLinux implements I2CBus {
 
   int supportedFunctions() => _busObject.run((bus) => bus.supportedFunctions());
 
+  bool isDeviceReady(int slave) {
+    throw new I2CException("Method not implemented");
+  }
+
   int readByte(int slave, int register) {
     return _busObject.run((bus) => bus.readByte(slave, register));
   }
@@ -146,7 +175,27 @@ class I2CBusLinux implements I2CBus {
     return _busObject.run((bus) => bus.writeByte(slave, register, value));
   }
 
-  /// Write one byte to register [register] on slave device [slave].
+  void receive(int slave, ByteBuffer buffer, int size) {
+    int address = _getForeign(buffer).address;
+    int read = _busObject.run((bus) => bus.receive(slave, address, size));
+    if (read < size) {
+      throw new I2CException("Read error", read);
+    }
+  }
+
+  void transmit(int slave, ByteBuffer buffer, int size) {
+    int address = _getForeign(buffer).address;
+    int written = _busObject.run((bus) => bus.transmit(slave, address, size));
+    if (written < size) {
+      throw new I2CException("Write error", written);
+    }
+  }
+
+  ForeignMemory _getForeign(ByteBuffer buffer) {
+    var b = buffer;
+    return b.getForeign();
+  }
+
   void close() => _busObject.run((bus) => bus.close());
 
   toString() => 'I2CBus $bus';
@@ -311,6 +360,44 @@ class _I2CBusImpl {
     } finally {
       data.free();
     }
+  }
+
+  // Read a block of bytes. Tries to read [size] bytes, but may return less if
+  // there are no more bytes to read. Returns the number of bytes read, or -1
+  // on error.
+  int receive(int slave, int address, int size) {
+    _selectSlave(slave);
+    int bytesRead = 0;
+    while (bytesRead < size) {
+      int result = _read.icall$3(_fd, address + bytesRead, size - bytesRead);
+      if (result < 0) {
+        return result;
+      }
+      if (result == 0) {
+        return bytesRead;
+      }
+      bytesRead += result;
+    }
+    return bytesRead;
+  }
+
+  // Write a block of bytes. Tries to write [size] bytes, but may write less if
+  // an error occurs. Returns the number of bytes written, or -1 on error.
+  int transmit(int slave, int address, int size) {
+    _selectSlave(slave);
+    int bytesWritten = 0;
+    while (bytesWritten < size) {
+      int result = _write.icall$3(_fd, address + bytesWritten,
+                                  size - bytesWritten);
+      if (result < 0) {
+        return result;
+      }
+      if (result == 0) {
+        return bytesWritten;
+      }
+      bytesWritten += result;
+    }
+    return bytesWritten;
   }
 
   // Close the connection to the I2C bus freeing up system resources.

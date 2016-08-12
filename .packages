@@ -30,6 +30,7 @@ mbedtls:pkg/mbedtls/lib
 mdns:pkg/mdns/lib
 mqtt:pkg/mqtt/lib
 nucleo_iks01a1:pkg/nucleo_iks01a1/lib
+nucleo_nfc01a1:pkg/nucleo_nfc01a1/lib
 os:pkg/os/lib
 package_config:third_party/package_config/lib
 path:third_party/path/lib

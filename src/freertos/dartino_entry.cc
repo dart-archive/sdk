@@ -69,6 +69,23 @@ extern "C" int I2COpen(char* name) {
   return dartino::DeviceManager::GetDeviceManager()->OpenI2C(name);
 }
 
+extern "C" int I2CIsDeviceReady(int handle, uint16_t address) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->IsDeviceReady(address);
+}
+
+extern "C" int I2CRequestRead(int handle, uint16_t address,
+                              uint8_t* buffer, size_t count) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->RequestRead(address, buffer, count);
+}
+
+extern "C" int I2CRequestWrite(int handle, uint16_t address,
+                               uint8_t* buffer, size_t count) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->RequestWrite(address, buffer, count);
+}
+
 extern "C" int I2CRequestReadRegister(int handle,
                                       uint16_t address, uint16_t reg,
                                       uint8_t* buffer, size_t count) {
@@ -108,6 +125,9 @@ DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
 DARTINO_EXPORT_STATIC_RENAME(i2c_open, I2COpen)
+DARTINO_EXPORT_STATIC_RENAME(i2c_is_device_ready, I2CIsDeviceReady)
+DARTINO_EXPORT_STATIC_RENAME(i2c_request_read, I2CRequestRead)
+DARTINO_EXPORT_STATIC_RENAME(i2c_request_write, I2CRequestWrite)
 DARTINO_EXPORT_STATIC_RENAME(i2c_request_read_register, I2CRequestReadRegister)
 DARTINO_EXPORT_STATIC_RENAME(i2c_request_write_register,
                              I2CRequestWriteRegister)
