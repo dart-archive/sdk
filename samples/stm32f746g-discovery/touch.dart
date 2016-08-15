@@ -13,25 +13,41 @@ main() {
   var frameBuffer = disco.frameBuffer;
   var touchScreen = disco.touchScreen;
 
+  drawMark(int x, int y, int offsetX, int offsetY) {
+    frameBuffer
+      ..drawLine(x, y - 5, x, y + 5, Color.blue)
+      ..drawLine(x - 5, y, x + 5, y, Color.blue)
+      ..writeText(x + offsetX, y + offsetY, "$x, $y");
+  }
+
   frameBuffer.backgroundColor = Color.white;
   frameBuffer.clear();
-  int x = 25;
-  int y = 25;
-  frameBuffer.drawLine(x, y - 5, x, y + 5, Color.blue);
-  frameBuffer.drawLine(x - 5, y, x + 5, y, Color.blue);
-  frameBuffer.writeText(x + 3, y + 3, "$x, $y");
-  x = frameBuffer.width - 25;
-  frameBuffer.drawLine(x, y - 5, x, y + 5, Color.blue);
-  frameBuffer.drawLine(x - 5, y, x + 5, y, Color.blue);
-  frameBuffer.writeText(x - 50, y + 3, "$x, $y");
+  drawMark(25, 25, 3, 3);
+  drawMark(frameBuffer.width - 25, 25, -50, 3);
+  drawMark(frameBuffer.width - 25, frameBuffer.height - 25, -58, -12);
+  drawMark(25, frameBuffer.height - 25, 3, -12);
+
+  const radius = 20;
+  const colors = const [
+    Color.blue,
+    Color.green,
+    Color.red,
+    Color.cyan,
+    Color.magenta
+  ];
 
   while (true) {
     TouchState t = touchScreen.state;
-    var msg = new StringBuffer('touch: ${t.count}');
     for (int index = 0; index < t.count; ++index) {
-      msg.write(' - ${t.x[index]}, ${t.y[index]}');
+      int x = t.x[index];
+      int y = t.y[index];
+      if (x - radius > 0 &&
+          x + radius < frameBuffer.width &&
+          y - radius > 0 &&
+          y + radius < frameBuffer.height) {
+        frameBuffer.drawCircle(x, y, radius, colors[index]);
+      }
     }
-    print(msg);
-    sleep(500);
+    sleep(20);
   }
 }
