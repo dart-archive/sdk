@@ -15,6 +15,7 @@ import 'dart:dartino' show sleep;
 import 'package:socket/socket.dart';
 import 'package:http/http.dart';
 import 'package:stm32/ethernet.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 // TODO: Add your own APPID from openweathermap.org here.
 var APPID = '';
@@ -22,9 +23,22 @@ var APPID = '';
 var myLocation = 'Aarhus';
 
 main() {
+  run();
+}
+
+run([STM32F746GDiscovery _]) {
+  print('Retrieving weather for $myLocation ...');
+
   // If we are running on a dev board, we need to initialize the network.
   if (Foreign.platform == Foreign.FREERTOS) {
+    print('Initializing ethernet stack...');
     initializeNetwork();
+    var localAddress = NetworkInterface.list().first.addresses.first;
+    print('Local ip address is $localAddress');
+  }
+
+  if (APPID.isEmpty) {
+    throw 'Edit weather-service.dart and set APPID';
   }
 
   // Get the current weather.

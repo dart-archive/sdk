@@ -16,12 +16,14 @@
 import 'dart:dartino';
 
 import 'package:gpio/gpio.dart';
-import 'package:stm32/stm32f746g_disco.dart';
 import 'package:stm32/gpio.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 main() {
-  STM32F746GDiscovery board = new STM32F746GDiscovery();
+  run(new STM32F746GDiscovery());
+}
 
+void run(STM32F746GDiscovery board) {
   // Array constant containing the GPIO pins of the connected LEDs.
   // You can add more LEDs simply by extending the list. Make sure
   // the pins are listed in the order the LEDs are connected.

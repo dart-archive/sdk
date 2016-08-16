@@ -5,7 +5,10 @@ import 'package:stm32/lcd.dart';
 import 'package:stm32/stm32f746g_disco.dart';
 
 main() {
-  var board = new STM32F746GDiscovery();
+  run(new STM32F746GDiscovery());
+}
+
+void run(STM32F746GDiscovery board) {
   var sensor = new MPL3115A2(board.i2c1);
   var display = board.frameBuffer;
 

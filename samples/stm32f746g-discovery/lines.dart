@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:dartino';
+
 import 'package:stm32/lcd.dart';
 import 'package:stm32/stm32f746g_disco.dart';
 
@@ -50,7 +52,10 @@ class MovableLine {
 }
 
 void main() {
-  STM32F746GDiscovery disco = new STM32F746GDiscovery();
+  run(new STM32F746GDiscovery());
+}
+
+void run(STM32F746GDiscovery board) {
 
   // The below code is on purpose written to create a lot of garbage to test
   // whether we can get a smooth animation even in the presence of lots of
@@ -75,16 +80,17 @@ void main() {
                             new MovablePoint(10, 1, -2, -3), Color.lightGreen));
 
   List history = [lines];
-  var surface = disco.frameBuffer;
+  var display = board.frameBuffer;
 
-  surface.clear(Color.black);
+  display.clear(Color.black);
 
   while (true) {
-    List next = history.first.map((line) => line.getNextLine(surface)).toList();
-    next.forEach((line) => line.draw(surface));
+    Fiber.yield(); // Give other fibers a chance to run
+    List next = history.first.map((line) => line.getNextLine(display)).toList();
+    next.forEach((line) => line.draw(display));
     history.insert(0, next);
     if (history.length > 10) {
-      history.removeLast().forEach((line) => line.erase(surface));
+      history.removeLast().forEach((line) => line.erase(display));
     }
   }
 }
