@@ -11,6 +11,11 @@
 
 #include "src/shared/natives.h"
 
+#ifdef DEBUG
+#define DARTINO_DEBUG 1
+#undef DEBUG
+#endif
+
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,6 +30,12 @@
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef DARTINO_DEBUG
+#undef DEBUG
+#undef DARTINO_DEBUG
+#define DEBUG 1
+#endif
 
 #include <vector>
 #include <map>

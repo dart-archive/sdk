@@ -2140,7 +2140,7 @@ llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
 }
 
 void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_module) {
-  llvm::LLVMContext& context(llvm::getGlobalContext());
+  llvm::LLVMContext context;
   llvm::Module module("dart_code", context);
 
   World world(program_, context, module);
