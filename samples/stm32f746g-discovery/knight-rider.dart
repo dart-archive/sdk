@@ -26,10 +26,10 @@ main() {
   // You can add more LEDs simply by extending the list. Make sure
   // the pins are listed in the order the LEDs are connected.
   List<Pin> leds = [
-    STM32Pin.PI2, // D8
-    STM32Pin.PA15, // D9
-    STM32Pin.PA8, // D10
-    STM32Pin.PB15, // D11
+    STM32F746GDiscovery.D8,
+    STM32F746GDiscovery.D9,
+    STM32F746GDiscovery.D10,
+    STM32F746GDiscovery.D11,
   ];
 
   // A button which when pressed, stops or starts the blink sequence
