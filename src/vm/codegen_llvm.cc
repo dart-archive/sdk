@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/vm/codegen_llvm.h"
-
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
@@ -116,6 +115,32 @@ class NativesBuilder {
  private:
   World& w;
 };
+
+class DartinoGC : public llvm::GCStrategy {
+public:
+  DartinoGC() {
+    UseStatepoints = true;
+    // These options are all gc.root specific, we specify them so that the
+    // gc.root lowering code doesn't run.
+    InitRoots = false;
+    NeededSafePoints = 0;
+    UsesMetadata = false;
+    CustomRoots = false;
+  }
+  llvm::Optional<bool> isGCManagedPointer(const llvm::Type *Ty) const override {
+    // Method is only valid on pointer typed values.
+    const llvm::PointerType *PT = llvm::cast<llvm::PointerType>(Ty);
+    // We arbitrarily pick addrspace(1) as our
+    // GC managed heap.  We know that a pointer into this heap needs to be
+    // updated and that no other pointer does.  Note that addrspace(1) is used
+    // only as an example, it has no special meaning, and is not reserved for
+    // GC usage.
+    return (1 == PT->getAddressSpace());
+  }
+};
+
+static llvm::GCRegistry::Add<DartinoGC> A("dartino",
+                                          "Dartino GC strategy");
 
 // Builds up constant objects for all [HeapObject]s it is called with.
 class HeapBuilder : public HeapObjectVisitor {
@@ -264,6 +289,7 @@ class HeapBuilder : public HeapObjectVisitor {
   llvm::Constant* BuildFunctionConstant(Function* function) {
     auto type = w.FunctionType(function->arity());
     auto llvm_function = llvm::Function::Create(type, llvm::Function::ExternalLinkage, name("Function_%p", function), &w.module_);
+    llvm_function->setGC("statepoint-example");
     w.llvm_functions[function] = llvm_function;
 
     auto ho = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(function->get_class())});
@@ -1045,7 +1071,11 @@ class BasicBlockBuilder {
 
     b.SetInsertPoint(bb_nonsmi);
     std::vector<llvm::Value*> klass_indices = { w.CInt(HeapObject::kClassOffset / kWordSize) };
-    auto custom_klass = b.CreateLoad(b.CreateGEP(h.UntagAndCast(receiver, w.object_ptr_ptr_type), klass_indices), "klass");
+    llvm::Function *load = llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagread, {w.i32_gc_ptr_ptr_type});
+    auto custom_klass = b.CreateBitCast(
+      b.CreateCall(load, {b.CreateBitCast(b.CreateGEP(receiver, klass_indices), w.i32_gc_ptr_ptr_type)}, "klass"),
+      w.object_ptr_type
+    );
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_lookup);
@@ -1759,11 +1789,13 @@ World::World(Program* program,
       intptr_type(NULL),
       int8_type(NULL),
       int8_ptr_type(NULL),
+      int32_type(NULL),
       int64_type(NULL),
       float_type(NULL),
       object_type(NULL),
       object_ptr_type(NULL),
       object_ptr_ptr_type(NULL),
+      i32_gc_ptr_ptr_type(NULL),
       heap_object_type(NULL),
       heap_object_ptr_type(NULL),
       class_type(NULL),
@@ -1802,6 +1834,9 @@ World::World(Program* program,
   object_type = llvm::StructType::create(context, "Tagged");
   object_ptr_type = llvm::PointerType::get(object_type, 0);
   object_ptr_ptr_type = llvm::PointerType::get(object_ptr_type, 0);
+  int32_type = llvm::Type::getInt32Ty(context);
+  llvm::PointerType* gc_i32_type = llvm::PointerType::get(int32_type, 0);
+  i32_gc_ptr_ptr_type = llvm::PointerType::get(gc_i32_type, 0);
 
   heap_object_type = llvm::StructType::create(context, "HeapType");
   heap_object_ptr_type = llvm::PointerType::get(heap_object_type, 0);
@@ -2062,7 +2097,7 @@ llvm::Function* World::GetSmiSlowCase(int selector) {
 }
 
 void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_module) {
-  llvm::LLVMContext& context(llvm::getGlobalContext());
+  llvm::LLVMContext context;
   llvm::Module module("dart_code", context);
 
   World world(program_, context, module);
@@ -2088,7 +2123,7 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
   }
 
   if (optimize) {
-    OptimizeModule(module);
+    OptimizeModule(module, world);
   }
 
   SaveModule(module, filename);
@@ -2104,15 +2139,56 @@ void LLVMCodegen::VerifyModule(llvm::Module& module) {
     FATAL("Modul verification failed. Cannot proceed.");
   }
   Print::Error("Module verification passed.");
+
 }
 
-void LLVMCodegen::OptimizeModule(llvm::Module& module) {
+// A pass to lower tagread intrinsics into actual instructions.
+struct RewriteTagRead : public llvm::FunctionPass {
+  static char ID; // Pass identification, replacement for typeid.
+  World& w;
+  RewriteTagRead(World& world) : FunctionPass(ID), w(world) {}
+
+  bool tryRewrite(llvm::BasicBlock& bb){
+    for (llvm::Instruction& instruction : bb) {
+      if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
+        llvm::Function* fn = call->getCalledFunction();
+        // TODO(dmitryolsh): this is nonsense, should be Intrinsic::tagread but
+        // somehow we don't get a proper ID.
+        if(fn && fn->isIntrinsic() &&
+          fn->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
+          llvm::IRBuilder<> b(&instruction);
+          IRHelper h(w, &b);
+          llvm::Value* expr = call->getArgOperand(0);
+          expr = h.UntagAndCast(expr, w.i32_gc_ptr_ptr_type);
+          expr = b.CreateLoad(expr);
+          call->replaceAllUsesWith(expr);
+          call->eraseFromParent();
+          // Have to stop iteration b/c block structure has changed.
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool runOnFunction(llvm::Function &func) override {
+    for (llvm::BasicBlock& bb : func) {
+      while(tryRewrite(bb)){ }
+    }
+    return false;
+  }
+};
+
+char RewriteTagRead::ID = 0;
+
+void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
   llvm::legacy::FunctionPassManager fpm(&module);
 
   // TODO: We should find out what other optimization passes would makes sense.
   fpm.add(llvm::createPromoteMemoryToRegisterPass());
   fpm.add(llvm::createCFGSimplificationPass());
   fpm.add(llvm::createConstantPropagationPass());
+  fpm.add(new RewriteTagRead(world));
 
   for (auto& f : module) fpm.run(f);
 }

@@ -319,6 +319,7 @@
           # scalaropts (contains mem2reg pass, ...)
           '-lLLVMAnalysis',
           '-lLLVMBitReader',
+          '-lLLVMCodeGen',
           '-lLLVMCore',
           '-lLLVMInstCombine',
           #'-lLLVMipa',

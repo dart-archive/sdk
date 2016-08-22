@@ -11,40 +11,39 @@
 
 #include "src/shared/natives.h"
 
+#ifdef DEBUG
+#define DARTINO_DEBUG 1
+#undef DEBUG
+#endif
+
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef DARTINO_DEBUG
+#undef DEBUG
+#undef DARTINO_DEBUG
+#define DEBUG 1
+#endif
+
 #include <vector>
 #include <map>
 
 namespace dartino {
-
-class LLVMCodegen {
- public:
-  LLVMCodegen(Program* program) : program_(program) { }
-
-  void Generate(const char* filename, bool optimize, bool verify_module);
-
- private:
-  void VerifyModule(llvm::Module& module);
-  void OptimizeModule(llvm::Module& module);
-  void SaveModule(llvm::Module& module, const char* filename);
-
-  Program* const program_;
-};
-
 
 class World {
  public:
@@ -85,12 +84,14 @@ class World {
   llvm::IntegerType* intptr_type;
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
+  llvm::IntegerType* int32_type;
   llvm::IntegerType* int64_type;
   llvm::Type* float_type;
 
   llvm::StructType* object_type;
   llvm::PointerType* object_ptr_type;
   llvm::PointerType* object_ptr_ptr_type;
+  llvm::PointerType* i32_gc_ptr_ptr_type;
 
   llvm::StructType* heap_object_type;
   llvm::PointerType* heap_object_ptr_type;
@@ -143,6 +144,20 @@ class World {
   std::map<int, llvm::Function*> smi_slow_cases;
 
   std::vector<llvm::Function*> natives_;
+};
+
+class LLVMCodegen {
+ public:
+  LLVMCodegen(Program* program) : program_(program) { }
+
+  void Generate(const char* filename, bool optimize, bool verify_module);
+
+ private:
+  void VerifyModule(llvm::Module& module);
+  void OptimizeModule(llvm::Module& module, World& world);
+  void SaveModule(llvm::Module& module, const char* filename);
+
+  Program* const program_;
 };
 
 // ************ Utilities *******************
