@@ -94,9 +94,7 @@ class NativesBuilder {
   NativesBuilder(World& world) : w(world) {}
 
   void BuildNativeDeclarations() {
-    auto void_ptr = w.object_ptr_type;
-
-    std::vector<llvm::Type*> argument_types = { void_ptr, w.object_ptr_ptr_type };
+    std::vector<llvm::Type*> argument_types = { w.process_ptr_type, w.arguments_ptr_type };
     auto function_type =
         llvm::FunctionType::get(w.object_ptr_type, argument_types, false);
 
@@ -155,11 +153,12 @@ class HeapBuilder : public HeapObjectVisitor {
  private:
   friend class BasicBlockBuilder;
 
+  // Returns untagged space-zero 
   llvm::Constant* BuildConstant(Object* raw_object) {
     if (!raw_object->IsHeapObject()) {
       Smi* smi = Smi::cast(raw_object);
       if (Smi::IsValidAsPortable(smi->value())) {
-        return w.CCast(w.CInt2Pointer(w.CSmi(smi->value())));
+        return w.CInt2Pointer(w.CSmi(smi->value()), w.object_ptr_aspace0_type);
       } else {
         return BuildLargeInteger(smi->value());
       }
@@ -167,7 +166,7 @@ class HeapBuilder : public HeapObjectVisitor {
 
     HeapObject* object = HeapObject::cast(raw_object);
 
-    llvm::Constant* value = w.tagged_heap_objects[object];
+    llvm::Constant* value = w.tagged_aspace0[object];
     if (value != NULL) return value;
 
     auto ot = w.object_ptr_type;
@@ -208,8 +207,12 @@ class HeapBuilder : public HeapObjectVisitor {
     }
 
     // Put tagging information on.
-    w.heap_objects[object] = value;
-    return w.tagged_heap_objects[object] = w.CTag(value);
+    w.untagged_aspace0[object] = value;
+    w.tagged_aspace1[object] = w.CTag(value, w.object_ptr_type);
+    ASSERT(llvm::dyn_cast<llvm::PointerType>(value->getType())->getAddressSpace() != kGCNameSpace);
+    value = w.CTagAddressSpaceZero(value, value->getType());
+    w.tagged_aspace0[object] = value;
+    return value;
   }
 
   llvm::Constant* BuildArrayConstant(Array* array) {
@@ -221,7 +224,7 @@ class HeapBuilder : public HeapObjectVisitor {
     std::vector<llvm::Constant*> array_entries = {ho, length};
     auto llvm_array = llvm::ConstantStruct::get(w.array_header, array_entries);
 
-    auto full_array_header = w.ObjectArrayType(array->length(), w.object_ptr_type, "Array");
+    auto full_array_header = w.ObjectArrayType(array->length(), w.object_ptr_aspace0_type, "Array");
     std::vector<llvm::Constant*> entries;
     entries.push_back(llvm_array);
     for (int i = 0; i < array->length(); i++) {
@@ -229,7 +232,7 @@ class HeapBuilder : public HeapObjectVisitor {
       if (value->IsHeapObject()) {
         entries.push_back(w.CCast(BuildConstant(value)));
       } else {
-        entries.push_back(w.CCast(w.CInt2Pointer(w.CSmi(Smi::cast(value)->value()))));
+        entries.push_back(w.CCast(w.CInt2Pointer(w.CSmi(Smi::cast(value)->value()), w.object_ptr_aspace0_type)));
       }
     }
     auto full_array = llvm::ConstantStruct::get(full_array_header, entries);
@@ -266,13 +269,13 @@ class HeapBuilder : public HeapObjectVisitor {
 
     auto innerType = w.heap_object_type->getContainedType(0);
     auto llvm_klass = w.CCast(is_meta_class ? null : BuildConstant(klass->get_class()), innerType);
-    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {llvm_klass});
+    auto heap_object = llvm::ConstantStruct::get(w.heap_object_type, {llvm_klass});
 
     bool is_root = !klass->has_super_class();
     bool has_methods = klass->has_methods();
 
     std::vector<llvm::Constant*> class_entries = {
-      ho, // heap object
+      heap_object,
       is_root ? w.CCast(null, w.class_ptr_type)
               : BuildConstant(klass->super_class()),
       BuildInstanceFormat(klass),
@@ -283,7 +286,8 @@ class HeapBuilder : public HeapObjectVisitor {
     };
 
     auto llvm_class = llvm::ConstantStruct::get(w.class_type, class_entries);
-    return new llvm::GlobalVariable(w.module_, w.class_type, true, llvm::GlobalValue::ExternalLinkage, llvm_class, name("Class_%p", klass));
+    auto global_variable = new llvm::GlobalVariable(w.module_, w.class_type, true, llvm::GlobalValue::ExternalLinkage, llvm_class, name("Class_%p", klass), nullptr);
+    return global_variable;
   }
 
   llvm::Constant* BuildFunctionConstant(Function* function) {
@@ -292,10 +296,10 @@ class HeapBuilder : public HeapObjectVisitor {
     llvm_function->setGC("statepoint-example");
     w.llvm_functions[function] = llvm_function;
 
-    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(function->get_class())});
+    auto klass = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(function->get_class())});
 
     std::vector<llvm::Constant*> function_entries = {
-      ho, // heap object
+      klass,
       w.CSmi(4), // bytecode size
       w.CSmi(0), // literals size
       w.CSmi(function->arity()),
@@ -341,7 +345,7 @@ class HeapBuilder : public HeapObjectVisitor {
         w.CCast(target),
         w.CCast(w.llvm_functions[entry->target()]),
         w.CCast(BuildConstant(entry->offset())),
-        w.CInt2Pointer(w.CSmi(entry->selector())),
+        w.CInt2Pointer(w.CSmi(entry->selector()), w.object_ptr_aspace0_type),
     };
 
     auto full_inst = llvm::ConstantStruct::get(w.dte_type, entries);
@@ -451,54 +455,98 @@ class IRHelper {
     return b->CreateBitCast(value, ptr_type, name);
   }
 
-  llvm::Value* UntagAndCast(llvm::Value* value, llvm::Type* ptr_type = NULL) {
-    if (ptr_type == NULL) ptr_type = w.object_ptr_type;
-    std::vector<llvm::Value*> indices = {w.CInt(-1)};
-    auto untagged = b->CreateGEP(b->CreateBitCast(value, w.int8_ptr_type), indices);
-    return b->CreateBitCast(untagged, ptr_type, "untagged");
+  llvm::Value* CastToNonGC(llvm::Value* value,
+                           llvm::Type* ptr_type,
+                           const char* name = "instance") {
+    return b->CreatePointerBitCastOrAddrSpaceCast(value, ptr_type, name);
+  }
+
+  llvm::Function* TaggedRead() {
+    return llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagread, {w.object_ptr_ptr_type});
+  }
+
+  llvm::Function* TaggedWrite() {
+    return llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagwrite, {w.object_ptr_type, w.object_ptr_ptr_type});
+  }
+
+  llvm::Function* SmiToInt() {
+    auto intrinsic = kBitsPerWord == 64 ? llvm::Intrinsic::smitoint64 : llvm::Intrinsic::smitoint;
+    return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {w.object_ptr_type});
+  }
+
+  llvm::Function* IntToSmi() {
+    auto intrinsic = kBitsPerWord == 64 ? llvm::Intrinsic::inttosmi64 : llvm::Intrinsic::inttosmi;
+    auto type = kBitsPerWord == 64 ? w.int64_type : w.int32_type;
+    return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {type});
   }
 
   llvm::Value* DecodeSmi(llvm::Value* value) {
-    value = b->CreatePtrToInt(value, w.intptr_type);
-    return b->CreateUDiv(value, w.CInt(2)); // use shift instead!
+    return b->CreateCall(SmiToInt(), {value});
   }
 
   llvm::Value* EncodeSmi(llvm::Value* value) {
-    value = b->CreateMul(value, w.CInt(2)); // use shift instead!
-    return b->CreateIntToPtr(value, w.object_ptr_type);
+    return b->CreateCall(IntToSmi(), {value});
   }
 
-  llvm::Value* GetArrayPointer(llvm::Value* array, int offset) {
-    auto untagged = UntagAndCast(array, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Array::kSize / kWordSize + offset) };
-    return Cast(b->CreateGEP(untagged, indices, "array_value"), w.object_ptr_ptr_type);
+  llvm::Value* GetArrayPointer(llvm::Value* array, int index) {
+    std::vector<llvm::Value*> indices = { w.CInt(Array::kSize / kWordSize + index) };
+    auto receiver = b->CreateBitCast(array, w.object_ptr_ptr_type);
+    // Creates a tagged, GC-address-space inner pointer into the array.
+    auto gep = b->CreateGEP(receiver, indices);
+    return gep;
+  }
+
+  llvm::Value* LoadField(llvm::Value* gep) {
+    ASSERT(gep->getType() == w.object_ptr_ptr_type);
+    auto answer = b->CreateCall(TaggedRead(), {gep}, "field");
+    return answer;
+  }
+
+  llvm::Value* LoadField(llvm::Value* arg, int offset) {
+    auto receiver = b->CreatePointerBitCastOrAddrSpaceCast(arg, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(offset / kWordSize) };
+    // Creates a tagged, GC-address-space inner pointer into the object.
+    auto gep = b->CreateGEP(receiver, indices);
+    return LoadField(gep);
+  }
+
+  void StoreField(int offset, llvm::Value* receiver, llvm::Value* value) {
+    receiver = b->CreatePointerBitCastOrAddrSpaceCast(receiver, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(offset / kWordSize) };
+    // Creates a tagged, GC-address-space inner pointer into the object.
+    auto slot = b->CreateGEP(receiver, indices);
+    b->CreateCall(TaggedWrite(), {value, slot});
+  }
+
+  llvm::Value* LoadFieldFromAddressSpaceZero(llvm::Value* gep) {
+    auto value = b->CreateLoad(gep);
+    return b->CreatePointerBitCastOrAddrSpaceCast(value, w.object_ptr_type);
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
-    auto untagged = UntagAndCast(heap_object, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(HeapObject::kClassOffset / kWordSize) };
-    return b->CreateLoad(Cast(b->CreateGEP(untagged, indices, "klass"), w.object_ptr_ptr_type));
+    return LoadField(heap_object, HeapObject::kClassOffset);
   }
 
   llvm::Value* LoadArrayEntry(llvm::Value* array, int offset) {
-    return b->CreateLoad(GetArrayPointer(array, offset));
+    return b->CreateCall(TaggedRead(), {GetArrayPointer(array, offset)});
   }
 
   llvm::Value* LoadInstanceFormat(llvm::Value* klass) {
-    auto untagged = UntagAndCast(klass, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Class::kInstanceFormatOffset / kWordSize) };
-    return b->CreateLoad(Cast(b->CreateGEP(untagged, indices, "instance_format"), w.object_ptr_ptr_type));
+    return LoadField(klass, Class::kInstanceFormatOffset);
   }
 
+  // Loads the statics array, which is an on-heap (but in the
+  // read-only-constants part of the heap) array pointed to by the off-heap
+  // Process object.  The pointer is already tagged.
   llvm::Value* LoadStaticsArray(llvm::Value* process) {
-    std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset  / kWordSize) };
-    return b->CreateLoad(b->CreateGEP(Cast(process, w.object_ptr_ptr_type), statics_indices), "statics");
+    std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset / kWordSize) };
+    auto gep = b->CreateGEP(Cast(process, w.object_ptr_ptr_unsafe_type), statics_indices);
+    return b->CreateLoad(gep);
   }
 
-  llvm::Value* LoadInitializerCode(llvm::Value* initializer) {
-    auto untagged = UntagAndCast(initializer, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Initializer::kFunctionOffset / kWordSize) };
-    return b->CreateLoad(b->CreateGEP(untagged, indices, "init_fun"));
+  llvm::Value* LoadInitializerCode(llvm::Value* initializer, int arity) {
+    auto entry = LoadField(initializer, Initializer::kFunctionOffset);
+    return b->CreatePointerBitCastOrAddrSpaceCast(entry, w.FunctionPtrType(arity));
   }
 
   llvm::Value* CreateSmiCheck(llvm::Value* object) {
@@ -590,7 +638,7 @@ class BasicBlockBuilder {
     DoPrologue();
     int arity = function_->arity();
     for (int i = 0; i < arity; i++) {
-      // These will be set in reverse order blow.
+      // These will be set in reverse order below.
       stack_.push_back(NULL);
     }
 
@@ -636,40 +684,35 @@ class BasicBlockBuilder {
 
   void DoLoadConstant(Object* object) {
     llvm::Value* value = NULL;
+    // We cast the constants to GC types even though they are constants and
+    // thus off-heap, because they can be combined with GC types by Phis etc.
+    // and the GC knows to ignore them.
     if (object->IsHeapObject()) {
-      value = w.CCast(w.tagged_heap_objects[HeapObject::cast(object)]);
+      value = w.tagged_aspace1[HeapObject::cast(object)];
       ASSERT(value != NULL);
     } else {
       // TODO: Support LargeIntegers for non-portable Smis.
-      value = w.CCast(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value())));
+      value = w.CCast(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value())), w.object_ptr_type);
     }
     push(value);
   }
 
   void DoLoadField(int field) {
     auto object = pop();
-    auto instance = h.UntagAndCast(object, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Instance::kSize / kWordSize + field) };
-    auto field_address = b.CreateGEP(instance, indices);
-    auto field_value = b.CreateLoad(field_address, name("field_%d", field));
+    auto field_value = h.LoadField(object, Instance::kSize + field * kWordSize);
     push(field_value);
   }
 
   void DoLoadBoxed(int index) {
-    auto boxed = h.UntagAndCast(local(index), w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Boxed::kValueOffset / kWordSize) };
-    auto value_address = b.CreateGEP(boxed, indices);
-    auto value = b.CreateLoad(value_address, "value");
+    auto boxed = local(index);
+    auto value = h.LoadField(boxed, Boxed::kValueOffset);
     push(value);
   }
 
   void DoStoreField(int field) {
     auto rhs = pop();
     auto object = pop();
-    auto instance = h.UntagAndCast(object, w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Instance::kSize / kWordSize + field) };
-    auto field_address = b.CreateGEP(instance, indices);
-    b.CreateStore(rhs, field_address);
+    h.StoreField(Instance::kSize + field * kWordSize, object, rhs);
     push(rhs);
   }
 
@@ -679,10 +722,7 @@ class BasicBlockBuilder {
 
   void DoStoreBoxed(int index) {
     auto value = local(0);
-    auto boxed = h.UntagAndCast(local(index), w.object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = { w.CInt(Boxed::kValueOffset / kWordSize) };
-    auto value_address = b.CreateGEP(boxed, indices);
-    b.CreateStore(value, value_address);
+    h.StoreField(Boxed::kValueOffset, local(index), value);
   }
 
   void DoDrop(int n) {
@@ -694,24 +734,22 @@ class BasicBlockBuilder {
   }
 
   void DoReturnNull() {
-    auto value = w.tagged_heap_objects[w.program_->null_object()];
+    auto value = w.tagged_aspace1[w.program_->null_object()];
     ASSERT(value != NULL);
     b.CreateRet(h.Cast(value, w.object_ptr_type));
   }
 
   void DoAllocate(Class* klass, bool immutable) {
     int fields = klass->NumberOfInstanceFields();
-    auto llvm_klass = w.CCast(w.tagged_heap_objects[klass], w.object_ptr_type);
+    auto llvm_klass = w.tagged_aspace1[klass];
     ASSERT(llvm_klass != NULL);
 
     // TODO: Check for Failure::xxx result!
     auto instance = b.CreateCall(
         w.runtime__HandleAllocate,
         {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
-    auto untagged_instance = h.UntagAndCast(instance, w.object_ptr_ptr_type);
     for (int field = 0; field < fields; field++) {
-      auto pos = b.CreateGEP(untagged_instance, {w.CInt(Instance::kSize / kWordSize + fields - 1 - field)});
-      b.CreateStore(pop(), pos);
+      h.StoreField(Instance::kSize + (fields - 1 - field) * kWordSize, instance, pop());
     }
     push(instance);
   }
@@ -740,7 +778,7 @@ class BasicBlockBuilder {
   void DoLoadStatic(int offset, bool check_for_initializer) {
     auto statics = h.LoadStaticsArray(llvm_process_);
     auto statics_entry_ptr = h.GetArrayPointer(statics, offset);
-    auto statics_entry = b.CreateLoad(statics_entry_ptr, "statics_entry");
+    auto statics_entry = h.LoadField(statics_entry_ptr);
 
     llvm::Value* value;
     if (check_for_initializer) {
@@ -751,14 +789,14 @@ class BasicBlockBuilder {
       // TODO: check for smi.
       auto klass = h.LoadClass(statics_entry);
       auto instance_format = h.DecodeSmi(h.LoadInstanceFormat(klass));
-      auto tmp = b.CreateAnd(instance_format, w.CInt(InstanceFormat::TypeField::mask() >> 1));
-      auto is_initializer = b.CreateICmpEQ(tmp, w.CInt(InstanceFormat::TypeField::encode(InstanceFormat::INITIALIZER_TYPE) >> 1));
+      auto tmp = b.CreateAnd(instance_format, w.CWord(InstanceFormat::TypeField::mask() >> 1));
+      auto is_initializer = b.CreateICmpEQ(tmp, w.CWord(InstanceFormat::TypeField::encode(InstanceFormat::INITIALIZER_TYPE) >> 1));
       b.CreateCondBr(is_initializer, bb_initializer, bb_join);
 
       b.SetInsertPoint(bb_initializer);
-      auto function = h.Cast(h.LoadInitializerCode(statics_entry), w.FunctionPtrType(0));
+      auto function = h.LoadInitializerCode(statics_entry, 0);
       auto initializer_result = b.CreateCall(function, {llvm_process_});
-      b.CreateStore(initializer_result, statics_entry_ptr);
+      b.CreateCall(h.TaggedWrite(), {initializer_result, statics_entry_ptr});
       b.CreateBr(bb_join);
 
       b.SetInsertPoint(bb_join);
@@ -773,14 +811,9 @@ class BasicBlockBuilder {
   }
 
   void DoStoreStatic(int offset) {
-    std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset  / kWordSize) };
-    auto statics_tagged = b.CreateLoad(b.CreateGEP(h.Cast(llvm_process_, w.object_ptr_ptr_type), statics_indices), "statics");
-    auto statics = h.UntagAndCast(statics_tagged, w.object_ptr_ptr_type);
-
-    std::vector<llvm::Value*> statics_entry_indices = { w.CInt(Array::kSize / kWordSize + offset) };
-    auto statics_entry = h.Cast(b.CreateGEP(statics, statics_entry_indices, "statics_entry"), w.object_ptr_ptr_type);
-
-    b.CreateStore(local(0), statics_entry);
+    auto statics = h.LoadStaticsArray(llvm_process_);
+    auto statics_entry_ptr = h.GetArrayPointer(statics, offset);
+    b.CreateCall(h.TaggedWrite(), {local(0), statics_entry_ptr});
   }
 
   void DoCall(Function* target) {
@@ -797,9 +830,7 @@ class BasicBlockBuilder {
   }
 
   void DoInvokeNative(Native nativeId, int arity) {
-    auto void_ptr = w.object_ptr_type;
-
-    auto process = h.Cast(llvm_process_, void_ptr);
+    auto process = h.Cast(llvm_process_, w.process_ptr_type);
     auto array = b.CreateAlloca(w.object_ptr_type, w.CInt(arity));
 
     for (int i = 0; i < arity; i++) {
@@ -834,8 +865,8 @@ class BasicBlockBuilder {
 
   void DoIdentical() {
     // TODO: Handle about other classes!
-    auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
-    auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
+    auto true_obj = w.tagged_aspace1[w.program_->true_object()];
+    auto false_obj = w.tagged_aspace1[w.program_->false_object()];
     push(b.CreateSelect(b.CreateICmpEQ(pop(), pop()), true_obj, false_obj, "identical_result"));
   }
 
@@ -899,8 +930,8 @@ class BasicBlockBuilder {
     llvm::Value* smi_result = NULL;
     if (if_true_bci == -1) {
       if (boolify) {
-        auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
-        auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
+        auto true_obj = w.tagged_aspace1[w.program_->true_object()];
+        auto false_obj = w.tagged_aspace1[w.program_->false_object()];
         smi_result = b.CreateSelect(result, true_obj, false_obj, "compare_result");
       } else {
         smi_result = b.CreateIntToPtr(result, w.object_ptr_type);
@@ -924,10 +955,10 @@ class BasicBlockBuilder {
       b.CreateBr(bb_join);
     } else {
       // Branch if true.
-      auto true_object = w.tagged_heap_objects[w.program_->true_object()];
+      auto true_object = w.tagged_aspace1[w.program_->true_object()];
       auto pos = GetBasicBlockAt(if_true_bci);
       auto neg = GetBasicBlockAt(if_false_bci);
-      auto cond = b.CreateICmpEQ(nonsmi_result, w.CCast(true_object));
+      auto cond = b.CreateICmpEQ(nonsmi_result, true_object);
       b.CreateCondBr(cond, pos, neg);
     }
     bb_nonsmi = b.GetInsertBlock(); // The basic block can be changed by [DoInvokeMethod]!
@@ -942,10 +973,10 @@ class BasicBlockBuilder {
   }
 
   void DoNegate() {
-    auto true_obj = w.tagged_heap_objects[w.program_->true_object()];
-    auto false_obj = w.tagged_heap_objects[w.program_->false_object()];
-    auto comp = b.CreateICmpEQ(pop(), w.CCast(true_obj));
-    push(b.CreateSelect(comp, w.CCast(false_obj), w.CCast(true_obj), "negate"));
+    auto true_obj = w.tagged_aspace1[w.program_->true_object()];
+    auto false_obj = w.tagged_aspace1[w.program_->false_object()];
+    auto comp = b.CreateICmpEQ(pop(), true_obj);
+    push(b.CreateSelect(comp, false_obj, true_obj, "negate"));
   }
 
   void DoInvokeMethod(int selector, int arity) {
@@ -977,16 +1008,15 @@ class BasicBlockBuilder {
     b.CreateCondBr(b.CreateICmpEQ(actual_offset, expected_offset), bb_lookup_success, bb_lookup_failure);
 
     b.SetInsertPoint(bb_lookup_failure);
-    auto dispatch = w.tagged_heap_objects[w.program_->dispatch_table()];
-    std::vector<llvm::Value*> dentry_indices = { w.CInt(Array::kSize / kWordSize) };
-    auto nsm_entry = b.CreateLoad(b.CreateGEP(h.UntagAndCast(dispatch, w.object_ptr_ptr_type), dentry_indices), "dispatch_table_entry");
+    auto dispatch = w.tagged_aspace1[w.program_->dispatch_table()];
+    auto nsm_entry = h.LoadField(dispatch, Array::kSize);  // NSM is 0th element in dispatch table.
     b.CreateBr(bb_lookup_success);
 
     b.SetInsertPoint(bb_lookup_success);
     auto phi = b.CreatePHI(w.object_ptr_type, 2);
     phi->addIncoming(entry, bb_start);
     phi->addIncoming(nsm_entry, bb_lookup_failure);
-    auto code = h.Cast(LookupDispatchTableCodeFromEntry(phi), w.FunctionPtrType(1 + arity));
+    auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(phi), w.FunctionPtrType(1 + arity));
     return b.CreateCall(code, args, "method_result");
   }
 
@@ -999,8 +1029,8 @@ class BasicBlockBuilder {
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
 
     auto comp = b.CreateICmpEQ(actual_offset, expected_offset);
-    auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
-    auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
+    auto true_obj = w.tagged_aspace1[w.program_->true_object()];
+    auto false_obj = w.tagged_aspace1[w.program_->false_object()];
     push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
@@ -1010,10 +1040,10 @@ class BasicBlockBuilder {
   }
 
   void DoBranchIf(int bci, int next_bci) {
-    auto true_object = w.tagged_heap_objects[w.program_->true_object()];
+    auto true_object = w.tagged_aspace1[w.program_->true_object()];
     auto pos = GetBasicBlockAt(bci);
     auto neg = GetBasicBlockAt(next_bci);
-    auto cond = b.CreateICmpEQ(pop(), w.CCast(true_object));
+    auto cond = b.CreateICmpEQ(pop(), true_object);
     b.CreateCondBr(cond, pos, neg);
   }
 
@@ -1044,15 +1074,11 @@ class BasicBlockBuilder {
 
  private:
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
-    std::vector<llvm::Value*> code_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
-    llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), code_indices), "code");
-
-    return code;
+    return h.LoadField(entry, DispatchTableEntry::kCodeOffset);
   }
 
   llvm::Value* LookupDispatchTableOffsetFromEntry(llvm::Value* entry) {
-    std::vector<llvm::Value*> offset_indices = { w.CInt(DispatchTableEntry::kOffsetOffset / kWordSize) };
-    llvm::Value* offset = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), offset_indices), "offset");
+    llvm::Value* offset = h.LoadField(entry, DispatchTableEntry::kOffsetOffset);
 
     return offset;
   }
@@ -1066,16 +1092,11 @@ class BasicBlockBuilder {
     b.CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
     b.SetInsertPoint(bb_smi);
-    auto smi_klass = w.CCast(w.tagged_heap_objects[w.program_->smi_class()]);
+    auto smi_klass = w.tagged_aspace1[w.program_->smi_class()];
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_nonsmi);
-    std::vector<llvm::Value*> klass_indices = { w.CInt(HeapObject::kClassOffset / kWordSize) };
-    llvm::Function *load = llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagread, {w.i32_gc_ptr_ptr_type});
-    auto custom_klass = b.CreateBitCast(
-      b.CreateCall(load, {b.CreateBitCast(b.CreateGEP(receiver, klass_indices), w.i32_gc_ptr_ptr_type)}, "klass"),
-      w.object_ptr_type
-    );
+    auto custom_klass = h.LoadField(receiver, HeapObject::kClassOffset);
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_lookup);
@@ -1083,17 +1104,19 @@ class BasicBlockBuilder {
     klass->addIncoming(smi_klass, bb_smi);
     klass->addIncoming(custom_klass, bb_nonsmi);
 
-    std::vector<llvm::Value*> classid_indices = { w.CInt(Class::kIdOrTransformationTargetOffset / kWordSize) };
-    auto smi_classid = b.CreateLoad(b.CreateGEP(h.UntagAndCast(klass, w.object_ptr_ptr_type), classid_indices));
-    auto smi_selector_offset = Selector::IdField::decode(selector) << Smi::kTagSize;
-    auto offset = b.CreateAdd(w.CInt(smi_selector_offset), b.CreatePtrToInt(smi_classid, w.intptr_type));
+    auto classid = h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset));
+    auto selector_offset = w.CWord(Selector::IdField::decode(selector));
+    auto offset = b.CreateAdd(selector_offset, classid);
+    offset = b.CreateAdd(w.CInt64(Array::kSize / kPointerSize), offset);
 
-    auto dispatch = w.tagged_heap_objects[w.program_->dispatch_table()];
+    auto dispatch = w.untagged_aspace0[w.program_->dispatch_table()];
+    auto scaled_dispatch = b.CreatePointerCast(dispatch, w.object_ptr_aspace0_ptr_aspace0_type);
 
-    // Away with the Smi tag & index into dispatch table.
-    offset = b.CreateAdd(b.CreateUDiv(h.Cast(offset, w.intptr_type), w.CInt(2)), w.CInt(Array::kSize / kWordSize));
-    std::vector<llvm::Value*> dentry_indices = { offset };
-    auto entry = b.CreateLoad(b.CreateGEP(h.UntagAndCast(dispatch, w.object_ptr_ptr_type), dentry_indices), "dispatch_table_entry");
+    // Index into dispatch table.  The dispatch table is a 'heap object'
+    // (tagged, with normal HeapObject layout), but it is always in the
+    // read-only static constants part of the heap so we don't need to track it
+    // specially.
+    auto entry = h.LoadFieldFromAddressSpaceZero(b.CreateGEP(scaled_dispatch, {offset}));
     return entry;
   }
 
@@ -1740,9 +1763,10 @@ class RootsBuilder : public PointerVisitor {
       if (object->IsHeapObject()) {
         // Ensure we've got a llvm constant for this root.
         hbuilder_->Visit(HeapObject::cast(object));
-        roots_.push_back(w.CCast(w.tagged_heap_objects[HeapObject::cast(object)]));
+        // The type of the roots may be more specific than heap_object_type, so cast.
+        roots_.push_back(w.CCast(w.tagged_aspace0[HeapObject::cast(object)], w.object_ptr_aspace0_type));
       } else {
-        roots_.push_back(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value())));
+        roots_.push_back(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value()), w.object_ptr_aspace0_type));
       }
     }
   }
@@ -1792,10 +1816,12 @@ World::World(Program* program,
       int32_type(NULL),
       int64_type(NULL),
       float_type(NULL),
-      object_type(NULL),
       object_ptr_type(NULL),
       object_ptr_ptr_type(NULL),
-      i32_gc_ptr_ptr_type(NULL),
+      object_ptr_aspace0_type(NULL),
+      object_ptr_aspace0_ptr_aspace0_type(NULL),
+      object_ptr_ptr_unsafe_type(NULL),
+      arguments_ptr_type(NULL),
       heap_object_type(NULL),
       heap_object_ptr_type(NULL),
       class_type(NULL),
@@ -1814,6 +1840,7 @@ World::World(Program* program,
       largeinteger_ptr_type(NULL),
       double_type(NULL),
       double_ptr_type(NULL),
+      process_ptr_type(NULL),
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
@@ -1821,22 +1848,34 @@ World::World(Program* program,
       runtime__HandleAllocate(NULL),
       runtime__HandleAllocateBoxed(NULL),
       runtime__HandleObjectFromFailure(NULL) {
-  // NOTE: Our target pointer is assumed to be 32-bit!
-  intptr_type = llvm::Type::getInt32Ty(context);
-
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
+  int32_type = llvm::Type::getInt32Ty(context);
   int64_type = llvm::Type::getInt64Ty(context);
+
+  intptr_type = kBitsPerWord == 8 ? int64_type : int32_type;
 
   // NOTE: Our target dart double's are assumed to be 64-bit C double!
   float_type = llvm::Type::getDoubleTy(context);
 
-  object_type = llvm::StructType::create(context, "Tagged");
-  object_ptr_type = llvm::PointerType::get(object_type, 0);
-  object_ptr_ptr_type = llvm::PointerType::get(object_ptr_type, 0);
-  int32_type = llvm::Type::getInt32Ty(context);
-  llvm::PointerType* gc_i32_type = llvm::PointerType::get(int32_type, 0);
-  i32_gc_ptr_ptr_type = llvm::PointerType::get(gc_i32_type, 0);
+  // The object_ptr_type corresponds to the tagged Object* pointer. It is in
+  // address space 1, which is the GCed space. It may not be that important
+  // what the width of the underlying type is, since we can't dereference these
+  // pointers without intrinsics.
+  object_ptr_type = llvm::PointerType::get(int8_type, 1);
+  object_ptr_aspace0_type = llvm::PointerType::get(int8_type, 0);
+
+  // Used for accessing fields with inner pointers, this is also a tagged GCed
+  // pointer. This assumes that the GC understands inner pointers, at least on
+  // the stack.
+  object_ptr_ptr_type = llvm::PointerType::get(object_ptr_type, 1);
+  object_ptr_aspace0_ptr_aspace0_type = llvm::PointerType::get(object_ptr_aspace0_type, 0);
+  object_ptr_ptr_unsafe_type = llvm::PointerType::get(object_ptr_type, 0);
+
+  // Used for the alloca'ed array of arguments to natives. This is not a
+  // GCed pointer itself (because it points at the stack), but the contents
+  // of the array is GCed pointers.
+  arguments_ptr_type = llvm::PointerType::get(object_ptr_type, 0);
 
   heap_object_type = llvm::StructType::create(context, "HeapType");
   heap_object_ptr_type = llvm::PointerType::get(heap_object_type, 0);
@@ -1865,15 +1904,14 @@ World::World(Program* program,
   double_type = llvm::StructType::create(context, "DoubleType");
   double_ptr_type = llvm::PointerType::get(double_type, 0);
 
+  // This pointer just needs to be in the right address space for the compilation to work.
+  process_ptr_type = int8_ptr_type;
+
   dte_type = llvm::StructType::create(context, "DispatchTableEntry");
   dte_ptr_type = llvm::PointerType::get(dte_type, 0);
 
   roots_type = llvm::StructType::create(context, "ProgramRootsType");
   roots_ptr_type = llvm::PointerType::get(roots_type, 0);
-
-  // [object_type]
-  std::vector<llvm::Type*> empty;
-  object_type->setBody(empty, true);
 
   // [heap_object_type]
   std::vector<llvm::Type*> heap_object_entries = {class_ptr_type};
@@ -1913,7 +1951,7 @@ World::World(Program* program,
   // [initializer_type]
   std::vector<llvm::Type*> initializer_entries;
   initializer_entries.push_back(heap_object_type);
-  initializer_entries.push_back(object_ptr_type); // machine code (normally function object)
+  initializer_entries.push_back(object_ptr_aspace0_type); // machine code (normally function object)
   initializer_type->setBody(initializer_entries);
 
   // [instance_type]
@@ -1937,19 +1975,19 @@ World::World(Program* program,
   // [dte_type]
   std::vector<llvm::Type*> dte_object_entries;
   dte_object_entries.push_back(heap_object_type);
-  dte_object_entries.push_back(object_ptr_type); // target
-  dte_object_entries.push_back(object_ptr_type); // (machine)code
-  dte_object_entries.push_back(object_ptr_type); // offset
-  dte_object_entries.push_back(object_ptr_type); // selector
+  dte_object_entries.push_back(object_ptr_aspace0_type); // target
+  dte_object_entries.push_back(object_ptr_aspace0_type); // (machine)code
+  dte_object_entries.push_back(object_ptr_aspace0_type); // offset
+  dte_object_entries.push_back(object_ptr_aspace0_type); // selector
   dte_type->setBody(dte_object_entries, true);
 
   // [roots_type]
   std::vector<llvm::Type*> root_entries;
 #define ADD_ROOT(type, name, CamelName) \
-  root_entries.push_back(object_ptr_type);
+  root_entries.push_back(object_ptr_aspace0_type);
   ROOTS_DO(ADD_ROOT)
 #undef ADD_ROOT
-  root_entries.push_back(object_ptr_type); // Program::entry_
+  root_entries.push_back(object_ptr_aspace0_type); // Program::entry_
   roots_type->setBody(root_entries, true);
 
   // External C functions for debugging.
@@ -1960,10 +1998,10 @@ World::World(Program* program,
   auto printf_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, true);
   libc__printf = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, "printf", &module_);
 
-  auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {object_ptr_type}, false);
-  auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type, intptr_type}, false);
-  auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
-  auto handle_object_from_failure_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
+  auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {process_ptr_type}, false);
+  auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type, intptr_type}, false);
+  auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type}, false);
+  auto handle_object_from_failure_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type}, false);
 
   runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGC", &module_);
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
@@ -1987,7 +2025,7 @@ llvm::StructType* World::InstanceType(int n) {
   std::vector<llvm::Type*> types;
   types.push_back(instance_type);
   for (int i = 0; i < n; i++) {
-    types.push_back(object_ptr_type);
+    types.push_back(object_ptr_aspace0_type);
   }
   inst_type->setBody(types, true);
   return inst_type;
@@ -2009,6 +2047,7 @@ llvm::StructType* World::OneByteStringType(int n) {
 
 llvm::FunctionType* World::FunctionType(int arity) {
   std::vector<llvm::Type*> args(1 /* process */ + arity, object_ptr_type);
+  args[0] = process_ptr_type;
   return llvm::FunctionType::get(object_ptr_type, args, false);
 }
 
@@ -2017,23 +2056,33 @@ llvm::PointerType* World::FunctionPtrType(int arity) {
 }
 
 llvm::Constant* World::CTag(llvm::Constant* constant, llvm::Type* ptr_type) {
-  if (ptr_type == NULL) ptr_type = constant->getType();
+  if (ptr_type == NULL) ptr_type = object_ptr_type;
+  ASSERT(constant->getType()->isPointerTy());
+  ASSERT(constant->getType()->getPointerAddressSpace() == 0);
+  ASSERT(ptr_type->getPointerAddressSpace() == 1);
+  std::vector<llvm::Value*> indices = {CInt(1)};
+  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
+  return llvm::ConstantExpr::getAddrSpaceCast(tagged, ptr_type);
+}
+
+llvm::Constant* World::CTagAddressSpaceZero(llvm::Constant* constant, llvm::Type* ptr_type) {
+  if (ptr_type == NULL) ptr_type = object_ptr_aspace0_type;
+  ASSERT(constant->getType()->isPointerTy());
+  ASSERT(constant->getType()->getPointerAddressSpace() == 0);
+  ASSERT(ptr_type->getPointerAddressSpace() == 0);
   std::vector<llvm::Value*> indices = {CInt(1)};
   auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
   return llvm::ConstantExpr::getBitCast(tagged, ptr_type);
 }
 
-llvm::Constant* World::CUnTag(llvm::Constant* constant, llvm::Type* ptr_type) {
-  if (ptr_type == NULL) ptr_type = constant->getType();
-  std::vector<llvm::Value*> indices = {CInt(-1)};
-  auto untagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
-  auto result = llvm::ConstantExpr::getBitCast(untagged, ptr_type);
-  return result;
-}
-
 llvm::Constant* World::CBit(int8 value) {
   uint64 value64 = value;
   return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(1, value64, false));
+}
+
+llvm::Constant* World::CWord(intptr_t value) {
+  int64 value64 = value;
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(kBitsPerWord, value64, true));
 }
 
 llvm::Constant* World::CInt(int32 value) {
@@ -2068,7 +2117,7 @@ llvm::Constant* World::CInt2Pointer(llvm::Constant* constant, llvm::Type* ptr_ty
 }
 
 llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
-  if (ptr_type == NULL) ptr_type = object_ptr_type;
+  if (ptr_type == NULL) ptr_type = object_ptr_aspace0_type;
   return llvm::ConstantExpr::getPointerCast(constant, ptr_type);
 }
 
@@ -2126,6 +2175,8 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
     OptimizeModule(module, world);
   }
 
+  LowerIntrinsics(module, world);
+
   SaveModule(module, filename);
 }
 
@@ -2143,28 +2194,74 @@ void LLVMCodegen::VerifyModule(llvm::Module& module) {
 }
 
 // A pass to lower tagread intrinsics into actual instructions.
-struct RewriteTagRead : public llvm::FunctionPass {
+struct RewriteGCIntrinsics : public llvm::FunctionPass {
   static char ID; // Pass identification, replacement for typeid.
   World& w;
-  RewriteTagRead(World& world) : FunctionPass(ID), w(world) {}
+  RewriteGCIntrinsics(World& world) : FunctionPass(ID), w(world) {}
 
   bool tryRewrite(llvm::BasicBlock& bb){
     for (llvm::Instruction& instruction : bb) {
       if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
         llvm::Function* fn = call->getCalledFunction();
-        // TODO(dmitryolsh): this is nonsense, should be Intrinsic::tagread but
-        // somehow we don't get a proper ID.
-        if(fn && fn->isIntrinsic() &&
-          fn->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
+        if (fn && fn->isIntrinsic()) {
+          fn->recalculateIntrinsicID();
           llvm::IRBuilder<> b(&instruction);
           IRHelper h(w, &b);
-          llvm::Value* expr = call->getArgOperand(0);
-          expr = h.UntagAndCast(expr, w.i32_gc_ptr_ptr_type);
-          expr = b.CreateLoad(expr);
-          call->replaceAllUsesWith(expr);
-          call->eraseFromParent();
-          // Have to stop iteration b/c block structure has changed.
-          return true;
+          // Have to stop iteration by returning true if block structure has changed.
+          switch (fn->getIntrinsicID()) {
+            case llvm::Intrinsic::tagread: {
+              llvm::Value* pointer = call->getArgOperand(0);
+              pointer = b.CreatePointerBitCastOrAddrSpaceCast(pointer, w.int8_ptr_type);
+              auto gep = b.CreateGEP(pointer, { w.CInt(-1) });
+              gep = b.CreatePointerCast(gep, w.object_ptr_aspace0_ptr_aspace0_type);
+              auto result = b.CreateLoad(gep);
+              auto cast_result = b.CreatePointerBitCastOrAddrSpaceCast(result, w.object_ptr_type);
+              call->replaceAllUsesWith(cast_result);
+              call->eraseFromParent();
+              return true;
+            }
+            case llvm::Intrinsic::tagwrite: {
+              // TODO(erikcorry): Add write barrier.
+              llvm::Value* pointer = call->getArgOperand(1);
+              pointer = b.CreatePointerBitCastOrAddrSpaceCast(pointer, w.int8_ptr_type);
+              auto gep = b.CreateGEP(pointer, { w.CInt(-1) });
+              gep = b.CreatePointerCast(gep, w.object_ptr_ptr_unsafe_type);
+
+              llvm::Value* value = call->getArgOperand(0);
+              b.CreateStore(value, gep);
+              call->eraseFromParent();
+              return true;
+            }
+            case llvm::Intrinsic::smitoint: {
+              auto pointer = call->getArgOperand(0);
+              auto number = b.CreatePtrToInt(pointer, w.int32_type);
+              auto result = b.CreateAShr(number, w.CInt(1));
+              call->replaceAllUsesWith(result);
+              call->eraseFromParent();
+              return true;
+            }
+            case llvm::Intrinsic::smitoint64: {
+              auto pointer = call->getArgOperand(0);
+              auto number = b.CreatePtrToInt(pointer, w.int64_type);
+              // Remove tag with an arithmetic shift.
+              auto result = b.CreateAShr(number, w.CInt64(1));
+              call->replaceAllUsesWith(result);
+              call->eraseFromParent();
+              return true;
+            }
+            case llvm::Intrinsic::inttosmi64:
+            case llvm::Intrinsic::inttosmi: {
+              auto number = call->getArgOperand(0);
+              // Tag with zero by adding to itself.
+              number = b.CreateAdd(number, number);
+              auto result = b.CreateIntToPtr(number, w.object_ptr_type);
+              call->replaceAllUsesWith(result);
+              call->eraseFromParent();
+              return true;
+            }
+            default:
+              break;
+          }
         }
       }
     }
@@ -2179,7 +2276,7 @@ struct RewriteTagRead : public llvm::FunctionPass {
   }
 };
 
-char RewriteTagRead::ID = 0;
+char RewriteGCIntrinsics::ID = 0;
 
 void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
   llvm::legacy::FunctionPassManager fpm(&module);
@@ -2188,7 +2285,14 @@ void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
   fpm.add(llvm::createPromoteMemoryToRegisterPass());
   fpm.add(llvm::createCFGSimplificationPass());
   fpm.add(llvm::createConstantPropagationPass());
-  fpm.add(new RewriteTagRead(world));
+
+  for (auto& f : module) fpm.run(f);
+}
+
+void LLVMCodegen::LowerIntrinsics(llvm::Module& module, World& world) {
+  llvm::legacy::FunctionPassManager fpm(&module);
+
+  fpm.add(new RewriteGCIntrinsics(world));
 
   for (auto& f : module) fpm.run(f);
 }

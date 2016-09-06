@@ -59,12 +59,13 @@ class World {
   llvm::PointerType* FunctionPtrType(int n);
 
   // Helper methods for creating/manipulating constants
-  llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
-  llvm::Constant* CUnTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
+  llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type);
+  llvm::Constant* CTagAddressSpaceZero(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CBit(int8 value);
   llvm::Constant* CInt(int32 integer);
   llvm::Constant* CInt8(uint8 integer);
   llvm::Constant* CInt64(int64 value);
+  llvm::Constant* CWord(intptr_t value);
   llvm::Constant* CDouble(double value);
   llvm::Constant* CSmi(uint32 integer);
   llvm::Constant* CPointer2Int(llvm::Constant* constant);
@@ -80,7 +81,7 @@ class World {
   llvm::Module& module_;
 
   // Basically intptr_t of the target. Used for pointer->int, int->pointer
-  // conversions. Currently hardcoded to 32-bit target.
+  // conversions.
   llvm::IntegerType* intptr_type;
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
@@ -88,10 +89,26 @@ class World {
   llvm::IntegerType* int64_type;
   llvm::Type* float_type;
 
-  llvm::StructType* object_type;
+  // dartino::Object*
   llvm::PointerType* object_ptr_type;
+  // dartino::Object**
   llvm::PointerType* object_ptr_ptr_type;
-  llvm::PointerType* i32_gc_ptr_ptr_type;
+  // dartino::Object* where we know it's a constant so it doesn't need to be in
+  // address space 1 because constants are not GCed.
+  llvm::PointerType* object_ptr_aspace0_type;
+  // dartino::Object** where we know it is a field in a constant, which means
+  // it is also pointing at a constant.
+  llvm::PointerType* object_ptr_aspace0_ptr_aspace0_type;
+  // dartino::Object**
+  // It's a pointer to a tagged address-space-1 field, but the pointer itself
+  // is address-space-0 ie not tracked by the GC machinery.  This could be
+  // useful for:
+  // * A pointer to an off-heap GC root variable.
+  // * A value used late in the optimization process, eg. a GEP obtained after
+  //   untagging while lowering load/store intrinsics.  Such GEPS may never be
+  //   live at a state point.
+  llvm::PointerType* object_ptr_ptr_unsafe_type;
+  llvm::PointerType* arguments_ptr_type;
 
   llvm::StructType* heap_object_type;
   llvm::PointerType* heap_object_ptr_type;
@@ -120,6 +137,8 @@ class World {
   llvm::StructType* double_type;
   llvm::PointerType* double_ptr_type;
 
+  llvm::PointerType* process_ptr_type;
+
   llvm::StructType* dte_type;
   llvm::PointerType* dte_ptr_type;
 
@@ -137,14 +156,21 @@ class World {
   llvm::Function* runtime__HandleInvokeSelector;
   llvm::Function* runtime__HandleObjectFromFailure;
 
-  std::map<HeapObject*, llvm::Constant*> tagged_heap_objects;
-  std::map<HeapObject*, llvm::Constant*> heap_objects;
+  // Constants, tagged and in the GC-ed space.
+  std::map<HeapObject*, llvm::Constant*> tagged_aspace1;
+  // The same, but address space zero.
+  std::map<HeapObject*, llvm::Constant*> tagged_aspace0;
+  // The actual addresses of constants, ie without the 1-tag.
+  std::map<HeapObject*, llvm::Constant*> untagged_aspace0;
   std::map<HeapObject*, llvm::Function*> llvm_functions;
 
   std::map<int, llvm::Function*> smi_slow_cases;
 
   std::vector<llvm::Function*> natives_;
 };
+
+static const int kRegularNameSpace = 0;
+static const int kGCNameSpace = 1;
 
 class LLVMCodegen {
  public:
@@ -155,6 +181,7 @@ class LLVMCodegen {
  private:
   void VerifyModule(llvm::Module& module);
   void OptimizeModule(llvm::Module& module, World& world);
+  void LowerIntrinsics(llvm::Module& module, World& world);
   void SaveModule(llvm::Module& module, const char* filename);
 
   Program* const program_;

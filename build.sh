@@ -49,5 +49,5 @@ run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
 run $LLVM_BIN/llc -march=x86 -o $BASENAME.S $BASENAME.bc
 
 # Link generated code together with dartino runtime and llvm embedder.
-run g++ -m32 -o $BASENAME -Lout/ReleaseIA32 -Lout/ReleaseIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
+run g++ -m32 -o $BASENAME -Lout/DebugIA32 -Lout/DebugIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
 
