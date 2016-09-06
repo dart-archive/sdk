@@ -1,37 +1,21 @@
-# The Dartino project
+# An update on Dartino
 
-The Dartino project aims to make developers more productive at writing
-application code for embedded devices. It is powered by the [Dart
-language](https://www.dartlang.org/docs/dart-up-and-running/ch02.html) and a
-fast, lean runtime.
+_September, 2016._
 
-Dartino is currently in an alpha state, and still incomplete. We'd be very happy
-to hear about things that work well and areas that need more work (see feedback
-below).
+The Dartino project has been [discontinued](https://groups.google.com/forum/#!topic/dartino-discuss/U3fzZjoOdKg), and is no longer being actively maintained by the Dart team.
 
-## Trying it out
+If you are interested in the source code, please look on GitHub:
 
-For building Dartino SDK please follow the instructions outlined in 
-[the wiki](https://github.com/dartino/sdk/wiki/Building).
-To learn more about using Dartino for embedded device development, please see 
-the [Dartino site](https://dartino.org).
+  * Core SDK:
+  [https://github.com/dartino/sdk](https://github.com/dartino/sdk)
+  * Atom IDE plugin:
+  [https://github.com/dartino/atom-dartino](https://github.com/dartino/atom-dartino)
+  * dartino.org website:
+  [https://github.com/dartino/www.dartino.org](https://github.com/dartino/www.dartino.org)
 
-## Feedback & contributing
+The team behind Dartino is doubling down on other areas of development:
 
-To give us feedback, please
-[file issues on GitHub](https://github.com/dartino/sdk/issues)
-or join our
-[discussion group](https://groups.google.com/forum/#!forum/dartino-discuss)
-and post there.
+  * Making [Dart webdev](https://webdev.dartlang.org) the most productive stack for web apps
+  * Making [Flutter](https://flutter.io) the best way of building high-quality cross-platform mobile apps
 
-For code contributions, please see the [Contributing page](https://github.com/dartino/sdk/wiki/Contributing).
-
-## Partners
-
-We are actively looking for partners! If you are interesting in integrating with
-Dartino for an embedded project, please send an email to
-dartino-contact@googlegroups.com.
-
-## License
-
-Please see the [license file](https://github.com/dartino/sdk/blob/master/LICENSE.md).
+Regards, the Dartino team
