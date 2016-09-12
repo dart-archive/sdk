@@ -908,6 +908,12 @@ class BasicBlockBuilder {
       auto overflow_bit = b.CreateExtractValue(s, {1});
       no_overflow = b.CreateICmpEQ(overflow_bit, w.CBit(0));
       result = b.CreateExtractValue(s, {0});
+    } else if (opcode == kInvokeBitAnd) {
+      result = b.CreateAnd(receiver, argument, "bitwise_smi_and");
+    } else if (opcode == kInvokeBitOr) {
+      result = b.CreateOr(receiver, argument, "bitwise_smi_or");
+    } else if (opcode == kInvokeBitXor) {
+      result = b.CreateXor(receiver, argument, "bitwise_smi_xor");
     } else if (opcode == kInvokeEq) {
       result = b.CreateICmpEQ(receiver, argument);
       boolify = true;
@@ -1515,6 +1521,9 @@ class BasicBlocksExplorer {
             // Fall through.
           }
 
+          case kInvokeBitAnd:
+          case kInvokeBitOr:
+          case kInvokeBitXor:
           case kInvokeAdd:
           case kInvokeSub: {
             int selector = Utils::ReadInt32(bcp + 1);
@@ -1527,9 +1536,6 @@ class BasicBlocksExplorer {
           case kInvokeTruncDiv:
 
           case kInvokeBitNot:
-          case kInvokeBitAnd:
-          case kInvokeBitOr:
-          case kInvokeBitXor:
           case kInvokeBitShr:
           case kInvokeBitShl:
 
