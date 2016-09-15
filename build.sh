@@ -34,20 +34,20 @@ run ninja -C out/DebugX64
 
 # Used for linking the generated llvm code with dartino runtime and a very small
 # embedder.
-run ninja -C out/ReleaseIA32 llvm_embedder
-run ninja -C out/DebugIA32 llvm_embedder
+run ninja -C out/ReleaseX64 llvm_embedder
+run ninja -C out/DebugX64 llvm_embedder
 
 run rm -f $EXECUTABLE
 run rm -f $BASENAME.bc $BASENAME.ll $BASENAME.S $BASENAME.o
 
-run out/DebugX64/llvm-codegen $SNAPSHOT $BASENAME.bc
+run out/DebugX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc
 
 # Make text representation of LLVM IR (for debugging)
 run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
 
 # Compile LLVM IR to 32-bit x86 asm code.
-run $LLVM_BIN/llc -march=x86 -o $BASENAME.S $BASENAME.bc
+run $LLVM_BIN/llc -o $BASENAME.S $BASENAME.bc
 
 # Link generated code together with dartino runtime and llvm embedder.
-run g++ -m32 -o $BASENAME -Lout/ReleaseIA32 -Lout/ReleaseIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
+run g++ -o $BASENAME -Lout/ReleaseX64 -Lout/ReleaseX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
 

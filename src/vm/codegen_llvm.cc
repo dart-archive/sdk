@@ -312,7 +312,7 @@ class HeapBuilder : public HeapObjectVisitor {
 
   llvm::Constant* BuildInstanceConstant(Instance* instance) {
     auto ho = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(instance->get_class())});
-    auto inst = llvm::ConstantStruct::get(w.instance_type, {ho, w.CInt(instance->FlagsBits())});
+    auto inst = llvm::ConstantStruct::get(w.instance_type, {ho, w.CWord(instance->FlagsBits())});
 
     int nof = instance->get_class()->NumberOfInstanceFields();
 
@@ -418,8 +418,8 @@ class HeapBuilder : public HeapObjectVisitor {
   }
 
   llvm::Constant* BuildInstanceFormat(Class* klass) {
-    uint32 value = static_cast<uint32>(reinterpret_cast<intptr_t>(klass->instance_format().as_smi()));
-    return w.CInt(value);
+    uintptr_t value = reinterpret_cast<uintptr_t>(klass->instance_format().as_smi());
+    return w.CWord(value);
   }
 
   World& w;
@@ -470,14 +470,13 @@ class IRHelper {
   }
 
   llvm::Function* SmiToInt() {
-    auto intrinsic = kBitsPerWord == 64 ? llvm::Intrinsic::smitoint64 : llvm::Intrinsic::smitoint;
+    auto intrinsic = w.bits_per_word == 64 ? llvm::Intrinsic::smitoint64 : llvm::Intrinsic::smitoint;
     return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {w.object_ptr_type});
   }
 
   llvm::Function* IntToSmi() {
-    auto intrinsic = kBitsPerWord == 64 ? llvm::Intrinsic::inttosmi64 : llvm::Intrinsic::inttosmi;
-    auto type = kBitsPerWord == 64 ? w.int64_type : w.int32_type;
-    return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {type});
+    auto intrinsic = w.bits_per_word == 64 ? llvm::Intrinsic::inttosmi64 : llvm::Intrinsic::inttosmi;
+    return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {w.intptr_type});
   }
 
   llvm::Value* DecodeSmi(llvm::Value* value) {
@@ -550,11 +549,11 @@ class IRHelper {
   }
 
   llvm::Value* CreateSmiCheck(llvm::Value* object) {
-    return b->CreateIsNull(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CInt(1)));
+    return b->CreateIsNull(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(1)));
   }
 
   llvm::Value* CreateFailureCheck(llvm::Value* object) {
-    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CInt(3)), w.CInt(3));
+    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(3)), w.CWord(3));
   }
 
   llvm::Value* Null() {
@@ -747,7 +746,7 @@ class BasicBlockBuilder {
     // TODO: Check for Failure::xxx result!
     auto instance = b.CreateCall(
         w.runtime__HandleAllocate,
-        {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
+        {llvm_process_, llvm_klass, w.CWord(immutable ? 1 : 0)});
     for (int field = 0; field < fields; field++) {
       h.StoreField(Instance::kSize + (fields - 1 - field) * kWordSize, instance, pop());
     }
@@ -1006,7 +1005,7 @@ class BasicBlockBuilder {
     auto entry = LookupDispatchTableEntry(receiver, selector);
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
     auto smi_selector_offset = Selector::IdField::decode(selector) << Smi::kTagSize;
-    auto actual_offset = w.CInt(smi_selector_offset);
+    auto actual_offset = w.CWord(smi_selector_offset);
 
     auto bb_lookup_failure = llvm::BasicBlock::Create(w.context, "bb_lookup_failure", llvm_function_);
     auto bb_lookup_success = llvm::BasicBlock::Create(w.context, "bb_lookup_success", llvm_function_);
@@ -1030,7 +1029,7 @@ class BasicBlockBuilder {
     auto receiver = pop();
     auto smi_selector_offset = Selector::IdField::decode(selector) << Smi::kTagSize;
 
-    auto actual_offset = w.CInt(smi_selector_offset);
+    auto actual_offset = w.CWord(smi_selector_offset);
     auto entry = LookupDispatchTableEntry(receiver, selector);
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
 
@@ -1070,7 +1069,7 @@ class BasicBlockBuilder {
   }
 
   void DoDebugPrint(const char* message) {
-    b.CreateCall(w.libc__printf, {h.BuildCString(message)});
+    //b.CreateCall(w.libc__printf, {h.BuildCString(message)});
   }
 
   void DoExitFatal(const char* message) {
@@ -1113,7 +1112,7 @@ class BasicBlockBuilder {
     auto classid = h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset));
     auto selector_offset = w.CWord(Selector::IdField::decode(selector));
     auto offset = b.CreateAdd(selector_offset, classid);
-    offset = b.CreateAdd(w.CInt64(Array::kSize / kPointerSize), offset);
+    offset = b.CreateAdd(w.CWord(Array::kSize / kPointerSize), offset);
 
     auto dispatch = w.untagged_aspace0[w.program_->dispatch_table()];
     auto scaled_dispatch = b.CreatePointerCast(dispatch, w.object_ptr_aspace0_ptr_aspace0_type);
@@ -1797,8 +1796,8 @@ class GlobalSymbolsBuilder {
     std::vector<llvm::Type*> empty;
 
     // program_start
-    auto program_start = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(32, 4096, false));
-    auto program_size = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(32, 1024 * 1024, false));
+    auto program_start = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(w.bits_per_word, 4096, false));
+    auto program_size = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(w.bits_per_word, 1024 * 1024, false));
     new llvm::GlobalVariable(w.module_, w.intptr_type, true, llvm::GlobalValue::ExternalLinkage, program_start, "program_start");
     new llvm::GlobalVariable(w.module_, w.intptr_type, true, llvm::GlobalValue::ExternalLinkage, program_size, "program_size");
     auto entry = static_cast<llvm::Function*>(w.llvm_functions[w.program_->entry()]);
@@ -1816,6 +1815,7 @@ World::World(Program* program,
     : program_(program),
       context(context),
       module_(module),
+      bits_per_word(0),
       intptr_type(NULL),
       int8_type(NULL),
       int8_ptr_type(NULL),
@@ -1859,7 +1859,13 @@ World::World(Program* program,
   int32_type = llvm::Type::getInt32Ty(context);
   int64_type = llvm::Type::getInt64Ty(context);
 
-  intptr_type = kBitsPerWord == 8 ? int64_type : int32_type;
+  if (Flags::codegen_64) {
+    intptr_type = int64_type;
+    bits_per_word = 64;
+  } else {
+    intptr_type = int32_type;
+    bits_per_word = 32;
+  }
 
   // NOTE: Our target dart double's are assumed to be 64-bit C double!
   float_type = llvm::Type::getDoubleTy(context);
@@ -1998,7 +2004,7 @@ World::World(Program* program,
 
   // External C functions for debugging.
 
-  auto exit_type = llvm::FunctionType::get(intptr_type, {intptr_type}, true);
+  auto exit_type = llvm::FunctionType::get(intptr_type, {int32_type}, false);
   libc__exit = llvm::Function::Create(exit_type, llvm::Function::ExternalLinkage, "exit", &module_);
 
   auto printf_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, true);
@@ -2088,7 +2094,7 @@ llvm::Constant* World::CBit(int8 value) {
 
 llvm::Constant* World::CWord(intptr_t value) {
   int64 value64 = value;
-  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(kBitsPerWord, value64, true));
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(bits_per_word, value64, true));
 }
 
 llvm::Constant* World::CInt(int32 value) {
@@ -2110,7 +2116,7 @@ llvm::Constant* World::CDouble(double value) {
 }
 
 llvm::Constant* World::CSmi(uint32 integer) {
-  return CInt(static_cast<uint32>(reinterpret_cast<intptr_t>(Smi::FromWord(integer))));
+  return CWord(reinterpret_cast<intptr_t>(Smi::FromWord(integer)));
 }
 
 llvm::Constant* World::CPointer2Int(llvm::Constant* constant) {
@@ -2156,6 +2162,8 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
   llvm::Module module("dart_code", context);
 
   World world(program_, context, module);
+
+  CreateGCSafepointPollFunction(module, world, context);
 
   HeapBuilder builder(world);
   program_->heap()->IterateObjects(&builder);
@@ -2240,7 +2248,7 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
             }
             case llvm::Intrinsic::smitoint: {
               auto pointer = call->getArgOperand(0);
-              auto number = b.CreatePtrToInt(pointer, w.int32_type);
+              auto number = b.CreatePtrToInt(pointer, w.intptr_type);
               auto result = b.CreateAShr(number, w.CInt(1));
               call->replaceAllUsesWith(result);
               call->eraseFromParent();
@@ -2284,6 +2292,23 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
 
 char RewriteGCIntrinsics::ID = 0;
 
+// The createPlaceSafepointsPass that is built into Clang takes the body of the
+// gc.safepoint_poll function and inlines its body at the safepoint site. Right
+// now we don't have support for polling for GC.  If we need it (for
+// multithread implementations) it might want to check the stack limit. Right
+// now, we just return void, which turns into nothing when inlined.
+void LLVMCodegen::CreateGCSafepointPollFunction(llvm::Module& module, World& world, llvm::LLVMContext& context) {
+  llvm::IRBuilder<> builder(context);
+
+  auto poll_function_as_constant =
+      module.getOrInsertFunction("gc.safepoint_poll", llvm::Type::getVoidTy(context), nullptr);
+  auto poll_fn = llvm::cast<llvm::Function>(poll_function_as_constant);
+  auto entry = llvm::BasicBlock::Create(world.context, "gc.safepoint_poll.entry", poll_fn);
+
+  builder.SetInsertPoint(entry);
+  builder.CreateRetVoid();
+}
+
 void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
   llvm::legacy::FunctionPassManager fpm(&module);
 
@@ -2298,9 +2323,14 @@ void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
 void LLVMCodegen::LowerIntrinsics(llvm::Module& module, World& world) {
   llvm::legacy::FunctionPassManager fpm(&module);
 
+  fpm.add(llvm::createPlaceSafepointsPass());
   fpm.add(new RewriteGCIntrinsics(world));
 
   for (auto& f : module) fpm.run(f);
+
+  llvm::legacy::PassManager mpm;
+  mpm.add(llvm::createRewriteStatepointsForGCPass());
+  mpm.run(module);
 }
 
 void LLVMCodegen::SaveModule(llvm::Module& module, const char* filename) {

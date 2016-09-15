@@ -18,6 +18,7 @@
 
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -79,6 +80,9 @@ class World {
   Program* const program_;
   llvm::LLVMContext& context;
   llvm::Module& module_;
+
+  // This is the word size (32 or 64) for the target, not llvm-codegen.
+  int bits_per_word;
 
   // Basically intptr_t of the target. Used for pointer->int, int->pointer
   // conversions.
@@ -181,6 +185,7 @@ class LLVMCodegen {
  private:
   void VerifyModule(llvm::Module& module);
   void OptimizeModule(llvm::Module& module, World& world);
+  void CreateGCSafepointPollFunction(llvm::Module& module, World& world, llvm::LLVMContext& context);
   void LowerIntrinsics(llvm::Module& module, World& world);
   void SaveModule(llvm::Module& module, const char* filename);
 
