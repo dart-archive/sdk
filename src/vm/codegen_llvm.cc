@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <set>
+#include <string>
 
 namespace dartino {
 
@@ -307,6 +308,15 @@ class HeapBuilder : public HeapObjectVisitor {
     };
 
     auto function_object = llvm::ConstantStruct::get(w.function_type, function_entries);
+
+    llvm::AttributeSet attr_set = llvm_function->getAttributes();
+    int id = w.next_function_id++;
+    attr_set = attr_set.addAttribute(w.context,
+                                     llvm::AttributeSet::FunctionIndex,
+                                     "dartino-id", std::to_string(id));
+    w.function_to_statepoint_id[function] = id;
+    llvm_function->setAttributes(attr_set);
+
     return new llvm::GlobalVariable(w.module_, w.function_type, true, llvm::GlobalValue::ExternalLinkage, function_object, name("FunctionObject_%p", function));
   }
 
@@ -1757,6 +1767,38 @@ class FunctionsBuilder : public HeapObjectVisitor {
   World& w;
 };
 
+class FunctionTableBuilder {
+ public:
+  FunctionTableBuilder(World& world) : w(world) { }
+
+  void Build() {
+    int count = w.next_function_id;
+    std::vector<Function*> functions(count);
+    {
+      size_t i = 0;
+      for (auto function_and_id : w.function_to_statepoint_id) {
+        functions[i++] = function_and_id.first;
+      }
+    }
+    sort(functions.begin(), functions.end(), 
+         [this](Function* a, Function* b)
+         { 
+            return w.function_to_statepoint_id[a] < w.function_to_statepoint_id[b];
+         });
+    std::vector<llvm::Constant*> entries;
+    for (Function* fn : functions) {
+      entries.push_back(w.untagged_aspace0[fn]);
+    }
+    auto array_type = llvm::ArrayType::get(entries[0]->getType(), count);
+    auto array_constant = llvm::ConstantArray::get(array_type, entries);
+    new llvm::GlobalVariable(w.module_, array_type, true,
+      llvm::GlobalValue::ExternalLinkage, array_constant, name("dartino_function_table"));
+  }
+
+ private:
+  World& w;
+};
+
 class RootsBuilder : public PointerVisitor {
  public:
   RootsBuilder(World& world, HeapBuilder* hbuilder)
@@ -2165,6 +2207,8 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
 
   CreateGCSafepointPollFunction(module, world, context);
 
+  CreateGCSafepointPollFunction(module, world, context);
+
   HeapBuilder builder(world);
   program_->heap()->IterateObjects(&builder);
 
@@ -2176,6 +2220,9 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
 
   FunctionsBuilder fbuilder(world);
   program_->heap()->IterateObjects(&fbuilder);
+
+  FunctionTableBuilder function_table_builder(world);
+  function_table_builder.Build();
 
   GlobalSymbolsBuilder sbuilder(world);
   sbuilder.BuildGlobalSymbols();
@@ -2206,6 +2253,32 @@ void LLVMCodegen::VerifyModule(llvm::Module& module) {
   Print::Error("Module verification passed.");
 
 }
+
+// A pass to lower tagread intrinsics into actual instructions.
+struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
+  static char ID; // Pass identification, replacement for typeid.
+  World& w;
+  AddStatepointIDsToCallSites(World& world) : FunctionPass(ID), w(world) {}
+
+  void setAttributes(llvm::BasicBlock& bb, const std::string& id){
+    for (llvm::Instruction& instruction : bb) {
+      if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
+        call->addAttribute(llvm::AttributeSet::FunctionIndex, "statepoint-id", id);
+      }
+    }
+  }
+
+  bool runOnFunction(llvm::Function &func) override {
+    auto caller_attributes = func.getAttributes();
+    std::string id = caller_attributes.getAttribute(
+                                      llvm::AttributeSet::FunctionIndex, 
+                                      "dartino-id").getValueAsString();    
+    for (llvm::BasicBlock& bb : func) {
+      setAttributes(bb, id);
+    }
+    return false;
+  }
+};
 
 // A pass to lower tagread intrinsics into actual instructions.
 struct RewriteGCIntrinsics : public llvm::FunctionPass {
@@ -2291,6 +2364,7 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
 };
 
 char RewriteGCIntrinsics::ID = 0;
+char AddStatepointIDsToCallSites::ID = 1;
 
 // The createPlaceSafepointsPass that is built into Clang takes the body of the
 // gc.safepoint_poll function and inlines its body at the safepoint site. Right
@@ -2323,6 +2397,7 @@ void LLVMCodegen::OptimizeModule(llvm::Module& module, World& world) {
 void LLVMCodegen::LowerIntrinsics(llvm::Module& module, World& world) {
   llvm::legacy::FunctionPassManager fpm(&module);
 
+  fpm.add(new AddStatepointIDsToCallSites(world));
   fpm.add(llvm::createPlaceSafepointsPass());
   fpm.add(new RewriteGCIntrinsics(world));
 
