@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "include/dartino_api.h"
+#include "src/vm/gc_llvm.h"
 #include "src/vm/program_info_block.h"
 
 namespace dartino {
@@ -14,6 +15,7 @@ extern "C" int program_size;
 extern "C" char program_info_block;
 
 static int Main(int argc, char** argv) {
+  StackMap::EnsureComputed();
   DartinoSetup();
 
   char* heap = reinterpret_cast<char*>(program_start);

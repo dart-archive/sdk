@@ -288,7 +288,7 @@ class Program : public ProgramList::Entry {
 
   void CollectGarbage();
   void CollectSharedGarbage();
-  void CollectNewSpace();
+  void CollectNewSpace(char* fp = nullptr);
   void PerformSharedGarbageCollection();
 
   void PrintStatistics();

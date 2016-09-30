@@ -95,7 +95,7 @@ class Chunk {
 class Space {
  public:
   static const int kDefaultMinimumChunkSize = 4 * KB;
-  static const int kDefaultMaximumChunkSize = 1024 * 256 * KB;
+  static const int kDefaultMaximumChunkSize = 1024 * 32 * KB;
 
   explicit Space(int maximum_initial_size = 0);
 

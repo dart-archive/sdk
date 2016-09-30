@@ -97,6 +97,8 @@ extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
 
 extern "C" void HandleGC(Process* process);
 
+extern "C" void HandleGCWithFP(Process* process, char* fp);
+
 extern "C" Object* HandleAllocate(Process* process, Class* clazz,
                                   int immutable);
 

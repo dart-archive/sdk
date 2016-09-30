@@ -120,7 +120,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void ValidateHeaps();
 
   // Iterate all pointers reachable from this process object.
-  void IterateRoots(PointerVisitor* visitor);
+  void IterateRoots(PointerVisitor* visitor, char* fp = nullptr);
 
   // Iterate all pointers in the process heap and stack. Used for
   // program garbage collection.

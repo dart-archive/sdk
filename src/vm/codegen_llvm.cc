@@ -309,13 +309,7 @@ class HeapBuilder : public HeapObjectVisitor {
 
     auto function_object = llvm::ConstantStruct::get(w.function_type, function_entries);
 
-    llvm::AttributeSet attr_set = llvm_function->getAttributes();
-    int id = w.next_function_id++;
-    attr_set = attr_set.addAttribute(w.context,
-                                     llvm::AttributeSet::FunctionIndex,
-                                     "dartino-id", std::to_string(id));
-    w.function_to_statepoint_id[function] = id;
-    llvm_function->setAttributes(attr_set);
+    w.GiveIdToFunction(llvm_function);
 
     return new llvm::GlobalVariable(w.module_, w.function_type, true, llvm::GlobalValue::ExternalLinkage, function_object, name("FunctionObject_%p", function));
   }
@@ -489,41 +483,41 @@ class IRHelper {
     return llvm::Intrinsic::getDeclaration(&w.module_, intrinsic, {w.intptr_type});
   }
 
-  llvm::Value* DecodeSmi(llvm::Value* value) {
-    return b->CreateCall(SmiToInt(), {value});
+  llvm::Value* DecodeSmi(llvm::Value* value, const char* name = "untagged_smi") {
+    return b->CreateCall(SmiToInt(), {value}, name);
   }
 
-  llvm::Value* EncodeSmi(llvm::Value* value) {
-    return b->CreateCall(IntToSmi(), {value});
+  llvm::Value* EncodeSmi(llvm::Value* value, const char* name = "smi") {
+    return b->CreateCall(IntToSmi(), {value}, name);
   }
 
   llvm::Value* GetArrayPointer(llvm::Value* array, int index) {
     std::vector<llvm::Value*> indices = { w.CInt(Array::kSize / kWordSize + index) };
     auto receiver = b->CreateBitCast(array, w.object_ptr_ptr_type);
     // Creates a tagged, GC-address-space inner pointer into the array.
-    auto gep = b->CreateGEP(receiver, indices);
+    auto gep = b->CreateGEP(receiver, indices, "tagged_array_gep");
     return gep;
   }
 
-  llvm::Value* LoadField(llvm::Value* gep) {
+  llvm::Value* LoadField(llvm::Value* gep, const char* name = "field") {
     ASSERT(gep->getType() == w.object_ptr_ptr_type);
-    auto answer = b->CreateCall(TaggedRead(), {gep}, "field");
+    auto answer = b->CreateCall(TaggedRead(), {gep}, name);
     return answer;
   }
 
-  llvm::Value* LoadField(llvm::Value* arg, int offset) {
+  llvm::Value* LoadField(llvm::Value* arg, int offset, const char* name = "field") {
     auto receiver = b->CreatePointerBitCastOrAddrSpaceCast(arg, w.object_ptr_ptr_type);
     std::vector<llvm::Value*> indices = { w.CInt(offset / kWordSize) };
     // Creates a tagged, GC-address-space inner pointer into the object.
-    auto gep = b->CreateGEP(receiver, indices);
-    return LoadField(gep);
+    auto gep = b->CreateGEP(receiver, indices, "tagged_gep");
+    return LoadField(gep, name);
   }
 
   void StoreField(int offset, llvm::Value* receiver, llvm::Value* value) {
     receiver = b->CreatePointerBitCastOrAddrSpaceCast(receiver, w.object_ptr_ptr_type);
     std::vector<llvm::Value*> indices = { w.CInt(offset / kWordSize) };
     // Creates a tagged, GC-address-space inner pointer into the object.
-    auto slot = b->CreateGEP(receiver, indices);
+    auto slot = b->CreateGEP(receiver, indices, "tagged_gep");
     b->CreateCall(TaggedWrite(), {value, slot});
   }
 
@@ -533,7 +527,7 @@ class IRHelper {
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
-    return LoadField(heap_object, HeapObject::kClassOffset);
+    return LoadField(heap_object, HeapObject::kClassOffset, "class");
   }
 
   llvm::Value* LoadArrayEntry(llvm::Value* array, int offset) {
@@ -541,7 +535,7 @@ class IRHelper {
   }
 
   llvm::Value* LoadInstanceFormat(llvm::Value* klass) {
-    return LoadField(klass, Class::kInstanceFormatOffset);
+    return LoadField(klass, Class::kInstanceFormatOffset, "instance_format");
   }
 
   // Loads the statics array, which is an on-heap (but in the
@@ -549,12 +543,12 @@ class IRHelper {
   // Process object.  The pointer is already tagged.
   llvm::Value* LoadStaticsArray(llvm::Value* process) {
     std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset / kWordSize) };
-    auto gep = b->CreateGEP(Cast(process, w.object_ptr_ptr_unsafe_type), statics_indices);
+    auto gep = b->CreateGEP(Cast(process, w.object_ptr_ptr_unsafe_type), statics_indices, "statics_entry");
     return b->CreateLoad(gep);
   }
 
   llvm::Value* LoadInitializerCode(llvm::Value* initializer, int arity) {
-    auto entry = LoadField(initializer, Initializer::kFunctionOffset);
+    auto entry = LoadField(initializer, Initializer::kFunctionOffset, "function");
     return b->CreatePointerBitCastOrAddrSpaceCast(entry, w.FunctionPtrType(arity));
   }
 
@@ -563,7 +557,11 @@ class IRHelper {
   }
 
   llvm::Value* CreateFailureCheck(llvm::Value* object) {
-    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(3)), w.CWord(3));
+    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(Failure::kTagMask)), w.CWord(Failure::kTag));
+  }
+
+  llvm::Value* CreateRetryAfterGCCheck(llvm::Value* object) {
+    return b->CreateIsNull(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(Failure::kTypeMask)));
   }
 
   llvm::Value* Null() {
@@ -708,13 +706,13 @@ class BasicBlockBuilder {
 
   void DoLoadField(int field) {
     auto object = pop();
-    auto field_value = h.LoadField(object, Instance::kSize + field * kWordSize);
+    auto field_value = h.LoadField(object, Instance::kSize + field * kWordSize, "instance_field");
     push(field_value);
   }
 
   void DoLoadBoxed(int index) {
     auto boxed = local(index);
-    auto value = h.LoadField(boxed, Boxed::kValueOffset);
+    auto value = h.LoadField(boxed, Boxed::kValueOffset, "boxed_value");
     push(value);
   }
 
@@ -749,14 +747,27 @@ class BasicBlockBuilder {
   }
 
   void DoAllocate(Class* klass, bool immutable) {
+    auto bb_retry = llvm::BasicBlock::Create(w.context, "bb_allocation_retry", llvm_function_);
+
     int fields = klass->NumberOfInstanceFields();
     auto llvm_klass = w.tagged_aspace1[klass];
     ASSERT(llvm_klass != NULL);
+    b.CreateBr(bb_retry);
 
-    // TODO: Check for Failure::xxx result!
+    b.SetInsertPoint(bb_retry);
     auto instance = b.CreateCall(
         w.runtime__HandleAllocate,
         {llvm_process_, llvm_klass, w.CWord(immutable ? 1 : 0)});
+    auto is_failure = h.CreateFailureCheck(instance);
+    auto bb_success = llvm::BasicBlock::Create(w.context, "bb_allocation_success", llvm_function_);
+    auto bb_failure = llvm::BasicBlock::Create(w.context, "bb_allocation_failure", llvm_function_);
+    b.CreateCondBr(is_failure, bb_failure, bb_success);
+
+    b.SetInsertPoint(bb_failure);
+    b.CreateCall(w.dartino_gc_trampoline, {llvm_process_});
+    b.CreateBr(bb_retry);
+
+    b.SetInsertPoint(bb_success);
     for (int field = 0; field < fields; field++) {
       h.StoreField(Instance::kSize + (fields - 1 - field) * kWordSize, instance, pop());
     }
@@ -787,7 +798,7 @@ class BasicBlockBuilder {
   void DoLoadStatic(int offset, bool check_for_initializer) {
     auto statics = h.LoadStaticsArray(llvm_process_);
     auto statics_entry_ptr = h.GetArrayPointer(statics, offset);
-    auto statics_entry = h.LoadField(statics_entry_ptr);
+    auto statics_entry = h.LoadField(statics_entry_ptr, "static_var");
 
     llvm::Value* value;
     if (check_for_initializer) {
@@ -795,11 +806,16 @@ class BasicBlockBuilder {
       auto bb_initializer = llvm::BasicBlock::Create(w.context, "bb_initializer", llvm_function_);
       auto bb_join = llvm::BasicBlock::Create(w.context, "join", llvm_function_);
 
-      // TODO: check for smi.
+      // Check for smi.
+      auto bb_not_smi = llvm::BasicBlock::Create(w.context, "bb_static_check_not_smi", llvm_function_);
+      auto is_smi = h.CreateSmiCheck(statics_entry);
+      b.CreateCondBr(is_smi, bb_join, bb_not_smi);
+
+      b.SetInsertPoint(bb_not_smi);
       auto klass = h.LoadClass(statics_entry);
-      auto instance_format = h.DecodeSmi(h.LoadInstanceFormat(klass));
-      auto tmp = b.CreateAnd(instance_format, w.CWord(InstanceFormat::TypeField::mask() >> 1));
-      auto is_initializer = b.CreateICmpEQ(tmp, w.CWord(InstanceFormat::TypeField::encode(InstanceFormat::INITIALIZER_TYPE) >> 1));
+      auto instance_format = h.DecodeSmi(h.LoadInstanceFormat(klass), "instance_format_untagged");
+      auto tmp = b.CreateAnd(instance_format, w.CWord(InstanceFormat::TypeField::mask() >> 1), "instance_type");
+      auto is_initializer = b.CreateICmpEQ(tmp, w.CWord(InstanceFormat::TypeField::encode(InstanceFormat::INITIALIZER_TYPE) >> 1), "is_initializer");
       b.CreateCondBr(is_initializer, bb_initializer, bb_join);
 
       b.SetInsertPoint(bb_initializer);
@@ -811,6 +827,7 @@ class BasicBlockBuilder {
       b.SetInsertPoint(bb_join);
       auto phi = b.CreatePHI(w.object_ptr_type, 2);
       phi->addIncoming(initializer_result, bb_initializer);
+      phi->addIncoming(statics_entry, bb_not_smi);
       phi->addIncoming(statics_entry, bb_main);
       value = phi;
     } else {
@@ -840,11 +857,15 @@ class BasicBlockBuilder {
 
   void DoInvokeNative(Native nativeId, int arity) {
     auto process = h.Cast(llvm_process_, w.process_ptr_type);
+    // TODO(erikcorry): This doesn't quite work.  Because we take the address
+    // of the alloca, to pass to the native, the alloca is not exploded into
+    // individual SSA values, and therefore the elements in the alloca are not
+    // reported to the stack maps.  Hilarity ensures.
     auto array = b.CreateAlloca(w.object_ptr_type, w.CInt(arity));
 
     for (int i = 0; i < arity; i++) {
       std::vector<llvm::Value*> indices = {w.CInt(i)};
-      auto array_pos = b.CreateGEP(array, indices);
+      auto array_pos = b.CreateGEP(array, indices, "native_arg_gep");
       auto arg = b.CreateLoad(stack_[arity - i - 1]);
       b.CreateStore(arg, array_pos);
     }
@@ -853,8 +874,12 @@ class BasicBlockBuilder {
 
     // NOTE: We point to the last element of the array.
     std::vector<llvm::Value*> indices = {w.CInt(arity - 1)};
-    auto last_element_in_array = b.CreateGEP(array, indices);
+    auto last_element_in_array = b.CreateGEP(array, indices, "native_args_last");
 
+    auto bb_retry_after_gc = llvm::BasicBlock::Create(context, "retry_after_gc", llvm_function_);
+    b.CreateBr(bb_retry_after_gc);
+
+    b.SetInsertPoint(bb_retry_after_gc);
     std::vector<llvm::Value*> args = {process, last_element_in_array};
     auto native_result = b.CreateCall(native, args, "native_call_result");
 
@@ -868,6 +893,15 @@ class BasicBlockBuilder {
     // We convert the failure id into a failure object and let the rest of the
     // bytecodes do its work.
     b.SetInsertPoint(bb_failure);
+    auto bb_real_failure = llvm::BasicBlock::Create(context, "real_failure", llvm_function_);
+    auto bb_call_gc = llvm::BasicBlock::Create(context, "call_gc", llvm_function_);
+    b.CreateCondBr(h.CreateRetryAfterGCCheck(native_result), bb_call_gc, bb_real_failure);
+
+    b.SetInsertPoint(bb_call_gc);
+    b.CreateCall(w.dartino_gc_trampoline, {llvm_process_});
+    b.CreateBr(bb_retry_after_gc);
+
+    b.SetInsertPoint(bb_real_failure);
     auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
     push(failure_object);
   }
@@ -1024,7 +1058,7 @@ class BasicBlockBuilder {
 
     b.SetInsertPoint(bb_lookup_failure);
     auto dispatch = w.tagged_aspace1[w.program_->dispatch_table()];
-    auto nsm_entry = h.LoadField(dispatch, Array::kSize);  // NSM is 0th element in dispatch table.
+    auto nsm_entry = h.LoadField(dispatch, Array::kSize, "no_such_method");  // NSM is 0th element in dispatch table.
     b.CreateBr(bb_lookup_success);
 
     b.SetInsertPoint(bb_lookup_success);
@@ -1079,7 +1113,7 @@ class BasicBlockBuilder {
   }
 
   void DoDebugPrint(const char* message) {
-    //b.CreateCall(w.libc__printf, {h.BuildCString(message)});
+    b.CreateCall(w.libc__puts, {h.BuildCString(message)});
   }
 
   void DoExitFatal(const char* message) {
@@ -1089,11 +1123,11 @@ class BasicBlockBuilder {
 
  private:
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
-    return h.LoadField(entry, DispatchTableEntry::kCodeOffset);
+    return h.LoadField(entry, DispatchTableEntry::kCodeOffset, "code");
   }
 
   llvm::Value* LookupDispatchTableOffsetFromEntry(llvm::Value* entry) {
-    llvm::Value* offset = h.LoadField(entry, DispatchTableEntry::kOffsetOffset);
+    llvm::Value* offset = h.LoadField(entry, DispatchTableEntry::kOffsetOffset, "offset");
 
     return offset;
   }
@@ -1111,7 +1145,7 @@ class BasicBlockBuilder {
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_nonsmi);
-    auto custom_klass = h.LoadField(receiver, HeapObject::kClassOffset);
+    auto custom_klass = h.LoadField(receiver, HeapObject::kClassOffset, "class");
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_lookup);
@@ -1119,7 +1153,7 @@ class BasicBlockBuilder {
     klass->addIncoming(smi_klass, bb_smi);
     klass->addIncoming(custom_klass, bb_nonsmi);
 
-    auto classid = h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset));
+    auto classid = h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset, "id_or_transformation_target"), "id_or_transformation_target_untagged");
     auto selector_offset = w.CWord(Selector::IdField::decode(selector));
     auto offset = b.CreateAdd(selector_offset, classid);
     offset = b.CreateAdd(w.CWord(Array::kSize / kPointerSize), offset);
@@ -1131,7 +1165,7 @@ class BasicBlockBuilder {
     // (tagged, with normal HeapObject layout), but it is always in the
     // read-only static constants part of the heap so we don't need to track it
     // specially.
-    auto entry = h.LoadFieldFromAddressSpaceZero(b.CreateGEP(scaled_dispatch, {offset}));
+    auto entry = h.LoadFieldFromAddressSpaceZero(b.CreateGEP(scaled_dispatch, {offset}, "dispatch_table_entry"));
     return entry;
   }
 
@@ -1773,7 +1807,7 @@ class FunctionTableBuilder {
 
   void Build() {
     int count = w.next_function_id;
-    std::vector<Function*> functions(count);
+    std::vector<llvm::Function*> functions(count);
     {
       size_t i = 0;
       for (auto function_and_id : w.function_to_statepoint_id) {
@@ -1781,15 +1815,15 @@ class FunctionTableBuilder {
       }
     }
     sort(functions.begin(), functions.end(), 
-         [this](Function* a, Function* b)
+         [this](llvm::Function* a, llvm::Function* b)
          { 
             return w.function_to_statepoint_id[a] < w.function_to_statepoint_id[b];
          });
     std::vector<llvm::Constant*> entries;
-    for (Function* fn : functions) {
-      entries.push_back(w.untagged_aspace0[fn]);
+    for (llvm::Constant* fn : functions) {
+      entries.push_back(w.CCast(fn, w.int8_ptr_type));
     }
-    auto array_type = llvm::ArrayType::get(entries[0]->getType(), count);
+    auto array_type = llvm::ArrayType::get(w.int8_ptr_type, count);
     auto array_constant = llvm::ConstantArray::get(array_type, entries);
     new llvm::GlobalVariable(w.module_, array_type, true,
       llvm::GlobalValue::ExternalLinkage, array_constant, name("dartino_function_table"));
@@ -1892,6 +1926,7 @@ World::World(Program* program,
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
+      libc__puts(NULL),
       runtime__HandleGC(NULL),
       runtime__HandleAllocate(NULL),
       runtime__HandleAllocateBoxed(NULL),
@@ -2052,12 +2087,18 @@ World::World(Program* program,
   auto printf_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, true);
   libc__printf = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, "printf", &module_);
 
-  auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {process_ptr_type}, false);
+  auto puts_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, false);
+  libc__puts = llvm::Function::Create(puts_type, llvm::Function::ExternalLinkage, "puts", &module_);
+
+  auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {process_ptr_type, int8_ptr_type}, false);
+  auto gc_trampoline_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {process_ptr_type}, false);
   auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type, intptr_type}, false);
   auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type}, false);
   auto handle_object_from_failure_type = llvm::FunctionType::get(object_ptr_type, {process_ptr_type, object_ptr_type}, false);
 
-  runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGC", &module_);
+  runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGCWithFP", &module_);
+  dartino_gc_trampoline = llvm::Function::Create(gc_trampoline_type, llvm::Function::ExternalLinkage, "dartino_gc_trampoline", &module_);
+  CreateGCTrampoline();
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
   runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
   runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);
@@ -2115,7 +2156,7 @@ llvm::Constant* World::CTag(llvm::Constant* constant, llvm::Type* ptr_type) {
   ASSERT(constant->getType()->getPointerAddressSpace() == 0);
   ASSERT(ptr_type->getPointerAddressSpace() == 1);
   std::vector<llvm::Value*> indices = {CInt(1)};
-  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
+  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices, "tagged");
   return llvm::ConstantExpr::getAddrSpaceCast(tagged, ptr_type);
 }
 
@@ -2125,7 +2166,7 @@ llvm::Constant* World::CTagAddressSpaceZero(llvm::Constant* constant, llvm::Type
   ASSERT(constant->getType()->getPointerAddressSpace() == 0);
   ASSERT(ptr_type->getPointerAddressSpace() == 0);
   std::vector<llvm::Value*> indices = {CInt(1)};
-  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
+  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices, "tagged_as0_");
   return llvm::ConstantExpr::getBitCast(tagged, ptr_type);
 }
 
@@ -2175,12 +2216,34 @@ llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
   return llvm::ConstantExpr::getPointerCast(constant, ptr_type);
 }
 
+void World::CreateGCTrampoline() {
+  llvm::IRBuilder<> builder(context);
+  BasicBlockBuilder b(*this, NULL, dartino_gc_trampoline, builder);
+  b.DoPrologue();
+
+  auto get_fp = llvm::Intrinsic::getDeclaration(&module_, llvm::Intrinsic::frameaddress, {int32_type});
+  // Get frame pointer of 0th function on the stack (ie this one).
+  auto fp = builder.CreateCall(get_fp, {CInt(0)}, "fp");
+
+  std::vector<llvm::Value*> args(2);
+  int index = 0;
+  for (llvm::Argument& arg : dartino_gc_trampoline->getArgumentList()) {
+    args[index++] = &arg;
+  }
+  args[index++] = fp;
+
+  builder.CreateCall(runtime__HandleGC, args);
+  builder.CreateRetVoid();
+}
+
 llvm::Function* World::GetSmiSlowCase(int selector) {
   auto cached = smi_slow_cases.find(selector);
   if (cached != smi_slow_cases.end()) return cached->second;
 
   auto type = FunctionType(2);
   auto function = llvm::Function::Create(type, llvm::Function::ExternalLinkage, name("Smi_%p", selector), &module_);
+  function->setGC("statepoint-example");
+  GiveIdToFunction(function);
 
   llvm::IRBuilder<> builder(context);
   BasicBlockBuilder b(*this, NULL, function, builder);
@@ -2199,9 +2262,24 @@ llvm::Function* World::GetSmiSlowCase(int selector) {
   return function;
 }
 
+void World::GiveIdToFunction(llvm::Function* llvm_function) {
+  llvm::AttributeSet attr_set = llvm_function->getAttributes();
+  int id = next_function_id++;
+  attr_set = attr_set.addAttribute(context,
+                                   llvm::AttributeSet::FunctionIndex,
+                                   "dartino-id", std::to_string(id));
+  llvm_function->setAttributes(attr_set);
+  function_to_statepoint_id[llvm_function] = id;
+}
+
 void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_module) {
   llvm::LLVMContext context;
   llvm::Module module("dart_code", context);
+
+  //llvm::DebugFlag = 1;
+  //llvm::setCurrentDebugType("stackmaps");
+  //llvm::setCurrentDebugType("statepoint-lowering");
+  //llvm::setCurrentDebugType("rewrite-statepoints-for-gc");
 
   World world(program_, context, module);
 

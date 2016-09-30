@@ -97,6 +97,8 @@
         'dartino_api_impl.cc',
         'dartino_api_impl.h',
         'dartino.cc',
+        'gc_llvm.cc',
+        'gc_llvm.h',
         'gc_thread.cc',
         'gc_thread.h',
         'hash_map.h',
@@ -296,7 +298,6 @@
 
       # $ llvm-config-3.6  --cxxflags --ldflags --system-libs --libs core scalaropts
       'defines': [
-          'NDEBUG',
           'D_GNU_SOURCE',
           'D__STDC_CONSTANT_MACROS',
           'D__STDC_FORMAT_MACROS',

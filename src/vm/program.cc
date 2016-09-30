@@ -494,6 +494,7 @@ void Program::CollectSharedGarbage() {
   }
 }
 
+
 void Program::PerformSharedGarbageCollection() {
   // Mark all reachable objects.  We mark all live objects in new-space too, to
   // detect liveness paths that go through new-space, but we just clear the
@@ -981,7 +982,7 @@ void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
 
 // Somewhat misnamed - it does a scavenge of the data area used by the
 // processes, not the code area used by the program.
-void Program::CollectNewSpace() {
+void Program::CollectNewSpace(char* fp) {
   HeapUsage usage_before;
 
   Heap* data_heap = process_heap();
@@ -1010,8 +1011,9 @@ void Program::CollectNewSpace() {
   GenerationalScavengeVisitor visitor(from, to, old);
   to->StartScavenge();
   old->StartScavenge();
+  data_heap->set_to_space(to);
 
-  for (auto process : process_list_) process->IterateRoots(&visitor);
+  for (auto process : process_list_) process->IterateRoots(&visitor, fp);
 
   old->VisitRememberedSet(&visitor);
 
@@ -1030,6 +1032,7 @@ void Program::CollectNewSpace() {
 
   // Second space argument is used to size the new-space.
   data_heap->ReplaceSpace(to, old);
+  data_heap->set_to_space(NULL);
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;

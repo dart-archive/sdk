@@ -32,6 +32,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -77,6 +78,10 @@ class World {
   // Helper method for getting hold of a smi slow-case helper function for
   // the slow path for inlined smi operations.
   llvm::Function* GetSmiSlowCase(int selector);
+
+  void GiveIdToFunction(llvm::Function* llvm_function);
+
+  void CreateGCTrampoline();
 
   Program* const program_;
   llvm::LLVMContext& context;
@@ -154,8 +159,10 @@ class World {
 
   llvm::Function* libc__exit;
   llvm::Function* libc__printf;
+  llvm::Function* libc__puts;
 
   llvm::Function* runtime__HandleGC;
+  llvm::Function* dartino_gc_trampoline;
   llvm::Function* runtime__HandleAllocate;
   llvm::Function* runtime__HandleAllocateBoxed;
   llvm::Function* runtime__HandleInvokeSelector;
@@ -168,7 +175,7 @@ class World {
   // The actual addresses of constants, ie without the 1-tag.
   std::map<HeapObject*, llvm::Constant*> untagged_aspace0;
   std::map<HeapObject*, llvm::Function*> llvm_functions;
-  std::unordered_map<Function*, int> function_to_statepoint_id;
+  std::unordered_map<llvm::Function*, int> function_to_statepoint_id;
   int next_function_id = 0;
 
   std::map<int, llvm::Function*> smi_slow_cases;

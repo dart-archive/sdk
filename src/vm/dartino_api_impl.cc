@@ -50,12 +50,6 @@ static Program* LoadSnapshot(List<uint8> bytes) {
 }
 
 static int RunProgram(Program* program, int argc, char** argv) {
-  /*
-#ifdef DARTINO_ENABLE_LIVE_CODING
-  ProgramFolder::FoldProgramByDefault(program);
-#endif  // DARTINO_ENABLE_LIVE_CODING
-  */
-
   SimpleProgramRunner runner;
 
   int exitcodes[1] = { -1 };

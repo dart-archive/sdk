@@ -14,6 +14,7 @@
 
 #include "src/vm/event_handler.h"
 #include "src/vm/frame.h"
+#include "src/vm/gc_llvm.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/native_interpreter.h"
@@ -302,7 +303,8 @@ void Process::ValidateHeaps() {
   v.VisitProcess(this);
 }
 
-void Process::IterateRoots(PointerVisitor* visitor) {
+void Process::IterateRoots(PointerVisitor* visitor, char* fp) {
+  StackMap::Visit(heap(), visitor, fp);
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   visitor->Visit(reinterpret_cast<Object**>(&exception_));

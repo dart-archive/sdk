@@ -146,16 +146,26 @@ void HandleGC(Process* process) {
   }
 }
 
+void HandleGCWithFP(Process* process, char* fp) {
+  if (process->heap()->needs_garbage_collection()) {
+    process->program()->CollectNewSpace(fp);
+
+    // After a mutable GC a lot of stacks might no longer have pointers to
+    // new space on them. If so, the remembered set will no longer contain such
+    // a stack.
+    //
+    // Since we don't update the remembered set on every mutating operation
+    // - e.g. SetLocal() - we add it before we start using it.
+    process->remembered_set()->Insert(process->stack());
+  }
+}
+
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
   return process->program()->ObjectFromFailure(failure);
 }
 
 Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
-  if (result->IsFailure()) {
-    FATAL("We don't have support for allocation failures yet.");
-    return result;
-  }
   return result;
 }
 
@@ -171,7 +181,7 @@ void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) {
-    FATAL("We don't have support for allocation failures yet.");
+    FATAL("We don't have support for boxed allocation failures yet.");
     return boxed;
   }
 

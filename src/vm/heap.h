@@ -110,6 +110,8 @@ class Heap {
 
   SemiSpace* space() { return space_; }
   OldSpace* old_space() { return old_space_; }
+  SemiSpace* to_space() { return to_space_; }
+  void set_to_space(SemiSpace* to) { to_space_ = to; }
 
   void ReplaceSpace(SemiSpace* space, OldSpace* old_space = NULL);
   SemiSpace* TakeSpace();
@@ -167,6 +169,7 @@ class Heap {
   // Used for initializing identity hash codes for immutable objects.
   RandomXorShift* random_;
   SemiSpace* space_;
+  SemiSpace* to_space_;
   OldSpace* old_space_;
   // Linked list of weak pointers to heap objects in this heap.
   WeakPointer* weak_pointers_;
