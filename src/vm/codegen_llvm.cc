@@ -154,7 +154,7 @@ class HeapBuilder : public HeapObjectVisitor {
  private:
   friend class BasicBlockBuilder;
 
-  // Returns untagged space-zero 
+  // Returns untagged space-zero.
   llvm::Constant* BuildConstant(Object* raw_object) {
     if (!raw_object->IsHeapObject()) {
       Smi* smi = Smi::cast(raw_object);
@@ -560,6 +560,7 @@ class IRHelper {
     return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(Failure::kTagMask)), w.CWord(Failure::kTag));
   }
 
+  // Assumes we have a failure of some sort, and checks for a retry-after-gc failure.
   llvm::Value* CreateRetryAfterGCCheck(llvm::Value* object) {
     return b->CreateIsNull(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CWord(Failure::kTypeMask)));
   }
@@ -761,7 +762,9 @@ class BasicBlockBuilder {
     auto is_failure = h.CreateFailureCheck(instance);
     auto bb_success = llvm::BasicBlock::Create(w.context, "bb_allocation_success", llvm_function_);
     auto bb_failure = llvm::BasicBlock::Create(w.context, "bb_allocation_failure", llvm_function_);
-    b.CreateCondBr(is_failure, bb_failure, bb_success);
+    llvm::MDBuilder md_builder(context);
+    llvm::MDNode* assume_no_fail = md_builder.createBranchWeights(0, 1000);
+    b.CreateCondBr(is_failure, bb_failure, bb_success, assume_no_fail);
 
     b.SetInsertPoint(bb_failure);
     b.CreateCall(w.dartino_gc_trampoline, {llvm_process_});
@@ -855,12 +858,55 @@ class BasicBlockBuilder {
     push(result);
   }
 
+  void InvokeNativeTrampoline(Native nativeId, int arity) {
+    std::vector<llvm::Value*> args(1 + arity, NULL);
+    for (int i = 0; i < arity; i++) {
+      args[arity - i] = b.CreateLoad(stack_[arity - i - 1]);
+    }
+    args[0] = llvm_process_;
+    llvm::Function* trampoline = w.NativeTrampoline(nativeId, arity);
+    auto native_result = b.CreateCall(trampoline, args, "native_result");
+
+    auto bb_failure = llvm::BasicBlock::Create(context, "failure", llvm_function_);
+    auto bb_no_failure = llvm::BasicBlock::Create(context, "no_failure", llvm_function_);
+    b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure);
+
+    b.SetInsertPoint(bb_no_failure);
+    b.CreateRet(native_result);
+
+    // We convert the failure id into a failure object and let the rest of the
+    // bytecodes do their work.
+    b.SetInsertPoint(bb_failure);
+    auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
+    push(failure_object);
+  }
+
   void DoInvokeNative(Native nativeId, int arity) {
+    if (nativeId == kListNew ||
+        nativeId == kListLength ||
+        nativeId == kListIndexSet ||
+        nativeId == kListIndexGet ||
+        nativeId == kOneByteStringAdd ||
+        nativeId == kSmiBitShr ||
+        nativeId == kSmiBitShl ||
+        nativeId == kSmiMul ||
+        nativeId == kSmiDiv ||
+        nativeId == kSmiTruncDiv ||
+        nativeId == kSmiToString ||
+        nativeId == kDoubleToString ||
+        nativeId == kDoubleEqual ||
+        nativeId == kDoubleLess ||
+        nativeId == kDoubleLessEqual ||
+        nativeId == kDoubleGreater ||
+        nativeId == kDoubleGreaterEqual ||
+        nativeId == kStopwatchNow ||
+        nativeId == kStopwatchFrequency ||
+        nativeId == kPrintToConsole) {
+      InvokeNativeTrampoline(nativeId, arity);
+      return;
+    }
+
     auto process = h.Cast(llvm_process_, w.process_ptr_type);
-    // TODO(erikcorry): This doesn't quite work.  Because we take the address
-    // of the alloca, to pass to the native, the alloca is not exploded into
-    // individual SSA values, and therefore the elements in the alloca are not
-    // reported to the stack maps.  Hilarity ensures.
     auto array = b.CreateAlloca(w.object_ptr_type, w.CInt(arity));
 
     for (int i = 0; i < arity; i++) {
@@ -872,14 +918,12 @@ class BasicBlockBuilder {
 
     llvm::Function* native = w.natives_[nativeId];
 
+    DoExitFatal(name("Unnatural Native %d\n", nativeId));
+
     // NOTE: We point to the last element of the array.
     std::vector<llvm::Value*> indices = {w.CInt(arity - 1)};
     auto last_element_in_array = b.CreateGEP(array, indices, "native_args_last");
 
-    auto bb_retry_after_gc = llvm::BasicBlock::Create(context, "retry_after_gc", llvm_function_);
-    b.CreateBr(bb_retry_after_gc);
-
-    b.SetInsertPoint(bb_retry_after_gc);
     std::vector<llvm::Value*> args = {process, last_element_in_array};
     auto native_result = b.CreateCall(native, args, "native_call_result");
 
@@ -891,15 +935,15 @@ class BasicBlockBuilder {
     b.CreateRet(native_result);
 
     // We convert the failure id into a failure object and let the rest of the
-    // bytecodes do its work.
+    // bytecodes do their work.
     b.SetInsertPoint(bb_failure);
     auto bb_real_failure = llvm::BasicBlock::Create(context, "real_failure", llvm_function_);
     auto bb_call_gc = llvm::BasicBlock::Create(context, "call_gc", llvm_function_);
     b.CreateCondBr(h.CreateRetryAfterGCCheck(native_result), bb_call_gc, bb_real_failure);
 
     b.SetInsertPoint(bb_call_gc);
-    b.CreateCall(w.dartino_gc_trampoline, {llvm_process_});
-    b.CreateBr(bb_retry_after_gc);
+    DoExitFatal(name("GC request in unnatural Native %d\n", nativeId));
+    DoReturnNull();
 
     b.SetInsertPoint(bb_real_failure);
     auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
@@ -1814,9 +1858,9 @@ class FunctionTableBuilder {
         functions[i++] = function_and_id.first;
       }
     }
-    sort(functions.begin(), functions.end(), 
+    sort(functions.begin(), functions.end(),
          [this](llvm::Function* a, llvm::Function* b)
-         { 
+         {
             return w.function_to_statepoint_id[a] < w.function_to_statepoint_id[b];
          });
     std::vector<llvm::Constant*> entries;
@@ -2236,6 +2280,88 @@ void World::CreateGCTrampoline() {
   builder.CreateRetVoid();
 }
 
+// Makes external function delcarations for a natural native method (native
+// with a natural calling convention, rather than an arguments array).  Also
+// creates the trampoline.  The purpose of the trampoline is to check whether
+// the native failed because a GC is needed.  If necessary the GC can be
+// performed and the native retried.  Putting it in this trampoline reduces
+// code bloat.  TODO(erikcorry): Measure whether this matters.
+//
+// The function names have the form: Native<name-of-native>
+// => The result is available via:  world.natural_natives_[nativeIndex]
+//
+// The trampoline is returned.
+llvm::Function* World::NativeTrampoline(Native nativeId, int arity) {
+  llvm::Function* cached = natural_native_trampolines_[nativeId];
+  if (cached != nullptr) return cached;
+
+  std::vector<llvm::Type*> types(arity + 1);
+  types[0] = process_ptr_type;
+  for (int i = 0; i < arity; i++) {
+    types[i + 1] = object_ptr_type;
+  }
+  llvm::FunctionType* function_type = llvm::FunctionType::get(object_ptr_type, types, false);
+  llvm::Function* declaration = nullptr;
+  llvm::Function* trampoline = nullptr;
+
+#define N(e, c, n, d)                                                    \
+  if (nativeId == k##e) {                                                 \
+    declaration =                                                        \
+        llvm::Function::Create(function_type,                            \
+                               llvm::Function::ExternalLinkage,          \
+                               "Native" #e,                              \
+                               &module_);                                \
+    trampoline =                                                         \
+        llvm::Function::Create(function_type,                            \
+                               llvm::Function::ExternalLinkage,          \
+                               "trampoline_" #e,                         \
+                               &module_);                                \
+  }
+  NATIVES_DO(N)
+#undef N
+
+  trampoline->setGC("statepoint-example");
+  GiveIdToFunction(trampoline);
+
+  llvm::IRBuilder<> builder(context);
+  BasicBlockBuilder b(*this, NULL, trampoline, builder);
+  b.DoPrologue();
+
+  std::vector<llvm::Value*> args(arity + 1);
+  int index = 0;
+  for (llvm::Argument& arg : trampoline->getArgumentList()) {
+    args[index++] = &arg;
+  }
+
+  auto bb_gc_retry = llvm::BasicBlock::Create(context, "gc_retry", trampoline);
+  builder.CreateBr(bb_gc_retry);
+
+  builder.SetInsertPoint(bb_gc_retry);
+  auto result = builder.CreateCall(declaration, args, "result");
+
+  auto bb_call_gc = llvm::BasicBlock::Create(context, "call_gc", trampoline);
+  auto bb_return = llvm::BasicBlock::Create(context, "return", trampoline);
+
+  auto mask = CWord(Failure::kTypeMask | Failure::kTagMask);
+  auto value = CWord(Failure::kRetryAfterGC | Failure::kTag);
+  auto check = builder.CreateICmpEQ(builder.CreateAnd(builder.CreatePtrToInt(result, intptr_type), mask), value);
+  llvm::MDBuilder md_builder(context);
+  llvm::MDNode* assume_no_fail = md_builder.createBranchWeights(0, 1000);
+  builder.CreateCondBr(check, bb_call_gc, bb_return, assume_no_fail);
+
+  builder.SetInsertPoint(bb_return);
+  builder.CreateRet(result);
+
+  builder.SetInsertPoint(bb_call_gc);
+  auto process = args[0];
+  builder.CreateCall(dartino_gc_trampoline, {process});
+  builder.CreateBr(bb_gc_retry);
+
+  natural_natives_[nativeId] = declaration;
+  natural_native_trampolines_[nativeId] = trampoline;
+  return trampoline;
+}
+
 llvm::Function* World::GetSmiSlowCase(int selector) {
   auto cached = smi_slow_cases.find(selector);
   if (cached != smi_slow_cases.end()) return cached->second;
@@ -2349,8 +2475,8 @@ struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
   bool runOnFunction(llvm::Function &func) override {
     auto caller_attributes = func.getAttributes();
     std::string id = caller_attributes.getAttribute(
-                                      llvm::AttributeSet::FunctionIndex, 
-                                      "dartino-id").getValueAsString();    
+                                      llvm::AttributeSet::FunctionIndex,
+                                      "dartino-id").getValueAsString();
     for (llvm::BasicBlock& bb : func) {
       setAttributes(bb, id);
     }

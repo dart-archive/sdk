@@ -287,9 +287,9 @@ class Program : public ProgramList::Entry {
   void ValidateSharedHeap();
 
   void CollectGarbage();
-  void CollectSharedGarbage();
+  void CollectSharedGarbage(char* fp);
   void CollectNewSpace(char* fp = nullptr);
-  void PerformSharedGarbageCollection();
+  void PerformSharedGarbageCollection(char* fp);
 
   void PrintStatistics();
 

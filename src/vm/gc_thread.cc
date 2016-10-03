@@ -165,7 +165,9 @@ void GCThread::MainLoop() {
         scheduler->StopProgram(
             shared_heap_to_gc, ProgramState::kCollectingGarbage);
       }
-      shared_heap_to_gc->CollectSharedGarbage();
+      // TODO(erikcorry): This somehow needs to get the frame pointers for the
+      // stacks.
+      shared_heap_to_gc->CollectSharedGarbage(nullptr);
       if (scheduler != NULL) {
         scheduler->ResumeProgram(
             shared_heap_to_gc, ProgramState::kCollectingGarbage);

@@ -578,6 +578,14 @@ class DispatchTableEntry : public HeapObject {
 
 // Failure (immediate).
 class Failure : public Object {
+  enum FailureType {
+    RETRY_AFTER_GC = 0,
+    WRONG_ARGUMENT_TYPE = 1,
+    INDEX_OUT_OF_BOUNDS = 2,
+    ILLEGAL_STATE = 3,
+    SHOULD_PREEMPT = 4
+  };
+
  public:
   // Construct Failures.
   static Failure* wrong_argument_type() { return Create(WRONG_ARGUMENT_TYPE); }
@@ -615,6 +623,8 @@ class Failure : public Object {
   static const int kTypeShift = kTagSize;
   static const uword kTypeMask = ((1 << kTypeSize) - 1) << kTypeShift;
 
+  static const uword kRetryAfterGC = FailureType::RETRY_AFTER_GC << kTypeShift;
+
   // Payload information.
   static const int kPayloadSize = kBitsPerWord - kTagSize - kTypeSize;
   static const int kPayloadShift = kTypeShift + kTypeSize;
@@ -622,14 +632,6 @@ class Failure : public Object {
   static const uword kPayloadMask = kMaxPayload << kPayloadShift;
 
  private:
-  enum FailureType {
-    RETRY_AFTER_GC = 0,
-    WRONG_ARGUMENT_TYPE = 1,
-    INDEX_OUT_OF_BOUNDS = 2,
-    ILLEGAL_STATE = 3,
-    SHOULD_PREEMPT = 4
-  };
-
   static Failure* Create(FailureType type) {
     return reinterpret_cast<Failure*>(type << kTagSize | kTag);
   }

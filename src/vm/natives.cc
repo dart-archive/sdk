@@ -50,10 +50,14 @@ NativeVerifier::~NativeVerifier() {
 }
 #endif
 
-BEGIN_NATIVE(PrintToConsole) {
-  arguments[0]->ShortPrint();
+extern "C" Object* NativePrintToConsole(Process* process, Object* object) {
+  object->ShortPrint();
   Print::Out("\n");
   return process->program()->null_object();
+}
+
+BEGIN_NATIVE(PrintToConsole) {
+  return NativePrintToConsole(process, arguments[0]);
 }
 END_NATIVE()
 
@@ -93,13 +97,16 @@ BEGIN_NATIVE(SmiToDouble) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SmiToString) {
-  Smi* x = Smi::cast(arguments[0]);
+extern "C" Object* NativeSmiToString(Process* process, Smi* x) {
   // We need kMaxSmiCharacters + 1 since we need to null terminate the string.
   char buffer[Smi::kMaxSmiCharacters + 1];
   int length = snprintf(buffer, ARRAY_SIZE(buffer), "%ld", x->value());
   ASSERT(length > 0 && length <= Smi::kMaxSmiCharacters);
   return process->NewStringFromAscii(List<const char>(buffer, length));
+}
+
+BEGIN_NATIVE(SmiToString) {
+  return NativeSmiToString(process, Smi::cast(arguments[0]));
 }
 END_NATIVE()
 
@@ -146,9 +153,7 @@ BEGIN_NATIVE(SmiSub) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SmiMul) {
-  Smi* x = Smi::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeSmiMul(Process* process, Smi* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word x_value = reinterpret_cast<word>(x);
   word y_value = Smi::cast(y)->value();
@@ -158,6 +163,10 @@ BEGIN_NATIVE(SmiMul) {
     return Failure::wrong_argument_type();
   }
   return reinterpret_cast<Smi*>(result);
+}
+
+BEGIN_NATIVE(SmiMul) {
+  return NativeSmiMul(process, Smi::cast(arguments[0]), arguments[1]);
 }
 END_NATIVE()
 
@@ -173,24 +182,28 @@ BEGIN_NATIVE(SmiMod) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SmiDiv) {
-  Smi* x = Smi::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeSmiDiv(Process* process, Smi* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
   return process->NewDouble(static_cast<double>(x->value()) / y_value);
 }
+
+BEGIN_NATIVE(SmiDiv) {
+  return NativeSmiDiv(process, Smi::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(SmiTruncDiv) {
-  Smi* x = Smi::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeSmiTruncDiv(Process* process, Smi* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
   if (y_value == 0) return Failure::index_out_of_bounds();
   word result = x->value() / y_value;
   if (!Smi::IsValid(result)) return Failure::wrong_argument_type();
   return Smi::FromWord(result);
+}
+
+BEGIN_NATIVE(SmiTruncDiv) {
+  return NativeSmiTruncDiv(process, Smi::cast(arguments[0]), arguments[1]);
 }
 END_NATIVE()
 
@@ -227,9 +240,7 @@ BEGIN_NATIVE(SmiBitXor) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SmiBitShr) {
-  Smi* x = Smi::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeSmiBitShr(Process* process, Smi* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
   word x_value = x->value();
@@ -239,11 +250,13 @@ BEGIN_NATIVE(SmiBitShr) {
   word shift = (y_value >= kBitsPerWord) ? (kBitsPerWord - 1) : y_value;
   return Smi::FromWord(x_value >> shift);
 }
+
+BEGIN_NATIVE(SmiBitShr) {
+  return NativeSmiBitShr(process, Smi::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(SmiBitShl) {
-  Smi* x = Smi::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeSmiBitShl(Process* process, Smi* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
   if (y_value >= kBitsPerPointer) return Failure::wrong_argument_type();
@@ -252,6 +265,10 @@ BEGIN_NATIVE(SmiBitShl) {
   bool overflow = !Smi::IsValid(result) || ((result >> y_value) != x_value);
   if (overflow) return Failure::wrong_argument_type();
   return Smi::FromWord(result);
+}
+
+BEGIN_NATIVE(SmiBitShl) {
+  return NativeSmiBitShl(process, Smi::cast(arguments[0]) , arguments[1]);
 }
 END_NATIVE()
 
@@ -573,48 +590,58 @@ BEGIN_NATIVE(DoubleTruncDiv) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleEqual) {
-  Double* x = Double::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeDoubleEqual(Process* process, Double* x, Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() == y_value);
 }
+
+BEGIN_NATIVE(DoubleEqual) {
+  return NativeDoubleEqual(process, Double::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleLess) {
-  Double* x = Double::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeDoubleLess(Process* process, Double* x, Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() < y_value);
 }
+
+BEGIN_NATIVE(DoubleLess) {
+  return NativeDoubleLess(process, Double::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleLessEqual) {
-  Double* x = Double::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeDoubleLessEqual(Process* process, Double* x, Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() <= y_value);
 }
+
+BEGIN_NATIVE(DoubleLessEqual) {
+  return NativeDoubleLessEqual(process, Double::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleGreater) {
-  Double* x = Double::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeDoubleGreater(Process* process, Double* x, Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() > y_value);
 }
+
+BEGIN_NATIVE(DoubleGreater) {
+  return NativeDoubleGreater(process, Double::cast(arguments[0]), arguments[1]);
+}
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleGreaterEqual) {
-  Double* x = Double::cast(arguments[0]);
-  Object* y = arguments[1];
+extern "C" Object* NativeDoubleGreaterEqual(Process* process, Double* x, Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() >= y_value);
+}
+
+BEGIN_NATIVE(DoubleGreaterEqual) {
+  return NativeDoubleGreaterEqual(process, Double::cast(arguments[0]), arguments[1]);
 }
 END_NATIVE()
 
@@ -705,12 +732,11 @@ BEGIN_NATIVE(DoubleToInt) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(DoubleToString) {
+extern "C" Object* NativeDoubleToString(Process* process, Double* d) {
   static const int kDecimalLow = -6;
   static const int kDecimalHigh = 21;
   static const int kBufferSize = 128;
 
-  Double* d = Double::cast(arguments[0]);
   char buffer[kBufferSize] = {'\0'};
 
   // The output contains the sign, at most kDecimalHigh - 1 digits,
@@ -741,6 +767,10 @@ BEGIN_NATIVE(DoubleToString) {
   char* result = builder.Finalize();
   ASSERT(result == buffer);
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
+}
+
+BEGIN_NATIVE(DoubleToString) {
+  return NativeDoubleToString(process, Double::cast(arguments[0]));
 }
 END_NATIVE()
 
@@ -888,31 +918,41 @@ BEGIN_NATIVE(DoublePow) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ListNew) {
-  Object* x = arguments[0];
+extern "C" Object* NativeListNew(Process* process, Object* x) {
   if (!x->IsSmi()) return Failure::wrong_argument_type();
-  int length = Smi::cast(arguments[0])->value();
+  int length = Smi::cast(x)->value();
   if (length < 0) return Failure::index_out_of_bounds();
   return process->NewArray(length);
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ListLength) {
-  Object* list = Instance::cast(arguments[0])->GetInstanceField(0);
-  return Smi::FromWord(BaseArray::cast(list)->length());
+BEGIN_NATIVE(ListNew) {
+  return NativeListNew(process, arguments[0]);
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ListIndexGet) {
-  Object* list = Instance::cast(arguments[0])->GetInstanceField(0);
+extern "C" Object* NativeListLength(Process* process, Instance* instance) {
+  Object* list = instance->GetInstanceField(0);
+  return Smi::FromWord(BaseArray::cast(list)->length());
+}
+
+BEGIN_NATIVE(ListLength) {
+  return NativeListLength(process, Instance::cast(arguments[0]));
+}
+END_NATIVE()
+
+extern "C" Object* NativeListIndexGet(Process* process, Instance* instance, Object* x) {
+  Object* list = instance->GetInstanceField(0);
   Array* array = Array::cast(list);
-  Object* x = arguments[1];
   if (!x->IsSmi()) return Failure::wrong_argument_type();
   int index = Smi::cast(x)->value();
   if (index < 0 || index >= array->length()) {
     return Failure::index_out_of_bounds();
   }
   return array->get(index);
+}
+
+BEGIN_NATIVE(ListIndexGet) {
+  return NativeListIndexGet(process, Instance::cast(arguments[0]), arguments[1]);
 }
 END_NATIVE()
 
@@ -929,19 +969,21 @@ BEGIN_NATIVE(ByteListIndexGet) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ListIndexSet) {
-  Object* list = Instance::cast(arguments[0])->GetInstanceField(0);
+extern "C" Object* NativeListIndexSet(Process* process, Instance* instance, Object* x, Object* value) {
+  Object* list = instance->GetInstanceField(0);
   Array* array = Array::cast(list);
-  Object* x = arguments[1];
   if (!x->IsSmi()) return Failure::wrong_argument_type();
   int index = Smi::cast(x)->value();
   if (index < 0 || index >= array->length()) {
     return Failure::index_out_of_bounds();
   }
-  Object* value = arguments[2];
   array->set(index, value);
   process->RecordStore(array, value);
   return value;
+}
+
+BEGIN_NATIVE(ListIndexSet) {
+  return NativeListIndexSet(process, Instance::cast(arguments[0]), arguments[1], arguments[2]);
 }
 END_NATIVE()
 
@@ -1138,15 +1180,21 @@ BEGIN_NATIVE(CoroutineNewStack) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(StopwatchFrequency) { return Smi::FromWord(1000000); }
+extern "C" Object* NativeStopwatchFrequency(Process* process) {
+  return Smi::FromWord(1000000);
+}
+
+BEGIN_NATIVE(StopwatchFrequency) { return NativeStopwatchFrequency(process); }
 END_NATIVE()
 
-BEGIN_NATIVE(StopwatchNow) {
+extern "C" Object* NativeStopwatchNow(Process* process) {
   static uint64 first = 0;
   uint64 now = Platform::GetProcessMicroseconds();
   if (first == 0) first = now;
   return process->ToInteger(now - first);
 }
+
+BEGIN_NATIVE(StopwatchNow) { return NativeStopwatchNow(process); }
 END_NATIVE()
 
 BEGIN_NATIVE(IdentityHashCode) {
@@ -1182,10 +1230,7 @@ BEGIN_NATIVE(StringLength) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(OneByteStringAdd) {
-  OneByteString* x = OneByteString::cast(arguments[0]);
-  Object* other = arguments[1];
-
+extern "C" Object* NativeOneByteStringAdd(Process* process, OneByteString* x, Object* other) {
   if (!other->IsString()) return Failure::wrong_argument_type();
 
   int xlen = x->length();
@@ -1215,6 +1260,10 @@ BEGIN_NATIVE(OneByteStringAdd) {
   result->FillFrom(x, 0);
   result->FillFrom(y, xlen);
   return result;
+}
+
+BEGIN_NATIVE(OneByteStringAdd) {
+  return NativeOneByteStringAdd(process, OneByteString::cast(arguments[0]), arguments[1]);
 }
 END_NATIVE()
 

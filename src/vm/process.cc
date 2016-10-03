@@ -166,7 +166,8 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
     program()->CollectNewSpace();
     new_stack_object = NewStack(new_size);
     if (new_stack_object->IsRetryAfterGCFailure()) {
-      program()->CollectSharedGarbage();
+      // TODO(erikcorry): Needs the frame pointer.
+      program()->CollectSharedGarbage(nullptr);
       new_stack_object = NewStack(new_size);
       if (new_stack_object->IsRetryAfterGCFailure()) {
         return kStackCheckOverflow;

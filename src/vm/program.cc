@@ -296,7 +296,7 @@ void Program::PrepareProgramGC() {
   // We need to perform a precise GC to get rid of floating garbage stacks.
   // This is done by:
   // 1) An old-space GC, which is precise for global reachability.
-  PerformSharedGarbageCollection();
+  PerformSharedGarbageCollection(nullptr);
   //    Old-space GC ignores the liveness information it has gathered in
   //    new-space, so this doesn't actually clean up the dead objects in
   //    new-space, so we do:
@@ -471,7 +471,7 @@ static void PrintProgramGCInfo(SharedHeapUsage* before,
       before->shared_size_2, after->shared_used_2, after->shared_size_2);
 }
 
-void Program::CollectSharedGarbage() {
+void Program::CollectSharedGarbage(char* fp) {
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
@@ -481,7 +481,7 @@ void Program::CollectSharedGarbage() {
     GetSharedHeapUsage(process_heap(), &usage_before);
   }
 
-  PerformSharedGarbageCollection();
+  PerformSharedGarbageCollection(fp);
 
   if (Flags::print_heap_statistics) {
     SharedHeapUsage usage_after;
@@ -495,7 +495,7 @@ void Program::CollectSharedGarbage() {
 }
 
 
-void Program::PerformSharedGarbageCollection() {
+void Program::PerformSharedGarbageCollection(char* fp) {
   // Mark all reachable objects.  We mark all live objects in new-space too, to
   // detect liveness paths that go through new-space, but we just clear the
   // mark bits afterwards.  Dead objects in new-space are only cleared in a
@@ -506,7 +506,7 @@ void Program::PerformSharedGarbageCollection() {
   MarkingStack stack;
   MarkingVisitor marking_visitor(new_space, old_space, &stack);
   for (auto process : process_list_) {
-    process->IterateRoots(&marking_visitor);
+    process->IterateRoots(&marking_visitor, fp);
   }
   stack.Process(&marking_visitor);
   heap->ProcessWeakPointers(old_space);
@@ -1041,7 +1041,7 @@ void Program::CollectNewSpace(char* fp) {
   }
 
   if (old->needs_garbage_collection()) {
-    CollectSharedGarbage();
+    CollectSharedGarbage(fp);
   }
 
   UpdateStackLimits();

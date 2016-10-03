@@ -78,6 +78,7 @@ class World {
   // Helper method for getting hold of a smi slow-case helper function for
   // the slow path for inlined smi operations.
   llvm::Function* GetSmiSlowCase(int selector);
+  llvm::Function* NativeTrampoline(Native native_id, int arity);
 
   void GiveIdToFunction(llvm::Function* llvm_function);
 
@@ -181,6 +182,8 @@ class World {
   std::map<int, llvm::Function*> smi_slow_cases;
 
   std::vector<llvm::Function*> natives_;
+  std::vector<llvm::Function*> natural_natives_ = std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
+  std::vector<llvm::Function*> natural_native_trampolines_ = std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
 };
 
 static const int kRegularNameSpace = 0;
