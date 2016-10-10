@@ -69,6 +69,10 @@ abstract class CompilerConfiguration {
         return new DartinoCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
             isHostChecked: isHostChecked, useSdk: useSdk);
+      case 'dartino_llvm':
+        return new DartinoLLVMCompilerConfiguration(
+            isDebug: isDebug, isChecked: isChecked,
+            isHostChecked: isHostChecked, useSdk: useSdk);
       case 'none':
         return new NoneCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
@@ -236,6 +240,59 @@ class DartinoCCompilerConfiguration extends Dart2xCompilerConfiguration {
 
     return new CommandArtifact(
         <Command>[command], snapshotFileName, 'application/dartino-snapshot');
+  }
+
+  List<String> computeRuntimeArguments(
+      RuntimeConfiguration runtimeConfiguration,
+      String buildDir,
+      TestInformation info,
+      List<String> vmOptions,
+      List<String> sharedOptions,
+      List<String> originalArguments,
+      CommandArtifact artifact) {
+    return <String>[]
+        ..addAll(vmOptions)
+        ..add(artifact.filename);
+  }
+}
+
+class DartinoLLVMCompilerConfiguration extends CompilerConfiguration {
+    DartinoLLVMCompilerConfiguration({
+      bool isDebug,
+      bool isChecked,
+      bool isHostChecked,
+      bool useSdk})
+      : super._subclass(
+          isDebug: isDebug, isChecked: isChecked,
+          isHostChecked: isHostChecked, useSdk: useSdk);
+
+  CompilationCommand computeCompilationCommand(
+      String outputFileName,
+      String buildDir,
+      CommandBuilder commandBuilder,
+      List arguments,
+      Map<String, String> environmentOverrides) {
+    arguments = new List.from(arguments);
+    arguments.add('$outputFileName');
+
+    return commandBuilder.getCompilationCommand(
+        'dartino_llvm', outputFileName, !useSdk,
+        const <Uri>[],
+        "./compile.sh",
+        arguments, environmentOverrides);
+  }
+
+  CommandArtifact computeCompilationArtifact(
+      String buildDir,
+      String tempDir,
+      CommandBuilder commandBuilder,
+      List basicArguments,
+      Map<String, String> environmentOverrides) {
+    String binaryName = '$tempDir/out';
+    var command = computeCompilationCommand(binaryName,
+      buildDir, commandBuilder, basicArguments, environmentOverrides);
+    return new CommandArtifact(
+        <Command>[command], binaryName, 'application/elf');
   }
 
   List<String> computeRuntimeArguments(

@@ -85,7 +85,7 @@ class TestOptionsParser {
    dart2analyzer: Perform static analysis on Dart code by running the analyzer on Dart.
           (only valid with the following runtimes: none)''',
               ['-c', '--compiler'],
-              ['none', 'dartino_compiler'],
+              ['none', 'dartino_compiler', 'dartino_llvm'],
               'none'),
           // TODO(antonm): fix the option drt.
           new _TestOptionSpecification(
@@ -114,7 +114,7 @@ class TestOptionsParser {
           analysis tests).''',
               ['-r', '--runtime'],
               ['none', 'dartino_compiler', 'dartinovm', 'dartino_warnings',
-               'dartino_tests', 'dartino_cc_tests'],
+               'dartino_tests', 'dartino_cc_tests', 'llvm'],
                'dartino_warnings,dartino_tests,dartino_compiler,'
                'dartino_cc_tests'),
           new _TestOptionSpecification(
@@ -688,6 +688,9 @@ Note: currently only implemented for dart2js.''',
     switch (config['compiler']) {
       case 'dartino_compiler':
         validRuntimes = const ['none', 'dartinovm'];
+        break;
+      case 'dartino_llvm':
+        validRuntimes = const ['llvm'];
         break;
       case 'none':
         validRuntimes = const [

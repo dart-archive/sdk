@@ -43,6 +43,9 @@ class RuntimeConfiguration {
       case 'none':
         return new NoneRuntimeConfiguration();
 
+      case 'llvm':
+        return new DartinoLLVMRuntimeConfiguration();
+
       case 'dartino_compiler':
         return new DartinocRuntimeConfiguration(
             hostChecked: configuration['host_checked'],
@@ -238,5 +241,23 @@ class DummyRuntimeConfiguration extends DartVmRuntimeConfiguration {
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     throw "Unimplemented runtime '$runtimeType'";
+  }
+}
+
+/// The LLVM runtime configuration.
+class DartinoLLVMRuntimeConfiguration extends RuntimeConfiguration {
+  DartinoLLVMRuntimeConfiguration()
+      : super.subclass();
+
+  List<Command> computeRuntimeCommands(
+      TestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      String script,
+      List<String> arguments,
+      Map<String, String> environmentOverrides) {
+    var executable = artifact.filename;
+    return <Command>[commandBuilder.getProcessCommand(
+      "dartino-llvm", executable, [], environmentOverrides)];
   }
 }
