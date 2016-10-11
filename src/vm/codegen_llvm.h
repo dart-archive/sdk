@@ -152,6 +152,7 @@ class World {
 
   llvm::StructType* dte_type;
   llvm::PointerType* dte_ptr_type;
+  llvm::PointerType* dte_ptr_ptr_type;
 
   llvm::StructType* roots_type;
   llvm::PointerType* roots_ptr_type;

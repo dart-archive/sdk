@@ -527,7 +527,8 @@ class IRHelper {
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
-    return LoadField(heap_object, HeapObject::kClassOffset, "class");
+    auto gc_pointer = LoadField(heap_object, HeapObject::kClassOffset, "class");
+    return b->CreatePointerBitCastOrAddrSpaceCast(gc_pointer, w.class_ptr_type);
   }
 
   llvm::Value* LoadArrayEntry(llvm::Value* array, int offset) {
@@ -1087,6 +1088,14 @@ class BasicBlockBuilder {
     push(result);
   }
 
+  llvm::Value* DispatchTableEntry(llvm::Value* offset) {
+    auto untyped = w.untagged_aspace0[w.program_->dispatch_table()];
+    auto typed = b.CreatePointerCast(untyped, w.dte_ptr_ptr_type);
+    auto gep = b.CreateGEP(typed, b.CreateAdd(offset, w.CWord(Array::kSize / kPointerSize)));
+    auto dte = b.CreateLoad(gep);;
+    return dte;
+  }
+
   llvm::Value* InvokeMethodHelper(int selector, std::vector<llvm::Value*> args) {
     int arity = args.size() - 2;
     auto receiver = args[1];
@@ -1101,12 +1110,11 @@ class BasicBlockBuilder {
     b.CreateCondBr(b.CreateICmpEQ(actual_offset, expected_offset), bb_lookup_success, bb_lookup_failure);
 
     b.SetInsertPoint(bb_lookup_failure);
-    auto dispatch = w.tagged_aspace1[w.program_->dispatch_table()];
-    auto nsm_entry = h.LoadField(dispatch, Array::kSize, "no_such_method");  // NSM is 0th element in dispatch table.
+    auto nsm_entry = DispatchTableEntry(w.CWord(0));  // NSM is 0th element in dispatch table.
     b.CreateBr(bb_lookup_success);
 
     b.SetInsertPoint(bb_lookup_success);
-    auto phi = b.CreatePHI(w.object_ptr_type, 2);
+    auto phi = b.CreatePHI(w.dte_ptr_type, 2);
     phi->addIncoming(entry, bb_start);
     phi->addIncoming(nsm_entry, bb_lookup_failure);
     auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(phi), w.FunctionPtrType(1 + arity));
@@ -1185,31 +1193,22 @@ class BasicBlockBuilder {
     b.CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
     b.SetInsertPoint(bb_smi);
-    auto smi_klass = w.tagged_aspace1[w.program_->smi_class()];
+    auto smi_klass = w.tagged_aspace0[w.program_->smi_class()];
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_nonsmi);
-    auto custom_klass = h.LoadField(receiver, HeapObject::kClassOffset, "class");
+    auto custom_klass = h.LoadClass(receiver);
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_lookup);
-    auto klass = b.CreatePHI(w.object_ptr_type, 2, "klass");
+    auto klass = b.CreatePHI(w.class_ptr_type, 2, "klass");
     klass->addIncoming(smi_klass, bb_smi);
     klass->addIncoming(custom_klass, bb_nonsmi);
 
     auto classid = h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset, "id_or_transformation_target"), "id_or_transformation_target_untagged");
     auto selector_offset = w.CWord(Selector::IdField::decode(selector));
     auto offset = b.CreateAdd(selector_offset, classid);
-    offset = b.CreateAdd(w.CWord(Array::kSize / kPointerSize), offset);
-
-    auto dispatch = w.untagged_aspace0[w.program_->dispatch_table()];
-    auto scaled_dispatch = b.CreatePointerCast(dispatch, w.object_ptr_aspace0_ptr_aspace0_type);
-
-    // Index into dispatch table.  The dispatch table is a 'heap object'
-    // (tagged, with normal HeapObject layout), but it is always in the
-    // read-only static constants part of the heap so we don't need to track it
-    // specially.
-    auto entry = h.LoadFieldFromAddressSpaceZero(b.CreateGEP(scaled_dispatch, {offset}, "dispatch_table_entry"));
+    auto entry =  DispatchTableEntry(offset);
     return entry;
   }
 
@@ -2042,6 +2041,7 @@ World::World(Program* program,
 
   dte_type = llvm::StructType::create(context, "DispatchTableEntry");
   dte_ptr_type = llvm::PointerType::get(dte_type, 0);
+  dte_ptr_ptr_type = llvm::PointerType::get(dte_ptr_type, 0);
 
   roots_type = llvm::StructType::create(context, "ProgramRootsType");
   roots_ptr_type = llvm::PointerType::get(roots_type, 0);
