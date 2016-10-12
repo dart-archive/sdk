@@ -114,6 +114,8 @@
         'intrinsics.h',
         'links.cc',
         'links.h',
+        'llvm_eh.cc',
+        'llvm_eh.h',
         'log_print_interceptor.cc',
         'log_print_interceptor.h',
         'lookup_cache.cc',
@@ -370,6 +372,7 @@
         'libdartino',
       ],
       'sources': [
+        'llvm_eh.cc',
         'llvm_embedder.cc',
       ],
     },

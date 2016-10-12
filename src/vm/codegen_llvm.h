@@ -48,6 +48,12 @@
 
 namespace dartino {
 
+struct CatchBlock {
+  int start;
+  int end;
+  int frame_size;
+};
+
 class World {
  public:
   World(Program* program,
@@ -157,6 +163,8 @@ class World {
   llvm::StructType* roots_type;
   llvm::PointerType* roots_ptr_type;
 
+  llvm::Type* caught_result_type;
+
   llvm::Constant* roots;
 
   llvm::Function* libc__exit;
@@ -169,6 +177,10 @@ class World {
   llvm::Function* runtime__HandleAllocateBoxed;
   llvm::Function* runtime__HandleInvokeSelector;
   llvm::Function* runtime__HandleObjectFromFailure;
+
+  llvm::Function* raise_exception;
+  llvm::Function* current_exception;
+  llvm::Function* dart_personality;
 
   // Constants, tagged and in the GC-ed space.
   std::map<HeapObject*, llvm::Constant*> tagged_aspace1;

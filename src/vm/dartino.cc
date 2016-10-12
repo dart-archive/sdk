@@ -13,6 +13,7 @@
 #include "src/vm/preempter.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
+#include "src/vm/llvm_eh.h"
 
 namespace dartino {
 
@@ -25,6 +26,7 @@ void Dartino::Setup() {
   EventHandler::Setup();
   Scheduler::Setup();
   Preempter::Setup();
+  ExceptionsSetup();
 }
 
 void Dartino::TearDown() {

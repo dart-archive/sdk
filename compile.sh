@@ -45,8 +45,11 @@ run out/DebugX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc
 run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
 
 # Compile LLVM IR to x86 asm code.
-run $LLVM_BIN/llc -o $BASENAME.S $BASENAME.bc
+run $LLVM_BIN/llc -exception-model=dwarf -o $BASENAME.S $BASENAME.bc
+
+#
+run as $BASENAME.S -o $BASENAME.o
+run objcopy  --globalize-symbol=__LLVM_StackMaps $BASENAME.o $BASENAME.o
 
 # Link generated code together with dartino runtime and llvm embedder.
-run g++ -m64 -o $EXECUTABLE -Lout/DebugX64 -Lout/DebugX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
-
+run g++ -m64 -o $EXECUTABLE -Lout/DebugX64 -Lout/DebugX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.o

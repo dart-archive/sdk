@@ -61,6 +61,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
+  Object* in_flight_exception() const { return in_flight_exception_; }
+  void set_in_flight_exception(Object* object){ in_flight_exception_ = object; }
   Heap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
@@ -212,7 +214,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kProgramOffset = kStackLimitOffset + kWordSize;
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
-  static const uword kPrimaryLookupCacheOffset = kExceptionOffset + kWordSize;
+  static const uword kPrimaryLookupCacheOffset = kExceptionOffset + 2*kWordSize;
 
  private:
   friend class Interpreter;
@@ -240,6 +242,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   Program* program_;
   Array* statics_;
   Object* exception_;
+  Object* in_flight_exception_;
 
   // We need extremely fast access to the primary lookup cache, so we
   // store a reference to it in the process whenever we're interpreting

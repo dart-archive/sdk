@@ -3,14 +3,16 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/vm/codegen_llvm.h"
+
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
 #include "src/shared/natives.h"
 #include "src/shared/selectors.h"
 
-#include "src/vm/process.h"
 #include "src/vm/interpreter.h"
+#include "src/vm/llvm_eh.h"
+#include "src/vm/process.h"
 #include "src/vm/program_info_block.h"
 
 #include <stdio.h>
@@ -583,7 +585,8 @@ class BasicBlockBuilder {
   BasicBlockBuilder(World& world,
                     Function* function,
                     llvm::Function* llvm_function,
-                    llvm::IRBuilder<>& builder)
+                    llvm::IRBuilder<>& builder,
+                    const std::vector<std::pair<int, int>>& ranges)
       : w(world),
         function_(function),
         llvm_function_(llvm_function),
@@ -592,7 +595,8 @@ class BasicBlockBuilder {
         llvm_process_(NULL),
         h(w, &builder),
         stack_pos_(0),
-        max_stack_height_(0) {
+        max_stack_height_(0),
+        catch_ranges_(ranges) {
     // We make an extra basic block for loading arguments and jump to the basic
     // block corresponding to BCI 0, because sometimes we'll have loops going
     // back to BCI0 (which LLVM doesn't allow).
@@ -748,6 +752,37 @@ class BasicBlockBuilder {
     b.CreateRet(h.Cast(value, w.object_ptr_type));
   }
 
+  llvm::Value* CreateInvokeOrCall(int bci, llvm::Value* callee, llvm::ArrayRef<llvm::Value*> args, const std::string& label="") {
+    for (auto p : catch_ranges_) {
+      int start = p.first;
+      int end = p.second;
+      if (bci >= start && bci < end) {
+        llvm::BasicBlock* exceptional = bci2bb_[p.second];
+        llvm::BasicBlock* normal = llvm::BasicBlock::Create(context, name("bb%d", bci), llvm_function_);
+        llvm::Value* val = b.CreateInvoke(callee, normal, exceptional, args, label);
+        b.SetInsertPoint(normal);
+        return val;
+      }
+    }
+    return b.CreateCall(callee, args, label);
+  }
+
+  void DoThrow(int bci) {
+    auto ex = pop();
+    CreateInvokeOrCall(bci, w.raise_exception, { llvm_process_, ex });
+    b.CreateUnreachable();
+  }
+
+  void DoCatchBlockEntry() {
+    llvm_function_->setPersonalityFn(w.dart_personality);
+    llvm::LandingPadInst *caughtResult =
+      b.CreateLandingPad(w.caught_result_type, 1, "landingPad");
+    caughtResult->addClause(llvm::Constant::getNullValue(b.getInt8PtrTy()));
+    llvm::Value *exception = b.CreateCall(w.current_exception, {llvm_process_});
+    // Save exception to local 0 where Dartino exception handling expects it to be
+    SetLocal(0, exception);
+  }
+
   void DoAllocate(Class* klass, bool immutable) {
     auto bb_retry = llvm::BasicBlock::Create(w.context, "bb_allocation_retry", llvm_function_);
 
@@ -846,7 +881,7 @@ class BasicBlockBuilder {
     b.CreateCall(h.TaggedWrite(), {local(0), statics_entry_ptr});
   }
 
-  void DoCall(Function* target) {
+  void DoCall(int bci, Function* target) {
     int arity = target->arity();
     std::vector<llvm::Value*> args(1 + arity, NULL);
     for (int i = 0; i < arity; i++) {
@@ -855,7 +890,7 @@ class BasicBlockBuilder {
     args[0] = llvm_process_;
     llvm::Function* llvm_target = static_cast<llvm::Function*>(w.llvm_functions[target]);
     ASSERT(llvm_target != NULL);
-    auto result = b.CreateCall(llvm_target, args, "result");
+    auto result = CreateInvokeOrCall(bci, llvm_target, args, "result");
     push(result);
   }
 
@@ -1073,7 +1108,7 @@ class BasicBlockBuilder {
     push(b.CreateSelect(comp, false_obj, true_obj, "negate"));
   }
 
-  void DoInvokeMethod(int selector, int arity) {
+  void DoInvokeMethod(int bci, int selector, int arity) {
     std::vector<llvm::Value*> method_args(1 + 1 + arity);
 
     method_args[0] = llvm_process_;
@@ -1083,7 +1118,7 @@ class BasicBlockBuilder {
       method_args[index--] = pop();
     }
     ASSERT(index == 0);
-    auto result = InvokeMethodHelper(selector, method_args);
+    auto result = InvokeMethodHelper(bci, selector, method_args);
 
     push(result);
   }
@@ -1096,7 +1131,7 @@ class BasicBlockBuilder {
     return dte;
   }
 
-  llvm::Value* InvokeMethodHelper(int selector, std::vector<llvm::Value*> args) {
+  llvm::Value* InvokeMethodHelper(int bci, int selector, std::vector<llvm::Value*> args) {
     int arity = args.size() - 2;
     auto receiver = args[1];
     auto entry = LookupDispatchTableEntry(receiver, selector);
@@ -1118,7 +1153,7 @@ class BasicBlockBuilder {
     phi->addIncoming(entry, bb_start);
     phi->addIncoming(nsm_entry, bb_lookup_failure);
     auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(phi), w.FunctionPtrType(1 + arity));
-    return b.CreateCall(code, args, "method_result");
+    return CreateInvokeOrCall(bci, code, args, "method_result");
   }
 
   void DoInvokeTest(int selector) {
@@ -1267,6 +1302,7 @@ class BasicBlockBuilder {
   llvm::BasicBlock* bb_entry_;
   std::map<int, llvm::BasicBlock*> bci2bb_;
   std::map<int, int> bci2sh_;
+  std::vector<std::pair<int, int>> catch_ranges_;
 };
 
 class BasicBlocksExplorer {
@@ -1298,8 +1334,7 @@ class BasicBlocksExplorer {
     auto llvm_function = w.llvm_functions[function_];
 
     llvm::IRBuilder<> builder(w.context);
-    BasicBlockBuilder b(w, function_, llvm_function, builder);
-
+    BasicBlockBuilder b(w, function_, llvm_function, builder, catch_ranges_);
     // Phase 1: Create basic blocks
     for (auto& pair : labels) {
       b.AddBasicBlockAtBCI(pair.first, pair.second);
@@ -1312,6 +1347,9 @@ class BasicBlocksExplorer {
     for (auto& pair : labels) {
       int bci = pair.first;
       b.InsertAtBCI(bci);
+      if(catch_blocks_.find(bci) != catch_blocks_.end()) {
+        b.DoCatchBlockEntry();
+      }
 
       int postponed_compare_bci = -1;
       bool last_opcode_was_jump = false;
@@ -1326,7 +1364,7 @@ class BasicBlocksExplorer {
         switch (opcode) {
           case kInvokeFactory:
           case kInvokeStatic: {
-            b.DoCall(Function::cast(Function::ConstantForBytecode(bcp)));
+            b.DoCall(bci, Function::cast(Function::ConstantForBytecode(bcp)));
             break;
           }
 
@@ -1512,19 +1550,19 @@ class BasicBlocksExplorer {
             break;
           }
 
+          case kThrow: {
+            b.DoThrow(bci);
+            stop = true;
+            break;
+          }
+
           /*
           case kInvokeNoSuchMethod: {
             int selector = Utils::ReadInt32(bcp + 1);
             DoInvokeNoSuchMethod(selector);
             break;
           }
-
-          case kThrow: {
-            DoThrow();
-            basic_block_.Clear();
-            break;
-          }
-
+          
           case kSubroutineCall: {
             int target = bci + Utils::ReadInt32(bcp + 1);
             DoSubroutineCall(target);
@@ -1628,7 +1666,7 @@ class BasicBlocksExplorer {
           case kInvokeMethod: {
             int selector = Utils::ReadInt32(bcp + 1);
             int arity = Selector::ArityField::decode(selector);
-            b.DoInvokeMethod(selector, arity);
+            b.DoInvokeMethod(bci, selector, arity);
             break;
           }
 
@@ -1766,11 +1804,11 @@ class BasicBlocksExplorer {
     if (frame_ranges_offset != -1) {
       uint8* catch_block_address = function_->bytecode_address_for(frame_ranges_offset);
       int count = Utils::ReadInt32(catch_block_address);
-      uint32* ptr = reinterpret_cast<uint32*>(catch_block_address + 4);
+      CatchBlock* blocks = reinterpret_cast<CatchBlock*>(catch_block_address + 4);
       for (int i = 0; i < count; i++) {
-        uint32 start = ptr[3 * i + 0];
-        uint32 stack_size = ptr[3 * i + 2];
-        Enqueue(start, stack_size);
+        catch_blocks_.insert(blocks[i].end);
+        catch_ranges_.push_back(std::make_pair(blocks[i].start, blocks[i].end));
+        Enqueue(blocks[i].end, blocks[i].frame_size);
       }
     }
   }
@@ -1800,6 +1838,7 @@ class BasicBlocksExplorer {
            op == kBranchBackIfFalseWide ||
            op == kPopAndBranchWide ||
            op == kPopAndBranchBackWide ||
+           op == kThrow ||
            op == kSubroutineCall || // Some kind of exception/catch block stuff :-/
            op == kReturn;
   }
@@ -1822,6 +1861,8 @@ class BasicBlocksExplorer {
   int max_stacksize_;
   std::map<int, int> labels;
   std::map<int, int> todo;
+  std::set<int> catch_blocks_;
+  std::vector<std::pair<int,int>> catch_ranges_;
 };
 
 class FunctionsBuilder : public HeapObjectVisitor {
@@ -2146,6 +2187,32 @@ World::World(Program* program,
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
   runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
   runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);
+  
+  // Exception handling types and functions.
+
+  auto raise_exception_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
+      {process_ptr_type, object_ptr_type}, false);
+  raise_exception = llvm::Function::Create(raise_exception_type,
+      llvm::Function::ExternalLinkage, "ThrowException", &module_);
+  raise_exception->setDoesNotReturn();
+
+  auto current_exception_type = llvm::FunctionType::get(object_ptr_type, 
+      {process_ptr_type}, false);
+  current_exception = llvm::Function::Create(current_exception_type,
+      llvm::Function::ExternalLinkage, "CurrentException", &module_);
+
+  std::vector<llvm::Type*> dart_personality_type_args = { 
+      int32_type,
+      int32_type, 
+      int64_type, 
+      int8_ptr_type, 
+      int8_ptr_type
+  };
+  auto dart_personality_type = llvm::FunctionType::get(int32_type,
+      dart_personality_type_args, false);
+  dart_personality = llvm::Function::Create(dart_personality_type,
+      llvm::Function::ExternalLinkage, "DartPersonality", &module_);
+  caught_result_type = llvm::Type::getTokenTy(context);
 }
 
 llvm::StructType* World::ObjectArrayType(int n, llvm::Type* entry_type, const char* name_) {
@@ -2262,7 +2329,7 @@ llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
 
 void World::CreateGCTrampoline() {
   llvm::IRBuilder<> builder(context);
-  BasicBlockBuilder b(*this, NULL, dartino_gc_trampoline, builder);
+  BasicBlockBuilder b(*this, NULL, dartino_gc_trampoline, builder, {});
   b.DoPrologue();
 
   auto get_fp = llvm::Intrinsic::getDeclaration(&module_, llvm::Intrinsic::frameaddress, {int32_type});
@@ -2324,7 +2391,7 @@ llvm::Function* World::NativeTrampoline(Native nativeId, int arity) {
   GiveIdToFunction(trampoline);
 
   llvm::IRBuilder<> builder(context);
-  BasicBlockBuilder b(*this, NULL, trampoline, builder);
+  BasicBlockBuilder b(*this, NULL, trampoline, builder, {});
   b.DoPrologue();
 
   std::vector<llvm::Value*> args(arity + 1);
@@ -2372,7 +2439,7 @@ llvm::Function* World::GetSmiSlowCase(int selector) {
   GiveIdToFunction(function);
 
   llvm::IRBuilder<> builder(context);
-  BasicBlockBuilder b(*this, NULL, function, builder);
+  BasicBlockBuilder b(*this, NULL, function, builder, {});
   b.DoPrologue();
 
   std::vector<llvm::Value*> args(3);
@@ -2380,8 +2447,8 @@ llvm::Function* World::GetSmiSlowCase(int selector) {
   for (llvm::Argument& arg : function->getArgumentList()) {
     args[index++] = &arg;
   }
-
-  llvm::Value* result = b.InvokeMethodHelper(selector, args);
+  // TODO(dmitryolsh): revise this 0 as BCI arg
+  llvm::Value* result = b.InvokeMethodHelper(0, selector, args);
   builder.CreateRet(result);
 
   smi_slow_cases[selector] = function;
@@ -2408,6 +2475,8 @@ void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_modu
   //llvm::setCurrentDebugType("rewrite-statepoints-for-gc");
 
   World world(program_, context, module);
+
+  ExceptionsSetup();
 
   CreateGCSafepointPollFunction(module, world, context);
 
@@ -2468,6 +2537,11 @@ struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
     for (llvm::Instruction& instruction : bb) {
       if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
         call->addAttribute(llvm::AttributeSet::FunctionIndex, "statepoint-id", id);
+      }
+      else if(llvm::InvokeInst* call = llvm::dyn_cast<llvm::InvokeInst>(&instruction)){
+        llvm::AttributeSet attributes = call->getAttributes();
+        attributes = attributes.addAttribute(w.context, llvm::AttributeSet::FunctionIndex, "statepoint-id", id);
+        call->setAttributes(attributes);
       }
     }
   }

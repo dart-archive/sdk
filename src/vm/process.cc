@@ -37,6 +37,7 @@ Process::Process(Program* program, Process* parent)
       program_(program),
       statics_(NULL),
       exception_(program->null_object()),
+      in_flight_exception_(program->null_object()),
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
@@ -309,6 +310,7 @@ void Process::IterateRoots(PointerVisitor* visitor, char* fp) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   visitor->Visit(reinterpret_cast<Object**>(&exception_));
+  visitor->Visit(reinterpret_cast<Object**>(&in_flight_exception_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 
   mailbox_.IteratePointers(visitor);
