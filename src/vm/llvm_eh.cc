@@ -48,8 +48,8 @@ void DeleteFromUnwindException(_Unwind_Reason_Code reason, _Unwind_Exception* ex
   DeleteException(ex);
 }
 
-_Unwind_Exception *CreateException() {
-  _Unwind_Exception *ret = new _Unwind_Exception;
+_Unwind_Exception* CreateException() {
+  _Unwind_Exception* ret = new _Unwind_Exception;
   ret->exception_class = dart_exception_class;
   ret->exception_cleanup = DeleteFromUnwindException;
   return ret;
@@ -226,9 +226,9 @@ extern "C" _Unwind_Reason_Code DartPersonality(int version,_Unwind_Action action
   // includes the current PC.
   uint8 call_site_encoding = *lsda++;
   uint32_t call_site_table_length = ReadULEB128(&lsda);
-  const uint8 *call_site_table_start = lsda;
-  const uint8 *call_site_table_end = call_site_table_start + call_site_table_length;
-  const uint8 *call_site_ptr = call_site_table_start;
+  const uint8* call_site_table_start = lsda;
+  const uint8* call_site_table_end = call_site_table_start + call_site_table_length;
+  const uint8* call_site_ptr = call_site_table_start;
 
   while (call_site_ptr < call_site_table_end) {
     uintptr_t start = ReadDwarfPointer(&call_site_ptr, call_site_encoding);
