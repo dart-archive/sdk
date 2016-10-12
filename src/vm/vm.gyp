@@ -70,7 +70,11 @@
         ],
       },
       'includes': [
-        '../../third_party/yasm/yasm_compile.gypi'
+        '../../third_party/yasm/yasm_compile.gypi',
+      ],
+      'include_dirs': [
+        '../../third_party/llvm/llvm-build/include',
+        '../../third_party/llvm/include',
       ],
       'sources': [
         '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
@@ -372,7 +376,6 @@
         'libdartino',
       ],
       'sources': [
-        'llvm_eh.cc',
         'llvm_embedder.cc',
       ],
     },
