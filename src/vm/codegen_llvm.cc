@@ -894,7 +894,7 @@ class BasicBlockBuilder {
     push(result);
   }
 
-  void InvokeNativeTrampoline(Native nativeId, int arity) {
+  void DoInvokeNative(Native nativeId, int arity) {
     std::vector<llvm::Value*> args(1 + arity, NULL);
     for (int i = 0; i < arity; i++) {
       args[arity - i] = b.CreateLoad(stack_[arity - i - 1]);
@@ -913,75 +913,6 @@ class BasicBlockBuilder {
     // We convert the failure id into a failure object and let the rest of the
     // bytecodes do their work.
     b.SetInsertPoint(bb_failure);
-    auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
-    push(failure_object);
-  }
-
-  void DoInvokeNative(Native nativeId, int arity) {
-    if (nativeId == kListNew ||
-        nativeId == kListLength ||
-        nativeId == kListIndexSet ||
-        nativeId == kListIndexGet ||
-        nativeId == kOneByteStringAdd ||
-        nativeId == kSmiBitShr ||
-        nativeId == kSmiBitShl ||
-        nativeId == kSmiMul ||
-        nativeId == kSmiDiv ||
-        nativeId == kSmiTruncDiv ||
-        nativeId == kSmiToString ||
-        nativeId == kDoubleToString ||
-        nativeId == kDoubleEqual ||
-        nativeId == kDoubleLess ||
-        nativeId == kDoubleLessEqual ||
-        nativeId == kDoubleGreater ||
-        nativeId == kDoubleGreaterEqual ||
-        nativeId == kStopwatchNow ||
-        nativeId == kStopwatchFrequency ||
-        nativeId == kPrintToConsole) {
-      InvokeNativeTrampoline(nativeId, arity);
-      return;
-    }
-
-    auto process = h.Cast(llvm_process_, w.process_ptr_type);
-    auto array = b.CreateAlloca(w.object_ptr_type, w.CInt(arity));
-
-    for (int i = 0; i < arity; i++) {
-      std::vector<llvm::Value*> indices = {w.CInt(i)};
-      auto array_pos = b.CreateGEP(array, indices, "native_arg_gep");
-      auto arg = b.CreateLoad(stack_[arity - i - 1]);
-      b.CreateStore(arg, array_pos);
-    }
-
-    llvm::Function* native = w.natives_[nativeId];
-
-    DoExitFatal(name("Unnatural Native %d\n", nativeId));
-
-    // NOTE: We point to the last element of the array.
-    std::vector<llvm::Value*> indices = {w.CInt(arity - 1)};
-    auto last_element_in_array = b.CreateGEP(array, indices, "native_args_last");
-
-    std::vector<llvm::Value*> args = {process, last_element_in_array};
-    auto native_result = b.CreateCall(native, args, "native_call_result");
-
-    auto bb_failure = llvm::BasicBlock::Create(context, "failure", llvm_function_);
-    auto bb_no_failure = llvm::BasicBlock::Create(context, "no_failure", llvm_function_);
-    b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure);
-
-    b.SetInsertPoint(bb_no_failure);
-    b.CreateRet(native_result);
-
-    // We convert the failure id into a failure object and let the rest of the
-    // bytecodes do their work.
-    b.SetInsertPoint(bb_failure);
-    auto bb_real_failure = llvm::BasicBlock::Create(context, "real_failure", llvm_function_);
-    auto bb_call_gc = llvm::BasicBlock::Create(context, "call_gc", llvm_function_);
-    b.CreateCondBr(h.CreateRetryAfterGCCheck(native_result), bb_call_gc, bb_real_failure);
-
-    b.SetInsertPoint(bb_call_gc);
-    DoExitFatal(name("GC request in unnatural Native %d\n", nativeId));
-    DoReturnNull();
-
-    b.SetInsertPoint(bb_real_failure);
     auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
     push(failure_object);
   }

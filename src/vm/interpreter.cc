@@ -20,11 +20,6 @@
 
 namespace dartino {
 
-const NativeFunction kNativeTable[] = {
-#define N(e, c, n, d) &Native_##e,
-    NATIVES_DO(N)
-#undef N
-};
 
 class State {
  public:
@@ -111,13 +106,11 @@ void Interpreter::Run() {
 
   Function* entry = process_->program()->entry();
   int result = -1;
-  if (entry != NULL) {
-    word* code = reinterpret_cast<word*>(entry->bytecode_address_for(0));
-    result = reinterpret_cast<InterpretFunction>(*code)(process_, &target_yield_result_);
-    result = InterruptKind::kTerminate;
-  } else {
-    result = Interpret(process_, &target_yield_result_);
-  }
+  ASSERT (entry != NULL);
+  word* code = reinterpret_cast<word*>(entry->bytecode_address_for(0));
+  result = reinterpret_cast<InterpretFunction>(*code)(process_, &target_yield_result_);
+  result = InterruptKind::kTerminate;
+  
   if (result < 0) FATAL("Fatal error in native interpreter");
   interruption_ = static_cast<InterruptKind>(result);
 

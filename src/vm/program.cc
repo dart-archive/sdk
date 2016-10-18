@@ -18,7 +18,6 @@
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
-#include "src/vm/native_interpreter.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
@@ -125,15 +124,9 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   frame_pointer = stack->Pointer(top);
-  if (program_entry == NULL) {
-    Function* entry = process->entry();
-    uint8_t* bcp = entry->bytecode_address_for(0);
-    stack->set(--top, reinterpret_cast<Object*>(bcp));
-    stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
-  } else {
-    stack->set(--top, reinterpret_cast<Object*>(NULL));
-    stack->set(--top, reinterpret_cast<Object*>(program_entry));
-  }
+  ASSERT(program_entry != NULL);
+  stack->set(--top, reinterpret_cast<Object*>(NULL));
+  stack->set(--top, reinterpret_cast<Object*>(program_entry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 
@@ -893,51 +886,6 @@ void Program::IterateRoots(PointerVisitor* visitor) {
 void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
   visitor->VisitBlock(first_root_address(), last_root_address() + 1);
   visitor->Visit(reinterpret_cast<Object**>(&entry_));
-}
-
-void Program::ClearDispatchTableIntrinsics() {
-  Array* table = dispatch_table();
-  if (table == NULL) return;
-
-  int length = table->length();
-  for (int i = 0; i < length; i++) {
-    Object* element = table->get(i);
-    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
-    entry->set_code(NULL);
-  }
-}
-
-void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
-  Array* table = dispatch_table();
-  if (table == NULL) return;
-
-  int length = table->length();
-  int hits = 0;
-
-  DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(0));
-  Function* trampoline = entry->target();
-
-  for (int i = 0; i < length; i++) {
-    Object* element = table->get(i);
-    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
-    if (entry->code() != NULL) {
-      // The intrinsic is already set.
-      hits++;
-      continue;
-    }
-    Function* target = entry->target();
-    if (target != trampoline) hits++;
-    void* code = target->ComputeIntrinsic(intrinsics);
-    if (code == NULL) {
-      code = reinterpret_cast<void*>(InterpreterMethodEntry);
-    }
-    entry->set_code(code);
-  }
-
-  if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n", hits * 100.0 / length,
-               hits, length);
-  }
 }
 
 struct HeapUsage {

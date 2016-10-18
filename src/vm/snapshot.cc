@@ -349,9 +349,6 @@ Program* SnapshotReader::ReadProgram() {
   program->heap()->space()->UpdateBaseAndLimit(memory_, top_);
   backward_references_.Delete();
 
-  // Programs read from a snapshot are always compact.
-  program->SetupDispatchTableIntrinsics();
-
   // As a sanity check we ensure that the heap size the writer of the snapshot
   // predicted we would have, is in fact *precisely* how much space we needed.
   int consumed_memory = top_ - memory_->base();
@@ -364,8 +361,6 @@ Program* SnapshotReader::ReadProgram() {
 
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(program->is_optimized());
-
-  program->ClearDispatchTableIntrinsics();
 
   // Emit recognizable header.
   WriteByte(0xbe);

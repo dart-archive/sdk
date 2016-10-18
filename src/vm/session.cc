@@ -14,7 +14,6 @@
 
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
-#include "src/vm/native_interpreter.h"
 #include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
@@ -2099,9 +2098,6 @@ void Session::RestartFrame(int frame_index) {
   // Move down to the frame we want to reset to.
   Frame frame(stack);
   for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
-
-  // Reset the return address to the entry function.
-  frame.SetReturnAddress(reinterpret_cast<void*>(InterpreterEntry));
 
   // Finally resize the stack to the next frame pointer.
   stack->SetTopFromPointer(frame.FramePointer());

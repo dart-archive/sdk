@@ -510,14 +510,10 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
 
   void* code = NULL;
   Function* target = clazz->LookupMethod(selector);
-  if (target == NULL) {
-    static const Names::Id name = Names::kNoSuchMethodTrampoline;
-    target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
-  } else {
-    code = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
-    if (code == NULL) code = reinterpret_cast<void*>(InterpreterMethodEntry);
-  }
-
+  ASSERT(target == NULL);
+  static const Names::Id name = Names::kNoSuchMethodTrampoline;
+  target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
+  
   ASSERT(target != NULL);
   cache->DemotePrimary(primary);
   primary->clazz = clazz;

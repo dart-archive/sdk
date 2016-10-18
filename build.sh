@@ -53,5 +53,5 @@ run as $BASENAME.S -o $BASENAME.o
 run objcopy  --globalize-symbol=__LLVM_StackMaps $BASENAME.o $BASENAME.o
 
 # Link generated code together with dartino runtime and llvm embedder.
-run g++ -o $BASENAME -Lout/ReleaseX64 -Lout/ReleaseX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.o
+run g++ -o $BASENAME -Lout/DebugX64 -Lout/DebugX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.o
 

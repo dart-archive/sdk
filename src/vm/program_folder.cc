@@ -363,7 +363,6 @@ void ProgramFolder::Fold() {
     FunctionOptimizingVisitor visitor(&rewriter);
     program()->heap()->IterateObjects(&visitor);
 
-    program()->SetupDispatchTableIntrinsics();
   }
 }
 

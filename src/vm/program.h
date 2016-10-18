@@ -297,11 +297,6 @@ class Program : public ProgramList::Entry {
   void IterateRoots(PointerVisitor* visitor);
   void IterateRootsIgnoringSession(PointerVisitor* visitor);
 
-  // Dispatch table support.
-  void ClearDispatchTableIntrinsics();
-  void SetupDispatchTableIntrinsics(
-      IntrinsicsTable* table = IntrinsicsTable::GetDefault());
-
   // Root objects.
  private:
 #define DECLARE_ENUM(type, name, CamelName) k##CamelName##Index,

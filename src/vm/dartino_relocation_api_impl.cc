@@ -17,10 +17,5 @@ size_t DartinoGetProgramSize(DartinoProgram program) {
 
 int DartinoRelocateProgram(DartinoProgram program, void* target,
                            uintptr_t base) {
-  if (base % dartino::kPageSize != 0) return -1;
-  dartino::Program* dartino_program =
-      reinterpret_cast<dartino::Program*>(program);
-  dartino::ProgramHeapRelocator relocator(
-      dartino_program, reinterpret_cast<uint8*>(target), base);
-  return relocator.Relocate();
+  return 0;
 }
