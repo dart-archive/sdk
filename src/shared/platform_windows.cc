@@ -4,6 +4,8 @@
 
 #if defined(DARTINO_TARGET_OS_WIN)
 
+#define _CRT_RAND_S 1
+
 #include "src/shared/platform.h"  // NOLINT
 
 #include <winsock2.h>
@@ -12,6 +14,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "src/shared/random.h"
 #include "src/shared/utils.h"
 
 namespace dartino {
@@ -39,6 +42,7 @@ void Platform::Setup() {
     FATAL1("Unable to initialize Windows Sockets [error #%d].", status);
   }
 #endif
+  VirtualMemoryInit();
 }
 
 void Platform::TearDown() {
@@ -228,9 +232,7 @@ void Platform::ImmediateAbort() { abort(); }
 int Platform::GetPid() { return static_cast<int>(GetCurrentProcessId()); }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
-  UNIMPLEMENTED();
-}
+void Platform::WaitForDebugger() { UNIMPLEMENTED(); }
 #endif
 
 char* Platform::GetEnv(const char* name) {
@@ -252,23 +254,72 @@ int Platform::MaxStackSizeInWords() { return 128 * KB; }
 int Platform::GetLastError() { return ::GetLastError(); }
 void Platform::SetLastError(int value) { ::SetLastError(value); }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
+static RandomXorShift* random = NULL;
 
-VirtualMemory::~VirtualMemory() { UNIMPLEMENTED(); }
+static void* GetRandomMmapAddr() {
+  if (random == NULL) {
+    unsigned seed1;
+    unsigned seed2;
+    // This is a crypto-random seed, but the PRNG we seed with it is not
+    // crypto-random.
+    rand_s(&seed1);
+    rand_s(&seed2);
+    // The unsigned long long constant should make the whole expression at
+    // least 64 bit.
+    random = new RandomXorShift((seed1 << 31ull) + seed2);
+  }
 
-bool VirtualMemory::IsReserved() const {
-  UNIMPLEMENTED();
-  return false;
+  // The address range used to randomize allocations in heap allocation.
+  // Try not to map pages into the default range that windows loads DLLs
+  // Use a multiple of 64k to prevent committing unused memory.
+  // Note: This does not guarantee memory regions will be within the
+  // range kAllocationRandomAddressMin to kAllocationRandomAddressMask.
+#ifdef DARTINO64
+  static const uintptr_t kAllocationRandomAddressMin = 0x0000000080000000;
+  static const uintptr_t kAllocationRandomAddressMask = 0x000003FFFFFF0000;
+#else
+  static const uintptr_t kAllocationRandomAddressMin = 0x04000000;
+  static const uintptr_t kAllocationRandomAddressMask = 0x3FFF0000;
+#endif
+  // << 32 causes undefined behaviour on 32 bit systems.
+  uintptr_t address = (random->NextUInt32() << 31) + random->NextUInt32();
+  address <<= 16;  // Windows VM functions like 64k aligned addresses.
+  address += kAllocationRandomAddressMin;
+  address &= kAllocationRandomAddressMask;
+  return reinterpret_cast<void*>(address);
 }
 
-bool VirtualMemory::Commit(uword address, int size, bool executable) {
-  UNIMPLEMENTED();
-  return false;
+static void* RandomizedVirtualAlloc(size_t size, int action) {
+  LPVOID base = NULL;
+
+  // Try to randomize the allocation address.
+  for (size_t attempts = 0; base == NULL && attempts < 3; ++attempts) {
+    base = VirtualAlloc(GetRandomMmapAddr(), size, action, PAGE_NOACCESS);
+  }
+
+  // After three attempts give up and let the OS find an address to use.
+  if (base == NULL) base = VirtualAlloc(NULL, size, action, PAGE_NOACCESS);
+
+  return base;
 }
 
-bool VirtualMemory::Uncommit(uword address, int size) {
-  UNIMPLEMENTED();
-  return false;
+VirtualMemory::VirtualMemory(int size) : size_(size) {
+  address_ = RandomizedVirtualAlloc(size, MEM_RESERVE);
+}
+
+VirtualMemory::~VirtualMemory() { VirtualFree(address_, size_, MEM_RELEASE); }
+
+bool VirtualMemory::IsReserved() const { return address_ == NULL; }
+
+bool VirtualMemory::Commit(void* address, int size) {
+  if (NULL == VirtualAlloc(address, size, MEM_COMMIT, PAGE_READWRITE)) {
+    return false;
+  }
+  return true;
+}
+
+bool VirtualMemory::Uncommit(void* address, int size) {
+  return VirtualFree(address, size, MEM_DECOMMIT) != 0;
 }
 
 }  // namespace dartino

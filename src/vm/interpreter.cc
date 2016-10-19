@@ -99,10 +99,10 @@ void Interpreter::Run() {
   // Since we don't update the remembered set on every mutating operation - e.g.
   // SetLocal() - we add it as soon as the interpreter uses it:
   //   * once we enter the interpreter
-  //   * once we we're done with mutable GC
+  //   * once we we're done with GC
   //   * once we we've done a coroutine change
   // This is conservative.
-  process_->remembered_set()->Insert(process_->stack());
+  GCMetadata::InsertIntoRememberedSet(process_->stack()->address());
 
   Function* entry = process_->program()->entry();
   int result = -1;
@@ -126,31 +126,26 @@ Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
 }
 
 void HandleGC(Process* process) {
-  if (process->heap()->needs_garbage_collection()) {
-    process->program()->CollectNewSpace();
+  process->program()->CollectNewSpace();
 
-    // After a mutable GC a lot of stacks might no longer have pointers to
-    // new space on them. If so, the remembered set will no longer contain such
-    // a stack.
-    //
-    // Since we don't update the remembered set on every mutating operation
-    // - e.g. SetLocal() - we add it before we start using it.
-    process->remembered_set()->Insert(process->stack());
-  }
+  // After a GC a lot of stacks might no longer have pointers to new space on
+  // them. If so, the remembered set will no longer contain such a stack.
+  //
+  // Since we don't update the remembered set on every mutating operation
+  // - e.g. SetLocal() - we add it before we start using it.
+  GCMetadata::InsertIntoRememberedSet(process->stack()->address());
 }
 
 void HandleGCWithFP(Process* process, char* fp) {
-  if (process->heap()->needs_garbage_collection()) {
-    process->program()->CollectNewSpace(fp);
+  process->program()->CollectNewSpace(fp);
 
-    // After a mutable GC a lot of stacks might no longer have pointers to
-    // new space on them. If so, the remembered set will no longer contain such
-    // a stack.
-    //
-    // Since we don't update the remembered set on every mutating operation
-    // - e.g. SetLocal() - we add it before we start using it.
-    process->remembered_set()->Insert(process->stack());
-  }
+  // After a mutable GC a lot of stacks might no longer have pointers to
+  // new space on them. If so, the remembered set will no longer contain such
+  // a stack.
+  //
+  // Since we don't update the remembered set on every mutating operation
+  // - e.g. SetLocal() - we add it before we start using it.
+  GCMetadata::InsertIntoRememberedSet(process->stack()->address());
 }
 
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
@@ -162,15 +157,6 @@ Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   return result;
 }
 
-void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
-  ASSERT(object->IsHeapObject());
-  ASSERT(
-      process->heap()->space()->Includes(HeapObject::cast(object)->address()));
-  if (value->IsHeapObject()) {
-    process->remembered_set()->Insert(HeapObject::cast(object));
-  }
-}
-
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) {
@@ -178,9 +164,8 @@ Object* HandleAllocateBoxed(Process* process, Object* value) {
     return boxed;
   }
 
-  if (value->IsHeapObject() && !value->IsNull()) {
-    process->remembered_set()->Insert(HeapObject::cast(boxed));
-  }
+  // No write barrier needed for new-space allocated objects.
+  ASSERT(process->heap()->space()->Includes(reinterpret_cast<uword>(boxed)));
   return boxed;
 }
 

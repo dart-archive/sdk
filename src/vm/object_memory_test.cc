@@ -24,7 +24,7 @@ static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
 }
 
 TEST_CASE(ObjectMemory) {
-  SemiSpace space;
+  SemiSpace space(Space::kCanResize);
 
   // Allocate.
   Chunk* first = AllocateChunkAndTestIt(&space);

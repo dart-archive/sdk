@@ -79,7 +79,7 @@ class StackMap {
   StackMap() {}
   static void EnsureComputed();
   static StackMapRecord* get(uword return_address);
-  static void Visit(Heap* heap, PointerVisitor* visitor, char* fp);
+  static void Visit(TwoSpaceHeap* heap, PointerVisitor* visitor, char* fp);
   static void Dump(StackMapRecord* record);
 
  private:

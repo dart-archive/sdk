@@ -222,8 +222,8 @@ class Program : public ProgramList::Entry {
 
   Session* session() { return session_; }
 
-  Heap* heap() { return &heap_; }
-  Heap* process_heap() { return &process_heap_; }
+  OneSpaceHeap* heap() { return &heap_; }
+  TwoSpaceHeap* process_heap() { return &process_heap_; }
 
   int program_heap_size() {
     ASSERT(is_optimized());
@@ -337,6 +337,10 @@ class Program : public ProgramList::Entry {
 
   ProcessHandle* MainProcess();
 
+#ifdef DEBUG
+  void Find(uword address);
+#endif
+
  private:
   friend class ProgramGroups;
 
@@ -374,8 +378,8 @@ class Program : public ProgramList::Entry {
 
   RandomXorShift random_;
 
-  Heap heap_;
-  Heap process_heap_;
+  OneSpaceHeap heap_;
+  TwoSpaceHeap process_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;

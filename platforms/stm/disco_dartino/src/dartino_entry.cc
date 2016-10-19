@@ -140,7 +140,7 @@ void DartinoEntry(void const * argument) {
       page_allocator->AddArena("ExtMem", 0xc0000000, 0x800000);
 
   // Initialize the LCD.
-  size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 2);
+  size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 4);
   size_t fb_pages = page_allocator->PagesForBytes(fb_bytes);
   void* fb = page_allocator->AllocatePages(fb_pages, ext_mem_arena);
   BSP_LCD_Init();

@@ -44,6 +44,32 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kWaitingForChildren,
   };
 
+  static const char* StateToName(State state) {
+    switch (state) {
+      case kSleeping:
+        return "kSleeping";
+      case kEnqueuing:
+        return "kEnqueuing";
+      case kReady:
+        return "kReady";
+      case kRunning:
+        return "kRunning";
+      case kYielding:
+        return "kYielding";
+      case kBreakpoint:
+        return "kBreakpoint";
+      case kCompileTimeError:
+        return "kCompileTimeError";
+      case kUncaughtException:
+        return "kUncaughtException";
+      case kTerminated:
+        return "kTerminated";
+      case kWaitingForChildren:
+        return "kWaitingForChildren";
+    }
+    return "Unknown";
+  }
+
   enum StackCheckResult {
     // Stack check handled (most likely by growing the stack) and
     // execution can continue.
@@ -63,7 +89,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void set_exception(Object* object) { exception_ = object; }
   Object* in_flight_exception() const { return in_flight_exception_; }
   void set_in_flight_exception(Object* object){ in_flight_exception_ = object; }
-  Heap* heap() { return program()->process_heap(); }
+  TwoSpaceHeap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -79,6 +105,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   Process* parent() const { return parent_; }
 
+  // Returns false for allocation failure.
+  static const int kInitialStackSize = 256;
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
 
@@ -186,8 +214,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   RandomXorShift* random() { return &random_; }
 
-  RememberedSet* remembered_set() { return &remembered_set_; }
-
   MessageMailbox* mailbox() { return &mailbox_; }
 
   Signal* signal() { return signal_.load(); }
@@ -195,7 +221,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject()) {
       ASSERT(!program()->heap()->space()->Includes(object->address()));
-      remembered_set_.Insert(object);
+      GCMetadata::InsertIntoRememberedSet(object->address());
     }
   }
 
@@ -214,7 +240,13 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kProgramOffset = kStackLimitOffset + kWordSize;
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
-  static const uword kPrimaryLookupCacheOffset = kExceptionOffset + 2*kWordSize;
+  static const uword kInFlightExceptionOffset = kExceptionOffset + kWordSize;
+  static const uword kPrimaryLookupCacheOffset = kInFlightExceptionOffset + kWordSize;
+  static const uword kRememberedSetBiasOffset =
+      kPrimaryLookupCacheOffset + kWordSize;
+
+  bool AllocationFailed() { return statics_ == NULL; }
+  void SetAllocationFailed() { statics_ = NULL; }
 
  private:
   friend class Interpreter;
@@ -249,9 +281,14 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
+  // This is used by the interpreter, and this is an accessible place to find
+  // it quickly.
+  uword remembered_set_bias_;
+
+  Object* large_integer_;
+
   RandomXorShift random_;
 
-  RememberedSet remembered_set_;
   Links links_;
 
   Atomic<State> state_;

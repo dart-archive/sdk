@@ -39,6 +39,8 @@ Process::Process(Program* program, Process* parent)
       exception_(program->null_object()),
       in_flight_exception_(program->null_object()),
       primary_lookup_cache_(NULL),
+      remembered_set_bias_(GCMetadata::remembered_set_bias()),
+      large_integer_(program->null_object()),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
       signal_(NULL),
@@ -72,10 +74,16 @@ Process::Process(Program* program, Process* parent)
   static_assert(
       kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
       "primary_lookup_cache_");
+  static_assert(
+      kRememberedSetBiasOffset == offsetof(Process, remembered_set_bias_),
+      "primary_lookup_cache_");
 
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
-  statics_ = Array::cast(NewArray(length));
+  Object* statics = NewArray(length);
+  if (statics->IsFailure()) return;  // Allocation failure - will retry.
+
+  statics_ = Array::cast(statics);
   for (int i = 0; i < length; i++) {
     statics_->set(i, static_fields->get(i));
   }
@@ -125,10 +133,21 @@ void Process::Cleanup(Signal::Kind kind) {
 
 void Process::SetupExecutionStack() {
   ASSERT(coroutine_ == NULL);
-  Stack* stack = Stack::cast(NewStack(256));
+  Object* raw_stack = NewStack(kInitialStackSize);
+  // Retry on allocation failure.
+  if (raw_stack->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Stack* stack = Stack::cast(raw_stack);
   stack->set(0, NULL);
-  Coroutine* coroutine =
-      Coroutine::cast(NewInstance(program()->coroutine_class()));
+  Object* raw_coroutine = NewInstance(program()->coroutine_class());
+  // Retry on allocation failure.
+  if (raw_coroutine->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Coroutine* coroutine = Coroutine::cast(raw_coroutine);
   coroutine->set_stack(stack);
   UpdateCoroutine(coroutine);
 }
@@ -137,7 +156,7 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
   ASSERT(coroutine->has_stack());
   coroutine_ = coroutine;
   UpdateStackLimit();
-  remembered_set_.Insert(coroutine->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine->stack()->address());
 }
 
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
@@ -185,7 +204,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
-  remembered_set_.Insert(coroutine_->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine_->stack()->address());
   UpdateStackLimit();
   return kStackCheckContinue;
 }
@@ -296,7 +315,7 @@ Object* Process::NewStack(int length) {
   Object* result = heap()->CreateStack(stack_class, length);
 
   if (result->IsFailure()) return result;
-  remembered_set_.Insert(HeapObject::cast(result));
+  GCMetadata::InsertIntoRememberedSet(HeapObject::cast(result)->address());
   return result;
 }
 
@@ -311,6 +330,11 @@ void Process::IterateRoots(PointerVisitor* visitor, char* fp) {
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   visitor->Visit(reinterpret_cast<Object**>(&exception_));
   visitor->Visit(reinterpret_cast<Object**>(&in_flight_exception_));
+
+  // At LLVM runtime, the statics array is not covered by the write barrier, so
+  // we have to explicitly visit its pointers.
+  statics_->IteratePointers(visitor);
+
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 
   mailbox_.IteratePointers(visitor);
@@ -484,6 +508,7 @@ void Process::SendSignal(Signal* signal) {
 }
 
 void Process::UpdateStackLimit() {
+  if (coroutine_ == NULL) return;
   // By adding 2, we reserve a slot for a return address and an extra
   // temporary each bytecode can utilize internally.
   Stack* stack = this->stack();

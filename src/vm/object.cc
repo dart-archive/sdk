@@ -282,7 +282,15 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   // immutability bit and the identity hascode will get copied via the flags
   // word.
   Object* clone = heap->CreateInstance(new_class, Smi::FromWord(0), false);
-  ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
+  if (clone->IsRetryAfterGCFailure()) {
+    // We can only get an allocation failure on the new-space in a two-space
+    // heap, since there is a NoAllocationFailureScope on the program heap
+    // and on the old generation of the process heap.
+    ASSERT(!heap->IsTwoSpaceHeap());
+    TwoSpaceHeap* tsh = reinterpret_cast<TwoSpaceHeap*>(heap);
+    clone = tsh->CreateOldSpaceInstance(new_class, Smi::FromWord(0));
+    ASSERT(!clone->IsFailure());
+  }
   Instance* target = Instance::cast(clone);
 
   // Copy the flags word from the old instance.
@@ -514,9 +522,12 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   InstanceFormat format = klass->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
-    visitor->VisitBlock(
-        reinterpret_cast<Object**>(address() + kPointerSize),
-        reinterpret_cast<Object**>(address() + format.fixed_size()));
+    size_t size = format.fixed_size();
+    if (size > kPointerSize) {
+      visitor->VisitBlock(
+          reinterpret_cast<Object**>(address() + kPointerSize),
+          reinterpret_cast<Object**>(address() + format.fixed_size()));
+    }
     return format;
   }
   switch (format.type()) {
@@ -599,9 +610,13 @@ HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   // Otherwise, copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(object_size));
+  uword new_address = to->Allocate(object_size);
+  if (new_address == 0) {
+    return NULL;
+  }
+  HeapObject* target = HeapObject::FromAddress(new_address);
   // Copy the content of source to target.
-  CopyBlock(reinterpret_cast<Object**>(target->address()),
+  CopyBlock(reinterpret_cast<Object**>(new_address),
             reinterpret_cast<Object**>(address()), object_size);
   if (target->IsStack()) {
     Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
@@ -735,10 +750,47 @@ PromotedTrack* PromotedTrack::Initialize(PromotedTrack* next, uword location,
                                          uword end) {
   PromotedTrack* self =
       reinterpret_cast<PromotedTrack*>(HeapObject::FromAddress(location));
+  GCMetadata::RecordStart(self->address());
+  // We mark the PromotedTrack object as dirty (containing new-space
+  // pointers). This is because the remembered-set scanner mainly looks at
+  // these dirty-bytes.  It ensures that the remembered-set scanner does not
+  // skip past the PromotedTrack object header and start scanning newly
+  // allocated objects inside the PromotedTrack area before they are
+  // traversable.
+  GCMetadata::InsertIntoRememberedSet(self->address());
   self->set_class(StaticClassStructures::promoted_track_class());
   self->set_next(next);
   self->set_end(end);
   return self;
 }
+
+#ifdef DEBUG
+class ContainsPointerVisitor : public PointerVisitor {
+ public:
+  ContainsPointerVisitor(Space* space, bool* flag)
+      : space_(space), flag_(flag) {}
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** current = start; current < end; current++) {
+      Object* object = *current;
+      if (object->IsHeapObject()) {
+        HeapObject* heap_object = HeapObject::cast(object);
+        if (space_->Includes(heap_object->address())) *flag_ = true;
+      }
+    }
+  }
+
+ private:
+  Space* space_;
+  bool* flag_;
+};
+
+bool HeapObject::ContainsPointersTo(Space* space) {
+  bool has_pointer = false;
+  ContainsPointerVisitor visitor(space, &has_pointer);
+  IteratePointers(&visitor);
+  return has_pointer;
+}
+#endif
 
 }  // namespace dartino

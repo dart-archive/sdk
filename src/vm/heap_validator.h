@@ -16,9 +16,8 @@ class SharedHeap;
 // depending on [process_heap], [program_heap].
 class HeapPointerValidator : public PointerVisitor {
  public:
-  HeapPointerValidator(Heap* program_heap, Heap* process_heap)
-      : program_heap_(program_heap),
-        process_heap_(process_heap) {}
+  HeapPointerValidator(OneSpaceHeap* program_heap, TwoSpaceHeap* process_heap)
+      : program_heap_(program_heap), process_heap_(process_heap) {}
   virtual ~HeapPointerValidator() {}
 
   virtual void VisitBlock(Object** start, Object** end);
@@ -26,14 +25,14 @@ class HeapPointerValidator : public PointerVisitor {
  private:
   void ValidatePointer(Object* object);
 
-  Heap* program_heap_;
-  Heap* process_heap_;
+  OneSpaceHeap* program_heap_;
+  TwoSpaceHeap* process_heap_;
 };
 
 // Validates that all pointers it gets called with lie inside the program heap.
 class ProgramHeapPointerValidator : public HeapPointerValidator {
  public:
-  explicit ProgramHeapPointerValidator(Heap* program_heap)
+  explicit ProgramHeapPointerValidator(OneSpaceHeap* program_heap)
       : HeapPointerValidator(program_heap, NULL) {}
   virtual ~ProgramHeapPointerValidator() {}
 };
@@ -42,14 +41,14 @@ class ProgramHeapPointerValidator : public HeapPointerValidator {
 // inside them are valid.
 class ProcessHeapValidatorVisitor : public ProcessVisitor {
  public:
-  explicit ProcessHeapValidatorVisitor(Heap* program_heap)
+  explicit ProcessHeapValidatorVisitor(OneSpaceHeap* program_heap)
       : program_heap_(program_heap) {}
   virtual ~ProcessHeapValidatorVisitor() {}
 
   virtual void VisitProcess(Process* process);
 
  private:
-  Heap* program_heap_;
+  OneSpaceHeap* program_heap_;
 };
 
 }  // namespace dartino

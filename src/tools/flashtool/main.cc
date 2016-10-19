@@ -3,18 +3,58 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/shared/assert.h"
+#include "src/shared/bytecodes.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/interpreter.h"
 #include "src/vm/intrinsics.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/program.h"
 #include "src/vm/program_info_block.h"
 #include "src/vm/program_relocator.h"
 #include "src/vm/snapshot.h"
+#include "src/vm/tick_sampler.h"
 
 namespace dartino {
+
+// Create some fake symbols to satisfy dependencies from the missing
+// interpreter.
+#define DEFINE_INTRINSIC(name_) void Intrinsic_##name_() { \
+  FATAL("Intrinsics_" #name_ " not implemented.");         \
+}
+  INTRINSICS_DO(DEFINE_INTRINSIC)
+#undef DEFINE_INTRINSIC
+
+extern "C" void InterpreterMethodEntry() {
+  FATAL("InterpreterMethodEntry not implemented.");
+}
+
+extern "C" void InterpreterEntry() {
+  FATAL("InterpreterEntry not implemented.");
+}
+
+void SetBytecodeBreak(Opcode opcode) {
+  FATAL("SetBytecodeBreak not implemented.");
+}
+
+void ClearBytecodeBreak(Opcode opcode) {
+  FATAL("ClearBytecodeBreak not implemented.");
+}
+
+void InterpreterCoroutineEntry() { FATAL("InterpreterCoroutineEntry"); }
+
+void Interpreter::Run() {
+  USE(process_);  // Avoid "unused" warning.
+  FATAL("Interpreter::Run");
+}
+
+void TickSampler::Setup() { FATAL("TickSampler::Setup"); }
+
+void TickSampler::Teardown() { FATAL("TickSampler::Teardown"); }
+
+/* Actual code starts here */
 
 static void printUsage(char* name) {
   printf(
@@ -67,6 +107,8 @@ static int Main(int argc, char** argv) {
     return 1;
   }
 
+  Platform::Setup();
+  Thread::Setup();
   ObjectMemory::Setup();
   List<uint8> bytes = Platform::LoadFile(argp[0]);
   SnapshotReader reader(bytes);

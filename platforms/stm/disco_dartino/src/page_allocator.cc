@@ -18,6 +18,17 @@ uint32_t PageAllocator::AddArena(const char* name, uintptr_t start,
   return 0;
 }
 
+int PageAllocator::GetArenas(memory_range_t* ranges_return, int ranges) {
+  int count = 0;
+  for (int i = 0; i < kMaxArenas && count < ranges; i++) {
+    if (arenas_[i].IsFree()) continue;
+    ranges_return[count].address = arenas_[i].base();
+    ranges_return[count].size = arenas_[i].size();
+    count++;
+  }
+  return count;
+}
+
 void* PageAllocator::AllocatePages(size_t pages, uint32_t arenas_bitmap) {
   for (int i = 0; i < kMaxArenas; i++) {
     if ((arenas_bitmap & (1 << i)) != 0) {

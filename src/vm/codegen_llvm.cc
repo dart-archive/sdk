@@ -472,7 +472,14 @@ class IRHelper {
   }
 
   llvm::Function* TaggedWrite() {
-    return llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagwrite, {w.object_ptr_type, w.object_ptr_ptr_type});
+    return llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::tagwrite, {w.object_ptr_type, w.object_ptr_type, w.object_ptr_ptr_type});
+  }
+
+  void WriteFieldNoWriteBarrier(llvm::Value* tagged_cell, llvm::Value* value) {
+    auto pointer = b->CreatePointerBitCastOrAddrSpaceCast(tagged_cell, w.int8_ptr_type);
+    auto gep = b->CreateGEP(pointer, { w.CInt(-1) });
+    gep = b->CreatePointerCast(gep, w.object_ptr_ptr_unsafe_type);
+    b->CreateStore(value, gep);
   }
 
   llvm::Function* SmiToInt() {
@@ -516,11 +523,11 @@ class IRHelper {
   }
 
   void StoreField(int offset, llvm::Value* receiver, llvm::Value* value) {
-    receiver = b->CreatePointerBitCastOrAddrSpaceCast(receiver, w.object_ptr_ptr_type);
+    auto slot_type_receiver = b->CreatePointerBitCastOrAddrSpaceCast(receiver, w.object_ptr_ptr_type);
     std::vector<llvm::Value*> indices = { w.CInt(offset / kWordSize) };
     // Creates a tagged, GC-address-space inner pointer into the object.
-    auto slot = b->CreateGEP(receiver, indices, "tagged_gep");
-    b->CreateCall(TaggedWrite(), {value, slot});
+    auto slot = b->CreateGEP(slot_type_receiver, indices, "tagged_gep");
+    b->CreateCall(TaggedWrite(), {receiver, value, slot});
   }
 
   llvm::Value* LoadFieldFromAddressSpaceZero(llvm::Value* gep) {
@@ -860,7 +867,7 @@ class BasicBlockBuilder {
       b.SetInsertPoint(bb_initializer);
       auto function = h.LoadInitializerCode(statics_entry, 0);
       auto initializer_result = b.CreateCall(function, {llvm_process_});
-      b.CreateCall(h.TaggedWrite(), {initializer_result, statics_entry_ptr});
+      h.WriteFieldNoWriteBarrier(statics_entry_ptr, initializer_result);
       b.CreateBr(bb_join);
 
       b.SetInsertPoint(bb_join);
@@ -878,7 +885,7 @@ class BasicBlockBuilder {
   void DoStoreStatic(int offset) {
     auto statics = h.LoadStaticsArray(llvm_process_);
     auto statics_entry_ptr = h.GetArrayPointer(statics, offset);
-    b.CreateCall(h.TaggedWrite(), {local(0), statics_entry_ptr});
+    h.WriteFieldNoWriteBarrier(statics_entry_ptr, local(0));
   }
 
   void DoCall(int bci, Function* target) {
@@ -1948,6 +1955,7 @@ World::World(Program* program,
       runtime__HandleObjectFromFailure(NULL) {
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
+  int8_ptr_ptr_type = llvm::PointerType::get(int8_ptr_type, 0);
   int32_type = llvm::Type::getInt32Ty(context);
   int64_type = llvm::Type::getInt64Ty(context);
 
@@ -2493,9 +2501,10 @@ struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
 struct RewriteGCIntrinsics : public llvm::FunctionPass {
   static char ID; // Pass identification, replacement for typeid.
   World& w;
+  llvm::Value* process;
   RewriteGCIntrinsics(World& world) : FunctionPass(ID), w(world) {}
 
-  bool tryRewrite(llvm::BasicBlock& bb){
+  bool tryRewrite(llvm::BasicBlock& bb) {
     for (llvm::Instruction& instruction : bb) {
       if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
         llvm::Function* fn = call->getCalledFunction();
@@ -2517,14 +2526,23 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
               return true;
             }
             case llvm::Intrinsic::tagwrite: {
-              // TODO(erikcorry): Add write barrier.
-              llvm::Value* pointer = call->getArgOperand(1);
-              pointer = b.CreatePointerBitCastOrAddrSpaceCast(pointer, w.int8_ptr_type);
-              auto gep = b.CreateGEP(pointer, { w.CInt(-1) });
-              gep = b.CreatePointerCast(gep, w.object_ptr_ptr_unsafe_type);
+              auto receiver = call->getArgOperand(0);
+              auto value = call->getArgOperand(1);
+              auto cell = call->getArgOperand(2);
 
-              llvm::Value* value = call->getArgOperand(0);
-              b.CreateStore(value, gep);
+              h.WriteFieldNoWriteBarrier(cell, value);
+
+              // Remembered set write barrier.
+              auto card1 = b.CreateLShr(b.CreatePtrToInt(call->getArgOperand(0), w.intptr_type), w.CWord(GCMetadata::kCardBits), "card1");
+              std::vector<llvm::Value*> bias_index = { w.CInt(Process::kRememberedSetBiasOffset / kWordSize) };
+              auto bias_gep = b.CreateGEP(h.Cast(process, w.int8_ptr_ptr_type), bias_index, "bias_gep");
+              auto bias = b.CreateLoad(bias_gep);
+              auto mark = b.CreateGEP(bias, card1, "mark");
+              // Cast the receiver to a byte and use that to store into the
+              // byte-sized card mark. The receiver is always tagged with 1, so
+              // we know it is not going to be zero.
+              b.CreateStore(b.CreatePtrToInt(receiver, w.int8_type), mark);
+
               call->eraseFromParent();
               return true;
             }
@@ -2565,9 +2583,12 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
   }
 
   bool runOnFunction(llvm::Function &func) override {
+    // 0th argument is always the process.
+    process = &*func.getArgumentList().begin();
     for (llvm::BasicBlock& bb : func) {
       while(tryRewrite(bb)){ }
     }
+    process = nullptr;
     return false;
   }
 };

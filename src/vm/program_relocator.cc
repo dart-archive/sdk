@@ -134,7 +134,8 @@ int ProgramHeapRelocator::Relocate() {
 
   // Create a shadow copy of the program.
   Program* target_program = reinterpret_cast<Program*>(malloc(sizeof(Program)));
-  memcpy(target_program, program_, sizeof(Program));
+  memcpy(reinterpret_cast<void*>(target_program),
+         reinterpret_cast<void*>(program_), sizeof(Program));
 
   // Now fix up root pointers in the copy.
   PointerRebasingVisitor visitor(reinterpret_cast<uword>(program_),

@@ -9,11 +9,12 @@
 #include "src/shared/assert.h"
 
 #include "platforms/stm/disco_dartino/src/cmpctmalloc.h"
+#include "platforms/stm/disco_dartino/src/page_alloc.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 
 PageAllocator* page_allocator;
 
-extern "C" void* page_alloc(size_t pages) {
+extern "C" void* page_alloc(size_t pages, int arenas) {
   return page_allocator->AllocatePages(pages);
 }
 
@@ -31,7 +32,7 @@ int main(int argc, char **argv) {
   page_allocator = new PageAllocator();
 
   // Test that nothing can be allocated in the empty page allocator.
-  void *p = cmpct_alloc(1);
+  void* p = cmpct_alloc(1);
   EXPECT(p == NULL);
 
   // Add an arena to the heap for the rest of the tests.

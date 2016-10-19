@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "platforms/stm/disco_dartino/src/globals.h"
+#include "platforms/stm/disco_dartino/src/page_alloc.h"
 
 class PageAllocator {
  public:
@@ -39,6 +40,7 @@ class PageAllocator {
   // arena added.
   void* AllocatePages(size_t pages, uint32_t arenas_bitmap = 0x1);
   void FreePages(void* start, size_t pages);
+  int GetArenas(memory_range_t* ranges_return, int ranges);
 
   static size_t PagesForBytes(size_t bytes) {
     return ROUNDUP(bytes, PAGE_SIZE) / PAGE_SIZE;
@@ -56,6 +58,9 @@ class PageAllocator {
     bool ContainsPageAt(void* start) {
       return base_ <= start && start < base_ + (pages_ << PAGE_SIZE_SHIFT);
     }
+
+    uint8_t* base() { return base_; }
+    size_t size() { return pages_ << PAGE_SIZE_SHIFT; }
 
    private:
     const char* name_;

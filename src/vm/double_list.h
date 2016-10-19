@@ -201,6 +201,14 @@ class DoubleList {
     return next;
   }
 
+#ifdef DEBUG
+  void Dump() {
+    for (auto t : this) {
+      fprintf(stderr, "%p\n", &t);
+    }
+  }
+#endif
+
  private:
   Entry head_;
 

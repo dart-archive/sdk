@@ -16,6 +16,7 @@
 #include "src/shared/utils.h"
 
 #include "src/vm/intrinsics.h"
+#include "src/vm/remembered_set.h"
 
 namespace dartino {
 
@@ -44,13 +45,15 @@ namespace dartino {
 //       Instance
 //         Coroutine
 
+class Chunk;
 class Heap;
+class OldSpace;
 class Process;
 class Program;
+class SemiSpace;
 class SnapshotReader;
 class SnapshotWriter;
-class SemiSpace;
-class OldSpace;
+class Space;
 
 // Used for representing the size of a [HeapObject] in a portable way.
 //
@@ -392,11 +395,16 @@ class HeapObject : public Object {
   static const int kClassOffset = 0;
   static const int kSize = kClassOffset + kPointerSize;
 
+#ifdef DEBUG
+  bool ContainsPointersTo(Space* space);
+#endif
+
  protected:
   inline void Initialize(int size, Object* init_value);
 
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
+  inline void at_put_bypass_write_barrier(int offset, Object* value);
   inline Object* at(int offset);
   void RawPrint(const char* title);
   // Returns the class field without checks.
@@ -791,6 +799,7 @@ class Instance : public HeapObject {
   inline void SetFlagsBits(uint32 bits);
 
   friend class Heap;
+  friend class TwoSpaceHeap;
   friend class Program;
   friend class SnapshotWriter;
 
@@ -1200,6 +1209,14 @@ class FreeListChunk : public HeapObject {
   // Casting.
   static inline FreeListChunk* cast(Object* object);
 
+  static inline FreeListChunk* CreateAt(uword free_start, uword free_size) {
+    FreeListChunk* chunk =
+        reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
+    chunk->set_class(StaticClassStructures::free_list_chunk_class());
+    chunk->set_size(free_size);
+    return chunk;
+  }
+
   // Sizing.
   static const int kSizeOffset = HeapObject::kSize;
   static const int kNextChunkOffset = kSizeOffset + kPointerSize;
@@ -1312,6 +1329,8 @@ class HeapObjectVisitor {
   // calling Visit on each of them. When it reaches the end of the
   // chunk it calls ChunkEnd.
   virtual void ChunkEnd(uword end) {}
+  // Notification that we are about to iterate over a chunk.
+  virtual void ChunkStart(Chunk* chunk) {}
 };
 
 // Class for visiting pointers inside heap objects.
@@ -1721,6 +1740,11 @@ HeapObject* HeapObject::FromAddress(uword raw_address) {
 InstanceFormat HeapObject::format() { return raw_class()->instance_format(); }
 
 void HeapObject::at_put(int offset, Object* value) {
+  if (!value->IsSmi()) GCMetadata::InsertIntoRememberedSet(address());
+  *reinterpret_cast<Object**>(address() + offset) = value;
+}
+
+void HeapObject::at_put_bypass_write_barrier(int offset, Object* value) {
   *reinterpret_cast<Object**>(address() + offset) = value;
 }
 
@@ -1743,7 +1767,9 @@ Class* HeapObject::raw_class() {
   return reinterpret_cast<Class*>(at(kClassOffset));
 }
 
-void HeapObject::set_class(Class* value) { at_put(kClassOffset, value); }
+void HeapObject::set_class(Class* value) {
+  at_put_bypass_write_barrier(kClassOffset, value);
+}
 
 bool Instance::get_immutable() {
   return FlagsImmutabilityField::decode(

@@ -16,18 +16,6 @@
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 
-#ifdef DARTINO_TARGET_OS_LK
-#include "lib/page_alloc.h"
-#endif
-
-#ifdef DARTINO_TARGET_OS_CMSIS
-// TODO(sgjesse): Put this into an .h file
-#define PAGE_SIZE_SHIFT 12
-#define PAGE_SIZE (1 << PAGE_SIZE_SHIFT)
-extern "C" void* page_alloc(size_t pages);
-extern "C" void page_free(void* start, size_t pages);
-#endif
-
 namespace dartino {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
@@ -40,13 +28,7 @@ Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.
   if (is_external()) return;
-#if defined(DARTINO_TARGET_OS_CMSIS) || defined(DARTINO_TARGET_OS_LK)
-  page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  _aligned_free(reinterpret_cast<void*>(base()));
-#else
-  free(reinterpret_cast<void*>(base()));
-#endif
+  Platform::FreePages(reinterpret_cast<void*>(base()), size());
 }
 
 Space::~Space() { FreeAllChunks(); }
@@ -58,6 +40,8 @@ void Space::FreeAllChunks() {
     ObjectMemory::FreeChunk(current);
     current = next;
   }
+  first_ = last_ = NULL;
+  top_ = limit_ = 0;
 }
 
 int Space::Size() {
@@ -100,6 +84,7 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    visitor->ChunkStart(chunk);
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
@@ -174,9 +159,11 @@ void ObjectMemory::Setup() {
 #else
   memset(&page_directories_, 0, kPointerSize * ARRAY_SIZE(page_directories_));
 #endif
+  GCMetadata::Setup();
 }
 
 void ObjectMemory::TearDown() {
+  GCMetadata::TearDown();
 #ifdef DARTINO32
   page_directory_.Delete();
 #else
@@ -215,27 +202,21 @@ void Chunk::Find(uword word, const char* name) {
 Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   ASSERT(owner != NULL);
 
-  size = Utils::RoundUp(size, kPageSize);
-  void* memory;
-#if defined(__ANDROID__)
-  // posix_memalign doesn't exist on Android. We fallback to
-  // memalign.
-  memory = memalign(kPageSize, size);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  memory = _aligned_malloc(size, kPageSize);
-#elif defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)
-  size = Utils::RoundUp(size, PAGE_SIZE);
-  memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-#else
-  if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
-#endif
+  size = Utils::RoundUp(size, Platform::kPageSize);
+  void* memory =
+      Platform::AllocatePages(size, GCMetadata::heap_allocation_arena());
+  uword lowest = GCMetadata::lowest_old_space_address();
+  USE(lowest);
+  ASSERT(reinterpret_cast<uword>(memory) >= lowest);
+  ASSERT(reinterpret_cast<uword>(memory) - lowest + size <=
+         GCMetadata::heap_extent());
   if (memory == NULL) return NULL;
 
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
 
-  ASSERT(base == Utils::RoundUp(base, kPageSize));
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(base == Utils::RoundUp(base, Platform::kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
 #ifdef DEBUG
   chunk->Scramble();
@@ -245,12 +226,12 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateFlashChunk(Space* owner, void* memory, int size) {
+Chunk* ObjectMemory::CreateFixedChunk(Space* owner, void* memory, int size) {
   ASSERT(owner != NULL);
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
   uword base = reinterpret_cast<uword>(memory);
-  ASSERT(base % kPageSize == 0);
+  ASSERT(base % Platform::kPageSize == 0);
 
   Chunk* chunk = new Chunk(owner, base, size, true);
   SetSpaceForPages(chunk->base(), chunk->limit(), owner);
@@ -297,9 +278,9 @@ void ObjectMemory::SetPageTable(uword address, PageTable* table) {
 }
 
 void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
-  ASSERT(Utils::IsAligned(base, kPageSize));
-  ASSERT(Utils::IsAligned(limit, kPageSize));
-  for (uword address = base; address < limit; address += kPageSize) {
+  ASSERT(Utils::IsAligned(base, Platform::kPageSize));
+  ASSERT(Utils::IsAligned(limit, Platform::kPageSize));
+  for (uword address = base; address < limit; address += Platform::kPageSize) {
     PageTable* table = GetPageTable(address);
     if (table == NULL) {
       ASSERT(space != NULL);
@@ -315,6 +296,7 @@ void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
   }
 }
 
+// Put free-list entries on the objects that are now dead.
 void OldSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword free_start = 0;
@@ -338,6 +320,7 @@ void OldSpace::RebuildAfterTransformations() {
   }
 }
 
+// Put one-word-fillers on the dead objects so it is still iterable.
 void SemiSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();

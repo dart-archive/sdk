@@ -30,7 +30,7 @@ run ninja
 # Used for building the `llvm-codegen` tool.
 # => This works only in 64-bit, since the llvm libraries we link against are
 #    only available in 64-bit.
-run ninja -C out/DebugX64
+run ninja -C out/ReleaseX64
 
 # Used for linking the generated llvm code with dartino runtime and a very small
 # embedder.
@@ -40,7 +40,7 @@ run ninja -C out/DebugX64 llvm_embedder
 run rm -f $EXECUTABLE
 run rm -f $BASENAME.bc $BASENAME.ll $BASENAME.S $BASENAME.o
 
-run out/DebugX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc 2> $BASENAME-codegen-out.txt
+run out/ReleaseX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc 2> $BASENAME-codegen-out.txt
 
 # Make text representation of LLVM IR (for debugging)
 run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
@@ -53,5 +53,5 @@ run as $BASENAME.S -o $BASENAME.o
 run objcopy  --globalize-symbol=__LLVM_StackMaps $BASENAME.o $BASENAME.o
 
 # Link generated code together with dartino runtime and llvm embedder.
-run g++ -o $BASENAME -Lout/DebugX64 -Lout/DebugX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.o
+run g++ -o $BASENAME -Lout/ReleaseX64 -Lout/ReleaseX64/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.o
 

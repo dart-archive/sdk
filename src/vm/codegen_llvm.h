@@ -102,6 +102,7 @@ class World {
   llvm::IntegerType* intptr_type;
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
+  llvm::PointerType* int8_ptr_ptr_type;
   llvm::IntegerType* int32_type;
   llvm::IntegerType* int64_type;
   llvm::Type* float_type;

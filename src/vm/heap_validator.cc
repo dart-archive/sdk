@@ -48,7 +48,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
 }
 
 void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
-  Heap* process_heap = process->heap();
+  TwoSpaceHeap* process_heap = process->heap();
 
   // Validate pointers in roots, queues, weak pointers and mutable heap.
   {

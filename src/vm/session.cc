@@ -1788,6 +1788,12 @@ bool Session::CommitChanges(int count) {
   ASSERT(state_->IsModifying());
   ASSERT(!program()->is_optimized());
 
+  // Free up as much space as possible so we don't run out of space when
+  // transforming instances.
+  program()->CollectNewSpace();
+  program()->CollectNewSpace();
+  program()->PerformSharedGarbageCollection(nullptr);
+
   if (count != PostponedChange::number_of_changes()) {
     if (!has_program_update_error_) {
       has_program_update_error_ = true;
@@ -1990,7 +1996,10 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
         if (instance->get_class()->IsTransformed()) {
           Instance* clone;
           ASSERT(heap_->space()->Includes(instance->address()) ||
-                 heap_->old_space()->Includes(instance->address()));
+                 reinterpret_cast<TwoSpaceHeap*>(heap_)->old_space()->Includes(
+                     instance->address()));
+          // TODO(erikcorry): We should clone old-space objects into
+          // old-space to avoid having up update the remembered set.
           clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
@@ -2008,27 +2017,6 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
   Heap* const heap_;
 };
 
-class RebuildVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    process->heap()->space()->RebuildAfterTransformations();
-    process->heap()->old_space()->RebuildAfterTransformations();
-  }
-};
-
-class TransformInstancesProcessVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    Heap* heap = process->heap();
-    SemiSpace* space = heap->space();
-    NoAllocationFailureScope scope(space);
-    TransformInstancesPointerVisitor pointer_visitor(heap);
-    process->IterateRoots(&pointer_visitor);
-    ASSERT(!space->is_empty());
-    space->CompleteTransformations(&pointer_visitor);
-  }
-};
-
 void Session::TransformInstances() {
   // Make sure we don't have any mappings that rely on the addresses
   // of objects *not* changing as we transform instances.
@@ -2038,22 +2026,39 @@ void Session::TransformInstances() {
   }
 
   // Deal with program space before the process spaces. This allows
-  // the [TransformInstancesProcessVisitor] to use the already installed
+  // the traversal of the process heap to use the already installed
   // forwarding pointers in program space.
 
   SemiSpace* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(program()->heap());
-  program()->IterateRoots(&pointer_visitor);
+  TransformInstancesPointerVisitor program_visitor(program()->heap());
+  program()->IterateRoots(&program_visitor);
   ASSERT(!space->is_empty());
-  space->CompleteTransformations(&pointer_visitor);
+  space->CompleteTransformations(&program_visitor);
 
-  TransformInstancesProcessVisitor process_visitor;
-  program()->VisitProcesses(&process_visitor);
+  TwoSpaceHeap* process_heap = program()->process_heap();
+  // When we are iterating over the heap we need to skip the areas of active
+  // allocation, which are not traversable and do not contain untransformed
+  // objects.
+  process_heap->old_space()->StartTrackingAllocations();
+  // When we rewrite objects we just expand the old space, so don't allow
+  // allocations to fail there.
+  NoAllocationFailureScope scope2(process_heap->old_space());
+  TransformInstancesPointerVisitor process_heap_visitor(process_heap);
 
-  space->RebuildAfterTransformations();
-  RebuildVisitor rebuilding_visitor;
-  program()->VisitProcesses(&rebuilding_visitor);
+  for (auto process : *program()->process_list()) {
+    process->IterateRoots(&process_heap_visitor);
+  }
+
+  process_heap->space()->CompleteTransformations(&process_heap_visitor);
+  process_heap->old_space()->CompleteTransformations(&process_heap_visitor);
+
+  process_heap->space()->RebuildAfterTransformations();
+  process_heap->old_space()->RebuildAfterTransformations();
+
+  // Make the newly allocated (newly transformed) objects traversable again.
+  process_heap->old_space()->EndTrackingAllocations();
+  process_heap->old_space()->UnlinkPromotedTrack();
 }
 
 void Session::PushFrameOnSessionStack(const Frame* frame) {

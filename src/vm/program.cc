@@ -41,7 +41,7 @@ Program::Program(ProgramSource source, int hashtag)
       process_list_mutex_(Platform::CreateMutex()),
       random_(0),
       heap_(&random_),
-      process_heap_(NULL, 512 * 1024 * KB),
+      process_heap_(NULL),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
@@ -92,8 +92,22 @@ int Program::ExitCode() {
 
 Process* Program::SpawnProcess(Process* parent) {
   Process* process = new Process(this, parent);
+  if (process->AllocationFailed()) {
+    // Delete the half-built process, we will retry after a GC.
+    process->Cleanup(Signal::kTerminated);
+    delete process;
+    return NULL;
+  }
 
-  // The counter part of this is in [ScheduleProcessForDeletion].
+  process->SetupExecutionStack();
+  if (process->AllocationFailed()) {
+    // Delete the half-built process, we will retry after a GC.
+    process->Cleanup(Signal::kTerminated);
+    delete process;
+    return NULL;
+  }
+
+  // The counterpart of this is in [ScheduleProcessForDeletion].
   if (parent != NULL) {
     parent->process_triangle_count_++;
   }
@@ -110,9 +124,13 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   }
 
   Process* process = SpawnProcess(NULL);
+
+  // TODO(erikcorry): This is not valid for multiple programs, where the
+  // process creation could fail.
+  ASSERT(!process->AllocationFailed());
+
   process->set_arguments(arguments);
 
-  process->SetupExecutionStack();
   Stack* stack = process->stack();
   word top = stack->length();
   // Push empty slot, fp and bcp.
@@ -406,8 +424,7 @@ void Program::ValidateSharedHeap() {
 
 void Program::CollectGarbage() {
   ClearCache();
-
-  SemiSpace* to = new SemiSpace(heap_.space()->Used() / 10);
+  SemiSpace* to = new SemiSpace(Space::kCanResize, heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
@@ -416,6 +433,7 @@ void Program::CollectGarbage() {
 }
 
 void Program::AddToProcessList(Process* process) {
+  ASSERT(!process->AllocationFailed());
   ScopedLock locker(process_list_mutex_);
   process_list_.Append(process);
 }
@@ -445,7 +463,8 @@ struct SharedHeapUsage {
   uword shared_size_2 = 0;
 };
 
-static void GetSharedHeapUsage(Heap* heap, SharedHeapUsage* heap_usage) {
+static void GetSharedHeapUsage(TwoSpaceHeap* heap,
+                               SharedHeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->shared_used = heap->space()->Used();
   heap_usage->shared_size = heap->space()->Size();
@@ -493,7 +512,7 @@ void Program::PerformSharedGarbageCollection(char* fp) {
   // detect liveness paths that go through new-space, but we just clear the
   // mark bits afterwards.  Dead objects in new-space are only cleared in a
   // new-space GC (scavenge).
-  Heap* heap = process_heap();
+  TwoSpaceHeap* heap = process_heap();
   OldSpace* old_space = heap->old_space();
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
@@ -509,7 +528,7 @@ void Program::PerformSharedGarbageCollection(char* fp) {
   }
 
   // Sweep over the old-space and rebuild the freelist.
-  SweepingVisitor sweeping_visitor(old_space->free_list());
+  SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
   new_space->Flush();
@@ -901,7 +920,7 @@ struct HeapUsage {
   uword TotalSize() { return process_used + immutable_size + program_size; }
 };
 
-static void GetHeapUsage(Heap* heap, HeapUsage* heap_usage) {
+static void GetHeapUsage(TwoSpaceHeap* heap, HeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->process_used = heap->space()->Used();
   heap_usage->process_size = heap->space()->Size();
@@ -933,7 +952,7 @@ void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
 void Program::CollectNewSpace(char* fp) {
   HeapUsage usage_before;
 
-  Heap* data_heap = process_heap();
+  TwoSpaceHeap* data_heap = process_heap();
 
   SemiSpace* from = data_heap->space();
   OldSpace* old = data_heap->old_space();
@@ -945,21 +964,23 @@ void Program::CollectNewSpace(char* fp) {
   old->Flush();
   from->Flush();
 
+#ifdef DEBUG
+  if (Flags::validate_heaps) old->Verify();
+#endif
+
   if (Flags::print_heap_statistics) {
     GetHeapUsage(data_heap, &usage_before);
   }
 
-  SemiSpace* to = new SemiSpace(from->Used() / 10);
+  SemiSpace* to = data_heap->unused_space();
 
-  // While garbage collecting, do not fail allocations. Instead grow
-  // the to-space as needed.
-  NoAllocationFailureScope scope(to);
-  NoAllocationFailureScope scope2(old);
+  to->set_used(0);
+  // Allocate from start of to-space..
+  to->UpdateBaseAndLimit(to->first(), to->first()->base());
 
   GenerationalScavengeVisitor visitor(from, to, old);
   to->StartScavenge();
   old->StartScavenge();
-  data_heap->set_to_space(to);
 
   for (auto process : process_list_) process->IterateRoots(&visitor, fp);
 
@@ -979,8 +1000,8 @@ void Program::CollectNewSpace(char* fp) {
   }
 
   // Second space argument is used to size the new-space.
-  data_heap->ReplaceSpace(to, old);
-  data_heap->set_to_space(NULL);
+  data_heap->SwapSemiSpaces();
+
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
@@ -988,8 +1009,15 @@ void Program::CollectNewSpace(char* fp) {
     PrintProcessGCInfo(&usage_before, &usage_after);
   }
 
+#ifdef DEBUG
+  if (Flags::validate_heaps) old->Verify();
+#endif
+
   if (old->needs_garbage_collection()) {
     CollectSharedGarbage(fp);
+#ifdef DEBUG
+    if (Flags::validate_heaps) old->Verify();
+#endif
   }
 
   UpdateStackLimits();
@@ -1023,7 +1051,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   // Flush outstanding free_list chunks into the free list. Then sweep
   // over the heap and rebuild the freelist.
   old_space->Flush();
-  SweepingVisitor sweeping_visitor(old_space->free_list());
+  SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
   // TODO(erikcorry): Find a better way to delete the mark bits on the new
@@ -1090,5 +1118,20 @@ LookupCache* Program::EnsureCache() {
 void Program::ClearCache() {
   if (cache_ != NULL) cache_->Clear();
 }
+
+#ifdef DEBUG
+void Program::Find(uword address) {
+  process_heap_.Find(address);
+  heap_.Find(address);
+
+#define CHECK_FOR_ROOT(Type, field_name, FieldName)        \
+  if (reinterpret_cast<Type*>(address) == field_name##_) { \
+    fprintf(stderr, "0x%zx is " #field_name "\n",          \
+            static_cast<size_t>(address));                 \
+  }
+  ROOTS_DO(CHECK_FOR_ROOT)
+#undef CHECK_FOR_ROOT
+}
+#endif
 
 }  // namespace dartino
