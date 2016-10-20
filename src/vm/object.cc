@@ -605,9 +605,8 @@ template HeapObject* HeapObject::CloneInToSpace<OldSpace>(OldSpace* s);
 template <class SomeSpace>
 HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   ASSERT(!to->Includes(this->address()));
-  // If there is a forward pointer return it.
-  if (HasForwardingAddress()) return forwarding_address();
-  // Otherwise, copy the object to the 'to' space
+  ASSERT(!HasForwardingAddress());
+  // No forwarding address, so copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
   uword new_address = to->Allocate(object_size);
