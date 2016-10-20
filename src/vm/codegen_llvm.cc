@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/vm/codegen_llvm.h"
-
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
@@ -68,8 +67,7 @@ static int StackDiff(uint8* bcp) {
       return 80;
     }
     case kSubroutineCall: {
-      // FIXME: Figure out how to handle this!
-      return 1;
+      return 0;
     }
     case kPopAndBranchBackWide:
     case kPopAndBranchWide: {
@@ -589,6 +587,16 @@ class BasicBlockBuilder {
   // bcp & fp & empty
   static const int kAuxiliarySlots = 3;
 
+  struct SubroutineEntry {
+    SubroutineEntry(){}
+
+    SubroutineEntry(int counter, llvm::Value* marker):counter(counter), marker(marker){}
+    
+    int counter; // Number of exits this subroutine has.
+    llvm::Value* marker; // Slot that contains the exit number.
+    llvm::Instruction* end; // End of subroutine, a place to attach new exit points.
+  };
+
   BasicBlockBuilder(World& world,
                     Function* function,
                     llvm::Function* llvm_function,
@@ -608,6 +616,9 @@ class BasicBlockBuilder {
     // block corresponding to BCI 0, because sometimes we'll have loops going
     // back to BCI0 (which LLVM doesn't allow).
     bb_entry_ = llvm::BasicBlock::Create(context, name("entry"), llvm_function_);
+    for (auto p : ranges) {
+      catch_block_bodies[p.second] = llvm::BasicBlock::Create(context, name("excont"), llvm_function_);
+    }
   }
   ~BasicBlockBuilder() {}
 
@@ -780,7 +791,7 @@ class BasicBlockBuilder {
     b.CreateUnreachable();
   }
 
-  void DoCatchBlockEntry() {
+  void DoCatchBlockEntry(int bci) {
     llvm_function_->setPersonalityFn(w.dart_personality);
     llvm::LandingPadInst *caughtResult =
       b.CreateLandingPad(w.caught_result_type, 1, "landingPad");
@@ -788,6 +799,9 @@ class BasicBlockBuilder {
     llvm::Value *exception = b.CreateCall(w.current_exception, {llvm_process_});
     // Save exception to local 0 where Dartino exception handling expects it to be
     SetLocal(0, exception);
+    auto body = catch_block_bodies[bci];
+    b.CreateBr(body);
+    b.SetInsertPoint(body);
   }
 
   void SetNoGC(llvm::CallInst* call) {
@@ -1159,7 +1173,65 @@ class BasicBlockBuilder {
     b.CreateCall(w.libc__exit, {w.CInt(1)});
   }
 
+  void DoSubroutineCall(int target) {
+    llvm::BasicBlock* block = bci2bb_[target];
+    llvm::Instruction* inst;
+    llvm::Value* marker;
+    // Check if already used subroutine body at least once.
+    if (subroutines_.find(target) == subroutines_.end()) {
+      llvm::IRBuilder<> b2(&*bb_entry_->begin());
+      marker = b2.CreateAlloca(w.int32_type, nullptr, "marker");
+      subroutines_[target] = SubroutineEntry(1, marker);
+      inst = FindSubroutineExit(block);
+    } else {
+      SubroutineEntry e = subroutines_[target];
+      marker = e.marker;
+      inst = e.end;
+      subroutines_[target].counter++;
+    }
+    b.CreateStore(w.CInt(subroutines_[target].counter), marker);
+    b.CreateBr(block);
+    llvm::BasicBlock* continuation = llvm::BasicBlock::Create(context, "contSub", llvm_function_);
+    llvm::BasicBlock* endOfSub = llvm::BasicBlock::Create(context, "endSub", llvm_function_);
+    b.SetInsertPoint(inst);
+    llvm::Value* val = b.CreateLoad(marker);
+    val = b.CreateICmpEQ(val, w.CInt(subroutines_[target].counter));
+    auto continuationInst = b.CreateCondBr(val, continuation, endOfSub);
+    inst->replaceAllUsesWith(continuationInst);
+    inst->eraseFromParent();
+    b.SetInsertPoint(endOfSub);
+    subroutines_[target].end = b.CreateUnreachable();
+    b.SetInsertPoint(continuation);
+  }
+
+  void DoSubroutineReturn() {
+    llvm::Instruction* inst = b.CreateUnreachable();
+    llvm::MDNode* n = llvm::MDNode::get(w.context, llvm::MDString::get(w.context, "subroutine"));
+    inst->setMetadata("dartino.exit_type", n);
+  }
+
+  bool SubroutineGenerated(int bci) {
+    if (subroutines_.count(bci)) {
+      return true;
+    }
+    llvm::BasicBlock* start = bci2bb_[bci];
+    return FindSubroutineExit(start) != nullptr;
+  }
+
  private:
+  llvm::Instruction* FindSubroutineExit(llvm::BasicBlock* start) {
+    auto terminator = start->getTerminator();
+    if (!terminator)
+      return nullptr;
+    if (terminator->getMetadata("dartino.exit_type"))
+      return terminator;
+    for (size_t i = 0; i < terminator->getNumSuccessors(); i++) {
+      auto inst = FindSubroutineExit(terminator->getSuccessor(i));
+      if (inst) return inst;
+    }
+    return nullptr;
+  }
+
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
     return h.LoadField(entry, DispatchTableEntry::kCodeOffset, "code");
   }
@@ -1199,6 +1271,9 @@ class BasicBlockBuilder {
   }
 
   llvm::BasicBlock* GetBasicBlockAt(int bci) {
+    if (catch_block_bodies.find(bci) != catch_block_bodies.end()) {
+      return catch_block_bodies[bci];
+    }
     auto bb = bci2bb_[bci];
     ASSERT(bb != NULL);
     return bb;
@@ -1254,6 +1329,8 @@ class BasicBlockBuilder {
   std::map<int, llvm::BasicBlock*> bci2bb_;
   std::map<int, int> bci2sh_;
   std::vector<std::pair<int, int>> catch_ranges_;
+  std::map<int, llvm::BasicBlock*> catch_block_bodies;
+  std::map<int, SubroutineEntry> subroutines_;
 };
 
 class BasicBlocksExplorer {
@@ -1295,11 +1372,72 @@ class BasicBlocksExplorer {
     // Phase 2: Fill basic blocks
     b.DoLoadArguments();
 
+    // Delay basic block that depend on ungenerated subroutine calls.
+    std::vector<int> current;
     for (auto& pair : labels) {
-      int bci = pair.first;
+      if (HasUngeneratedSubroutineCall(b, pair.first)) {
+        current.push_back(pair.first);
+      }
+      else
+        BuildBlock(b, pair.first);
+    }
+    // Proceed in multi-pass style untill all subroutines
+    // and their dependants are generated.
+    std::vector<int> delayed;
+    while (current.size() > 0) {
+      for (int bci : current) {
+        if (HasUngeneratedSubroutineCall(b, bci)) {
+          delayed.push_back(bci);
+        } else {
+          BuildBlock(b, bci);
+        }
+      }
+      current = delayed;
+      delayed.clear();
+    }
+    VerifyFunction();
+  }
+
+
+ private:
+
+  bool HasUngeneratedSubroutineCall(BasicBlockBuilder& b, int bci) {
+    bool stop = false;
+    do {
+      uint8* bcp = function_->bytecode_address_for(bci);
+      Opcode opcode = static_cast<Opcode>(*bcp);
+      int next_bci = bci + Bytecode::Size(opcode);
+
+      switch (opcode) {
+        case kThrow: {
+          stop = true;
+          break;
+        }
+
+        case kSubroutineCall: {
+          int target = bci + Utils::ReadInt32(bcp + 1);
+          if (!b.SubroutineGenerated(target))
+            return true;
+          break;
+        }
+
+        case kMethodEnd: {
+          stop = true;
+          break;
+        }
+        default:
+          break;
+      }
+      bci = next_bci;
+    } while (labels.find(bci) == labels.end() && !stop);
+
+    return false;
+  }
+
+   void BuildBlock(BasicBlockBuilder& b, int bci) {
       b.InsertAtBCI(bci);
       if(catch_blocks_.find(bci) != catch_blocks_.end()) {
-        b.DoCatchBlockEntry();
+        b.DoCatchBlockEntry(bci);
       }
 
       int postponed_compare_bci = -1;
@@ -1507,21 +1645,22 @@ class BasicBlocksExplorer {
             break;
           }
 
-          /*
-          case kInvokeNoSuchMethod: {
-            int selector = Utils::ReadInt32(bcp + 1);
-            DoInvokeNoSuchMethod(selector);
-            break;
-          }
-          
           case kSubroutineCall: {
             int target = bci + Utils::ReadInt32(bcp + 1);
-            DoSubroutineCall(target);
+            b.DoSubroutineCall(target);
             break;
           }
 
           case kSubroutineReturn: {
-            DoSubroutineReturn();
+            b.DoSubroutineReturn();
+            stop = true;
+            break;
+          }
+
+          /*
+          case kInvokeNoSuchMethod: {
+            int selector = Utils::ReadInt32(bcp + 1);
+            DoInvokeNoSuchMethod(selector);
             break;
           }
 
@@ -1679,10 +1818,6 @@ class BasicBlocksExplorer {
       }
     }
 
-    VerifyFunction();
-  }
-
- private:
   // Scans [bci] until the next DoBranch occurs and records on that DoBranch
   // target(s) the stacksize.
   void ScanBci(int bci, int stacksize) {
@@ -1734,11 +1869,7 @@ class BasicBlocksExplorer {
         case kReturn:
           return;
         case kSubroutineCall:
-          // TODO:
-          // This is some kind of exception/catch block stuff. Need fo find out
-          // if this [stadksize] is correct here.
           Enqueue(bci + Utils::ReadInt32(bcp + 1), stacksize);
-          return;
         default:
           break;
       }
@@ -1773,7 +1904,10 @@ class BasicBlocksExplorer {
       todo[bci] = stacksize;
       labels[bci] = stacksize;
     } else {
-      ASSERT(pair->second == stacksize);
+      // TODO(dmitryolsh): temporary workaround for subroutines. 
+      // Basically it should calculate different StackDiff depending on
+      // the place it's called from - from the exception handler or on normal path.
+      labels[bci] = std::max(stacksize, labels[bci]);
     }
   }
 
@@ -1790,7 +1924,6 @@ class BasicBlocksExplorer {
            op == kPopAndBranchWide ||
            op == kPopAndBranchBackWide ||
            op == kThrow ||
-           op == kSubroutineCall || // Some kind of exception/catch block stuff :-/
            op == kReturn;
   }
 
@@ -2139,7 +2272,7 @@ World::World(Program* program,
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
   runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
   runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);
-  
+
   // Exception handling types and functions.
 
   auto raise_exception_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
@@ -2148,16 +2281,16 @@ World::World(Program* program,
       llvm::Function::ExternalLinkage, "ThrowException", &module_);
   raise_exception->setDoesNotReturn();
 
-  auto current_exception_type = llvm::FunctionType::get(object_ptr_type, 
+  auto current_exception_type = llvm::FunctionType::get(object_ptr_type,
       {process_ptr_type}, false);
   current_exception = llvm::Function::Create(current_exception_type,
       llvm::Function::ExternalLinkage, "CurrentException", &module_);
 
-  std::vector<llvm::Type*> dart_personality_type_args = { 
+  std::vector<llvm::Type*> dart_personality_type_args = {
       int32_type,
-      int32_type, 
-      int64_type, 
-      int8_ptr_type, 
+      int32_type,
+      int64_type,
+      int8_ptr_type,
       int8_ptr_type
   };
   auto dart_personality_type = llvm::FunctionType::get(int32_type,
