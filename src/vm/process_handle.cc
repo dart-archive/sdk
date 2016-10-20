@@ -26,8 +26,8 @@ void ProcessHandle::InitializeDartObject(Object* o) {
   dart_pid->SetInstanceField(0, Smi::FromWord(address >> 2));
 }
 
-BEGIN_NATIVE(ProcessLink) {
-  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+extern "C" Object* NativeProcessLink(Process* process, Object* dart_handle) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
   {
     ScopedSpinlock locker(handle->lock());
     Process* handle_process = handle->process();
@@ -39,10 +39,9 @@ BEGIN_NATIVE(ProcessLink) {
     return process->program()->false_object();
   }
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessUnlink) {
-  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+extern "C" Object* NativeProcessUnlink(Process* process, Object* dart_handle) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
   {
     ScopedSpinlock locker(handle->lock());
     Process* handle_process = handle->process();
@@ -55,11 +54,10 @@ BEGIN_NATIVE(ProcessUnlink) {
   }
   return process->program()->null_object();
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessMonitor) {
-  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
-  Instance* dart_port = Instance::cast(arguments[1]);
+extern "C" Object* NativeProcessMonitor(Process* process, Object* dart_handle, Object* instance) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
+  Instance* dart_port = Instance::cast(instance);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();
   Port* port = Port::FromDartObject(dart_port);
 
@@ -74,11 +72,10 @@ BEGIN_NATIVE(ProcessMonitor) {
     }
   }
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessUnmonitor) {
-  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
-  Instance* dart_port = Instance::cast(arguments[1]);
+extern "C" Object* NativeProcessUnmonitor(Process* process, Object* dart_handle, Object* instance) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
+  Instance* dart_port = Instance::cast(instance);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();
   Port* port = Port::FromDartObject(dart_port);
 
@@ -91,10 +88,9 @@ BEGIN_NATIVE(ProcessUnmonitor) {
   }
   return process->program()->null_object();
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessKill) {
-  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+extern "C" Object* NativeProcessKill(Process* process, Object* dart_handle) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
 
   // Avoid allocating [Signal] if destination is already dead, but do allocate
   // [Signal] outside spinlock.
@@ -113,6 +109,5 @@ BEGIN_NATIVE(ProcessKill) {
   }
   return process->program()->null_object();
 }
-END_NATIVE()
 
 }  // namespace dartino
