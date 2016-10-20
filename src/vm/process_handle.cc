@@ -55,7 +55,8 @@ extern "C" Object* NativeProcessUnlink(Process* process, Object* dart_handle) {
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeProcessMonitor(Process* process, Object* dart_handle, Object* instance) {
+extern "C" Object* NativeProcessMonitor(Process* process, Object* dart_handle,
+                                        Object* instance) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
   Instance* dart_port = Instance::cast(instance);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();
@@ -73,7 +74,8 @@ extern "C" Object* NativeProcessMonitor(Process* process, Object* dart_handle, O
   }
 }
 
-extern "C" Object* NativeProcessUnmonitor(Process* process, Object* dart_handle, Object* instance) {
+extern "C" Object* NativeProcessUnmonitor(Process* process, Object* dart_handle,
+                                          Object* instance) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(dart_handle);
   Instance* dart_port = Instance::cast(instance);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();

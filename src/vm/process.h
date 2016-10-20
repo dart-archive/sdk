@@ -88,7 +88,9 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
   Object* in_flight_exception() const { return in_flight_exception_; }
-  void set_in_flight_exception(Object* object){ in_flight_exception_ = object; }
+  void set_in_flight_exception(Object* object) {
+    in_flight_exception_ = object;
+  }
   TwoSpaceHeap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
@@ -241,7 +243,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
   static const uword kInFlightExceptionOffset = kExceptionOffset + kWordSize;
-  static const uword kPrimaryLookupCacheOffset = kInFlightExceptionOffset + kWordSize;
+  static const uword kPrimaryLookupCacheOffset =
+      kInFlightExceptionOffset + kWordSize;
   static const uword kRememberedSetBiasOffset =
       kPrimaryLookupCacheOffset + kWordSize;
 

@@ -32,7 +32,8 @@ typedef enum {
 
 struct _Unwind_Exception;
 
-typedef void (*_Unwind_Exception_Cleanup_Fn) (_Unwind_Reason_Code, _Unwind_Exception* );
+typedef void (*_Unwind_Exception_Cleanup_Fn)(_Unwind_Reason_Code,
+                                             _Unwind_Exception*);
 
 struct _Unwind_Context;
 typedef _Unwind_Context* _Unwind_Context_t;
@@ -50,4 +51,4 @@ void ExceptionsSetup();
 
 }  // namespace dartino
 
-#endif // SRC_VM_LLVM_EH_H_
+#endif  // SRC_VM_LLVM_EH_H_

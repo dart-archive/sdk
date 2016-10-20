@@ -44,7 +44,6 @@ static int Main(int argc, char** argv) {
 
 // Forward main calls to dartino::Main.
 int main(int argc, char** argv) {
-
   // Disable printf() buffering!
   setbuf(stdout, NULL);
 

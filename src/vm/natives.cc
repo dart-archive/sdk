@@ -83,7 +83,6 @@ extern "C" Object* NativeIntParse(Process* process, Object* x, Object* y) {
   return process->ToInteger(result);
 }
 
-
 extern "C" Object* NativeSmiToDouble(Process* process, Smi* x) {
   return process->NewDouble(static_cast<double>(x->value()));
 }
@@ -254,7 +253,7 @@ extern "C" Object* NativeMintNegate(Process* process, LargeInteger* x) {
   return process->NewInteger(-x->value());
 }
 
-extern "C" Object* NativeMintAdd(Process* process, LargeInteger* x, Object *y) {
+extern "C" Object* NativeMintAdd(Process* process, LargeInteger* x, Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   int64 x_value = x->value();
@@ -307,7 +306,8 @@ extern "C" Object* NativeMintDiv(Process* process, LargeInteger* x, Object* y) {
   return process->NewDouble(static_cast<double>(x->value()) / y_value);
 }
 
-extern "C" Object* NativeMintTruncDiv(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintTruncDiv(Process* process, LargeInteger* x,
+                                      Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   if (y_value == 0) {
@@ -324,25 +324,29 @@ extern "C" Object* NativeMintBitNot(Process* process, LargeInteger* x) {
   return process->NewInteger(~x->value());
 }
 
-extern "C" Object* NativeMintBitAnd(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintBitAnd(Process* process, LargeInteger* x,
+                                    Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return process->ToInteger(x->value() & y_value);
 }
 
-extern "C" Object* NativeMintBitOr(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintBitOr(Process* process, LargeInteger* x,
+                                   Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return process->ToInteger(x->value() | y_value);
 }
 
-extern "C" Object* NativeMintBitXor(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintBitXor(Process* process, LargeInteger* x,
+                                    Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return process->ToInteger(x->value() ^ y_value);
 }
 
-extern "C" Object* NativeMintBitShr(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintBitShr(Process* process, LargeInteger* x,
+                                    Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   // For values larger than or equal to 64 the shift will
@@ -354,7 +358,8 @@ extern "C" Object* NativeMintBitShr(Process* process, LargeInteger* x, Object* y
   return process->ToInteger(x->value() >> y_value);
 }
 
-extern "C" Object* NativeMintBitShl(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintBitShl(Process* process, LargeInteger* x,
+                                    Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   int64 x_value = x->value();
@@ -365,31 +370,36 @@ extern "C" Object* NativeMintBitShl(Process* process, LargeInteger* x, Object* y
   return process->ToInteger(x->value() << y_value);
 }
 
-extern "C" Object* NativeMintEqual(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintEqual(Process* process, LargeInteger* x,
+                                   Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return ToBool(process, x->value() == y_value);
 }
 
-extern "C" Object* NativeMintLess(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintLess(Process* process, LargeInteger* x,
+                                  Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return ToBool(process, x->value() < y_value);
 }
 
-extern "C" Object* NativeMintLessEqual(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintLessEqual(Process* process, LargeInteger* x,
+                                       Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return ToBool(process, x->value() <= y_value);
 }
 
-extern "C" Object* NativeMintGreater(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintGreater(Process* process, LargeInteger* x,
+                                     Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return ToBool(process, x->value() > y_value);
 }
 
-extern "C" Object* NativeMintGreaterEqual(Process* process, LargeInteger* x, Object* y) {
+extern "C" Object* NativeMintGreaterEqual(Process* process, LargeInteger* x,
+                                          Object* y) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   return ToBool(process, x->value() >= y_value);
@@ -429,7 +439,8 @@ extern "C" Object* NativeDoubleDiv(Process* process, Double* x, Object* y) {
   return process->NewDouble(x->value() / y_value);
 }
 
-extern "C" Object* NativeDoubleTruncDiv(Process* process, Double* x, Object* y) {
+extern "C" Object* NativeDoubleTruncDiv(Process* process, Double* x,
+                                        Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   if (y_value == 0) return Failure::index_out_of_bounds();
@@ -448,7 +459,8 @@ extern "C" Object* NativeDoubleLess(Process* process, Double* x, Object* y) {
   return ToBool(process, x->value() < y_value);
 }
 
-extern "C" Object* NativeDoubleLessEqual(Process* process, Double* x, Object* y) {
+extern "C" Object* NativeDoubleLessEqual(Process* process, Double* x,
+                                         Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() <= y_value);
@@ -460,7 +472,8 @@ extern "C" Object* NativeDoubleGreater(Process* process, Double* x, Object* y) {
   return ToBool(process, x->value() > y_value);
 }
 
-extern "C" Object* NativeDoubleGreaterEqual(Process* process, Double* x, Object* y) {
+extern "C" Object* NativeDoubleGreaterEqual(Process* process, Double* x,
+                                            Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() >= y_value);
@@ -521,7 +534,8 @@ extern "C" Object* NativeDoubleTruncateToDouble(Process* process, Double* x) {
   return process->NewDouble(trunc(x->value()));
 }
 
-extern "C" Object* NativeDoubleRemainder(Process* process, Double* x, Object* y) {
+extern "C" Object* NativeDoubleRemainder(Process* process, Double* x,
+                                         Object* y) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   Double* yd = Double::cast(y);
   return process->NewDouble(fmod(x->value(), yd->value()));
@@ -573,7 +587,8 @@ extern "C" Object* NativeDoubleToString(Process* process, Double* d) {
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
-extern "C" Object* NativeDoubleToStringAsExponential(Process* process, Double* x, Smi* y) {
+extern "C" Object* NativeDoubleToStringAsExponential(Process* process,
+                                                     Double* x, Smi* y) {
   static const int kBufferSize = 128;
 
   double d = x->value();
@@ -594,7 +609,8 @@ extern "C" Object* NativeDoubleToStringAsExponential(Process* process, Double* x
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
-extern "C" Object* NativeDoubleToStringAsFixed(Process* process, Double* x, Smi* y) {
+extern "C" Object* NativeDoubleToStringAsFixed(Process* process, Double* x,
+                                               Smi* y) {
   static const int kBufferSize = 128;
 
   double d = x->value();
@@ -616,7 +632,8 @@ extern "C" Object* NativeDoubleToStringAsFixed(Process* process, Double* x, Smi*
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
-extern "C" Object* NativeDoubleToStringAsPrecision(Process* process, Double* x, Smi* y) {
+extern "C" Object* NativeDoubleToStringAsPrecision(Process* process, Double* x,
+                                                   Smi* y) {
   static const int kBufferSize = 128;
   static const int kMaxLeadingPaddingZeroes = 6;
   static const int kMaxTrailingPaddingZeroes = 0;
@@ -715,7 +732,8 @@ extern "C" Object* NativeListLength(Process* process, Instance* instance) {
   return Smi::FromWord(BaseArray::cast(list)->length());
 }
 
-extern "C" Object* NativeListIndexGet(Process* process, Instance* instance, Object* x) {
+extern "C" Object* NativeListIndexGet(Process* process, Instance* instance,
+                                      Object* x) {
   Object* list = instance->GetInstanceField(0);
   Array* array = Array::cast(list);
   if (!x->IsSmi()) return Failure::wrong_argument_type();
@@ -726,7 +744,8 @@ extern "C" Object* NativeListIndexGet(Process* process, Instance* instance, Obje
   return array->get(index);
 }
 
-extern "C" Object* NativeByteListIndexGet(Process* process, Instance* instance, Object* x) {
+extern "C" Object* NativeByteListIndexGet(Process* process, Instance* instance,
+                                          Object* x) {
   Object* list = instance->GetInstanceField(0);
   ByteArray* array = ByteArray::cast(list);
   if (!x->IsSmi()) return Failure::wrong_argument_type();
@@ -737,7 +756,8 @@ extern "C" Object* NativeByteListIndexGet(Process* process, Instance* instance, 
   return Smi::FromWord(array->get(index));
 }
 
-extern "C" Object* NativeListIndexSet(Process* process, Instance* instance, Object* x, Object* value) {
+extern "C" Object* NativeListIndexSet(Process* process, Instance* instance,
+                                      Object* x, Object* value) {
   Object* list = instance->GetInstanceField(0);
   Array* array = Array::cast(list);
   if (!x->IsSmi()) return Failure::wrong_argument_type();
@@ -808,14 +828,16 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp));
   // Finally push the entry and fp.
-  //TODO(dmitryolsh): figure out how to implement this in LLVM.  
+  // TODO(dmitryolsh): figure out how to implement this in LLVM.
   stack->set_top(top);
 
   return child;
 }
 
-extern "C" Object* NativeProcessSpawn(Process* process, Instance* entrypoint, Instance* closure,
-    Object* argument, Object* to_child, Object* from_child, Object* dart_monitor_port) {
+extern "C" Object* NativeProcessSpawn(Process* process, Instance* entrypoint,
+                                      Instance* closure, Object* argument,
+                                      Object* to_child, Object* from_child,
+                                      Object* dart_monitor_port) {
   Program* program = process->program();
 
   bool link_to_child = to_child == program->true_object();
@@ -892,10 +914,13 @@ extern "C" Object* NativeProcessCurrent(Process* process) {
   return dart_process;
 }
 
+extern "C" Object* NativeCoroutineCurrent(Process* process) {
+  return process->coroutine();
+}
 
-extern "C" Object* NativeCoroutineCurrent(Process* process) { return process->coroutine(); }
-
-extern "C" Object* NativeCoroutineNewStack(Process* process, Instance* coroutine, Instance* entry) {
+extern "C" Object* NativeCoroutineNewStack(Process* process,
+                                           Instance* coroutine,
+                                           Instance* entry) {
   Object* object = process->NewStack(256);
   if (object->IsFailure()) return object;
 
@@ -927,7 +952,7 @@ extern "C" Object* NativeCoroutineNewStack(Process* process, Instance* coroutine
   stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
-  //TODO(dmitryolsh): figure out how to implement this in LLVM.
+  // TODO(dmitryolsh): figure out how to implement this in LLVM.
   stack->set_top(top);
   return stack;
 }
@@ -972,7 +997,8 @@ extern "C" Object* NativeStringLength(Process* process, BaseArray* x) {
   return Smi::FromWord(x->length());
 }
 
-extern "C" Object* NativeOneByteStringAdd(Process* process, OneByteString* x, Object* other) {
+extern "C" Object* NativeOneByteStringAdd(Process* process, OneByteString* x,
+                                          Object* other) {
   if (!other->IsString()) return Failure::wrong_argument_type();
 
   int xlen = x->length();
@@ -1004,7 +1030,8 @@ extern "C" Object* NativeOneByteStringAdd(Process* process, OneByteString* x, Ob
   return result;
 }
 
-extern "C" Object* NativeOneByteStringCodeUnitAt(Process* process, OneByteString* x, Object* y) {
+extern "C" Object* NativeOneByteStringCodeUnitAt(Process* process,
+                                                 OneByteString* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
   if (index < 0) return Failure::index_out_of_bounds();
@@ -1020,7 +1047,8 @@ extern "C" Object* NativeOneByteStringCreate(Process* process, Object* z) {
   return result;
 }
 
-extern "C" Object* NativeOneByteStringEqual(Process* process, OneByteString* x, Object* y) {
+extern "C" Object* NativeOneByteStringEqual(Process* process, OneByteString* x,
+                                            Object* y) {
   if (y->IsOneByteString()) {
     return ToBool(process, x->Equals(OneByteString::cast(y)));
   }
@@ -1032,7 +1060,9 @@ extern "C" Object* NativeOneByteStringEqual(Process* process, OneByteString* x, 
   return process->program()->false_object();
 }
 
-extern "C" Object* NativeOneByteStringSetCodeUnitAt(Process* process, OneByteString* x, Object* y, Object* z) {
+extern "C" Object* NativeOneByteStringSetCodeUnitAt(Process* process,
+                                                    OneByteString* x, Object* y,
+                                                    Object* z) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
   if (index < 0) return Failure::index_out_of_bounds();
@@ -1043,7 +1073,9 @@ extern "C" Object* NativeOneByteStringSetCodeUnitAt(Process* process, OneByteStr
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeOneByteStringSetContent(Process* process, OneByteString* x, Smi* offset, Object* other) {
+extern "C" Object* NativeOneByteStringSetContent(Process* process,
+                                                 OneByteString* x, Smi* offset,
+                                                 Object* other) {
   if (!other->IsOneByteString()) return Failure::wrong_argument_type();
 
   OneByteString* y = OneByteString::cast(other);
@@ -1051,7 +1083,9 @@ extern "C" Object* NativeOneByteStringSetContent(Process* process, OneByteString
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeOneByteStringSubstring(Process* process, OneByteString* x, Object* y, Object* z) {
+extern "C" Object* NativeOneByteStringSubstring(Process* process,
+                                                OneByteString* x, Object* y,
+                                                Object* z) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word start = Smi::cast(y)->value();
@@ -1070,11 +1104,13 @@ extern "C" Object* NativeOneByteStringSubstring(Process* process, OneByteString*
   return result;
 }
 
-extern "C" Object* NativeTwoByteStringLength(Process* process, TwoByteString* x) {
+extern "C" Object* NativeTwoByteStringLength(Process* process,
+                                             TwoByteString* x) {
   return Smi::FromWord(x->length());
 }
 
-extern "C" Object* NativeTwoByteStringAdd(Process* process, TwoByteString* x, Object* other) {
+extern "C" Object* NativeTwoByteStringAdd(Process* process, TwoByteString* x,
+                                          Object* other) {
   if (!other->IsString()) return Failure::wrong_argument_type();
 
   int xlen = x->length();
@@ -1107,7 +1143,8 @@ extern "C" Object* NativeTwoByteStringAdd(Process* process, TwoByteString* x, Ob
   return result;
 }
 
-extern "C" Object* NativeTwoByteStringCodeUnitAt(Process* process, TwoByteString* x, Object* y) {
+extern "C" Object* NativeTwoByteStringCodeUnitAt(Process* process,
+                                                 TwoByteString* x, Object* y) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
   if (index < 0) return Failure::index_out_of_bounds();
@@ -1123,7 +1160,8 @@ extern "C" Object* NativeTwoByteStringCreate(Process* process, Object* z) {
   return result;
 }
 
-extern "C" Object* NativeTwoByteStringEqual(Process* process, TwoByteString* x, Object* y) {
+extern "C" Object* NativeTwoByteStringEqual(Process* process, TwoByteString* x,
+                                            Object* y) {
   if (y->IsOneByteString()) {
     return ToBool(process, OneByteString::cast(y)->Equals(x));
   }
@@ -1135,7 +1173,9 @@ extern "C" Object* NativeTwoByteStringEqual(Process* process, TwoByteString* x, 
   return process->program()->false_object();
 }
 
-extern "C" Object* NativeTwoByteStringSetCodeUnitAt(Process* process, TwoByteString* x, Object* y, Object* z) {
+extern "C" Object* NativeTwoByteStringSetCodeUnitAt(Process* process,
+                                                    TwoByteString* x, Object* y,
+                                                    Object* z) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
   if (index < 0) return Failure::index_out_of_bounds();
@@ -1146,7 +1186,9 @@ extern "C" Object* NativeTwoByteStringSetCodeUnitAt(Process* process, TwoByteStr
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeTwoByteStringSetContent(Process* process, TwoByteString* x, Smi* offset, Object* other) {
+extern "C" Object* NativeTwoByteStringSetContent(Process* process,
+                                                 TwoByteString* x, Smi* offset,
+                                                 Object* other) {
   if (other->IsOneByteString()) {
     OneByteString* y = OneByteString::cast(other);
     x->FillFrom(y, offset->value());
@@ -1162,7 +1204,9 @@ extern "C" Object* NativeTwoByteStringSetContent(Process* process, TwoByteString
   return Failure::wrong_argument_type();
 }
 
-extern "C" Object* NativeTwoByteStringSubstring(Process* process, TwoByteString* x, Object* y, Object* z) {
+extern "C" Object* NativeTwoByteStringSubstring(Process* process,
+                                                TwoByteString* x, Object* y,
+                                                Object* z) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word start = Smi::cast(y)->value();
@@ -1211,7 +1255,9 @@ extern "C" Object* NativeDateTimeLocalTimeZoneOffset(Process* process) {
   return process->ToInteger(offset);
 }
 
-extern "C" Object* NativeSystemEventHandlerAdd(Process* process, Object* id, Object* port_arg, Object* flags_arg) {
+extern "C" Object* NativeSystemEventHandlerAdd(Process* process, Object* id,
+                                               Object* port_arg,
+                                               Object* flags_arg) {
   if (!port_arg->IsPort()) {
     return Failure::wrong_argument_type();
   }
@@ -1230,14 +1276,16 @@ extern "C" Object* NativeUint32DigitsAllocate(Process* process, Smi* length) {
   return process->NewByteArray(byte_size);
 }
 
-extern "C" Object* NativeUint32DigitsGet(Process* process, ByteArray* backing, Smi* index) {
+extern "C" Object* NativeUint32DigitsGet(Process* process, ByteArray* backing,
+                                         Smi* index) {
   word byte_index = index->value() * 4;
   ASSERT(byte_index + 4 <= backing->length());
   uint8* byte_address = backing->byte_address_for(byte_index);
   return process->ToInteger(*reinterpret_cast<uint32*>(byte_address));
 }
 
-extern "C" Object* NativeUint32DigitsSet(Process* process, ByteArray* backing, Smi* index, Object* object) {
+extern "C" Object* NativeUint32DigitsSet(Process* process, ByteArray* backing,
+                                         Smi* index, Object* object) {
   word byte_index = index->value() * 4;
   ASSERT(byte_index + 4 <= backing->length());
   uint8* byte_address = backing->byte_address_for(byte_index);
@@ -1247,14 +1295,16 @@ extern "C" Object* NativeUint32DigitsSet(Process* process, ByteArray* backing, S
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeTimerScheduleTimeout(Process* process, Object * x, Object* y) {
+extern "C" Object* NativeTimerScheduleTimeout(Process* process, Object* x,
+                                              Object* y) {
   int64 timeout = AsForeignInt64(x);
   Port* port = Port::FromDartObject(y);
   EventHandler::GlobalInstance()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
 }
 
-extern "C" Object* NativeEventHandlerSleep(Process* process, Object* x, Object* port_arg) {
+extern "C" Object* NativeEventHandlerSleep(Process* process, Object* x,
+                                           Object* port_arg) {
   int64 arg = AsForeignInt64(x);
   // Adding one (1) if the sleep is not for 0 ms. This ensures that the
   // sleep will last at least the provided number of milliseconds.

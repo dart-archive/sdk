@@ -19,7 +19,8 @@ class TargetYieldResult;
 extern "C" int Interpret(Process* process,
                          TargetYieldResult* target_yield_result);
 
-typedef int (*InterpretFunction)(Process* process, TargetYieldResult* target_yield_result);
+typedef int (*InterpretFunction)(Process* process,
+                                 TargetYieldResult* target_yield_result);
 
 extern "C" void InterpreterEntry();
 

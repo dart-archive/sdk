@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include "src/vm/llvm_embedder.h"
+
 #include <stdlib.h>
 
 #include "include/dartino_api.h"
@@ -21,7 +23,8 @@ static int Main(int argc, char** argv) {
   char* heap = reinterpret_cast<char*>(program_start);
   int heap_size = program_size;
 
-  DartinoProgram program = DartinoLoadProgramFromFlashWide(heap, heap_size, &program_info_block);
+  DartinoProgram program =
+      DartinoLoadProgramFromFlashWide(heap, heap_size, &program_info_block);
   int result = DartinoRunMain(program, 0, NULL);
   DartinoDeleteProgram(program);
 

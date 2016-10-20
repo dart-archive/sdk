@@ -25,8 +25,7 @@ namespace dartino {
 unsigned char dart_exception_class_chars[] = "GOO\0DRT\0";
 uintptr_t dart_exception_class;
 
-void Trace(const char* msg)
-{
+void Trace(const char* msg) {
 #if 0
   fprintf(stderr, "%s", msg);
 #endif
@@ -40,10 +39,10 @@ void DeleteException(_Unwind_Exception* ex) {
   }
 }
 
-
 // The callback to be called by unwinder in order to clean up foreign exceptions
 // http://mentorembedded.github.com/cxx-abi/abi-eh.html
-void DeleteFromUnwindException(_Unwind_Reason_Code reason, _Unwind_Exception* ex) {
+void DeleteFromUnwindException(_Unwind_Reason_Code reason,
+                               _Unwind_Exception* ex) {
   Trace("Delete exception from unwind\n");
   DeleteException(ex);
 }
@@ -60,7 +59,7 @@ extern "C" void ThrowException(Process* process, Object* ex) {
   _Unwind_Exception* e = CreateException();
   process->set_in_flight_exception(ex);
   auto ret = _Unwind_RaiseException(e);
-  if(ret == _URC_END_OF_STACK) {
+  if (ret == _URC_END_OF_STACK) {
     fprintf(stderr, "Uncaught exception.\n");
     exit(1);
   }
@@ -90,7 +89,6 @@ static uintptr_t ReadULEB128(const uint8** data) {
   return result;
 }
 
-
 /// Read a signed leb128 encoded value
 /// See 7.6 Variable Length Data
 /// http://dwarfstd.org/doc/Dwarf3.pdf
@@ -106,7 +104,7 @@ static uintptr_t ReadSLEB128(const uint8** data) {
     p++;
   } while (b & 0x80);
   // Sign extend.
-  if((b & 0x40) && shift < sizeof(result)*8) {
+  if ((b & 0x40) && shift < sizeof(result) * 8) {
     result |= ~0 << shift;
   }
   *data = p;
@@ -114,7 +112,7 @@ static uintptr_t ReadSLEB128(const uint8** data) {
 }
 
 /// Read a pointer encoded value
-/// See 7.6 Variable Length Data 
+/// See 7.6 Variable Length Data
 /// http://dwarfstd.org/doc/Dwarf3.pdf
 static uintptr_t ReadDwarfPointer(const uint8** data, uint8 encoding) {
   uintptr_t result = 0;
@@ -188,19 +186,19 @@ static uintptr_t ReadDwarfPointer(const uint8** data, uint8 encoding) {
 
 // This is the personality function which is embedded in the
 // dwarf unwind info block.
-extern "C" _Unwind_Reason_Code DartPersonality(int version,_Unwind_Action actions,
-    uint64_t exceptionClass, _Unwind_Exception* exception, 
-    _Unwind_Context_t context) {
+extern "C" _Unwind_Reason_Code DartPersonality(int version,
+                                               _Unwind_Action actions,
+                                               uint64_t exceptionClass,
+                                               _Unwind_Exception* exception,
+                                               _Unwind_Context_t context) {
   if (actions & _UA_SEARCH_PHASE) {
     Trace("DartPersonality: in search phase.\n");
-  }
-  else {
+  } else {
     Trace("DartPersonality: in non-search phase.\n");
   }
   const uint8* lsda = _Unwind_GetLanguageSpecificData(context);
   _Unwind_Reason_Code ret = _URC_CONTINUE_UNWIND;
-  if (!lsda)
-    return ret;
+  if (!lsda) return ret;
   // Get the current instruction pointer and offset it before the next
   // instruction in the current frame which threw the exception.
   uintptr_t pc = _Unwind_GetIP(context) - 1;
@@ -227,13 +225,15 @@ extern "C" _Unwind_Reason_Code DartPersonality(int version,_Unwind_Action action
   uint8 call_site_encoding = *lsda++;
   uint32_t call_site_table_length = ReadULEB128(&lsda);
   const uint8* call_site_table_start = lsda;
-  const uint8* call_site_table_end = call_site_table_start + call_site_table_length;
+  const uint8* call_site_table_end =
+      call_site_table_start + call_site_table_length;
   const uint8* call_site_ptr = call_site_table_start;
 
   while (call_site_ptr < call_site_table_end) {
     uintptr_t start = ReadDwarfPointer(&call_site_ptr, call_site_encoding);
     uintptr_t length = ReadDwarfPointer(&call_site_ptr, call_site_encoding);
-    uintptr_t landing_pad = ReadDwarfPointer(&call_site_ptr, call_site_encoding);
+    uintptr_t landing_pad =
+        ReadDwarfPointer(&call_site_ptr, call_site_encoding);
     ReadULEB128(&call_site_ptr);  // Skip action entry.
 
     if (landing_pad == 0) {
@@ -248,8 +248,7 @@ extern "C" _Unwind_Reason_Code DartPersonality(int version,_Unwind_Action action
         // To execute landing pad set here.
         _Unwind_SetIP(context, func_start + landing_pad);
         ret = _URC_INSTALL_CONTEXT;
-      }
-      else {
+      } else {
         Trace("DartPersonality: handler found.\n");
         ret = _URC_HANDLER_FOUND;
       }
@@ -261,8 +260,7 @@ extern "C" _Unwind_Reason_Code DartPersonality(int version,_Unwind_Action action
 }
 
 // Generate uint64 class identifier from character string.
-uint64_t GenClass(unsigned char* class_chars, size_t size)
-{
+uint64_t GenClass(unsigned char* class_chars, size_t size) {
   uint64_t ret = class_chars[0];
   for (size_t i = 1; i < size; i++) {
     ret = (ret << 8) | class_chars[i];
@@ -270,9 +268,8 @@ uint64_t GenClass(unsigned char* class_chars, size_t size)
   return ret;
 }
 
-void ExceptionsSetup()
-{
+void ExceptionsSetup() {
   dart_exception_class = GenClass(dart_exception_class_chars, 8);
 }
 
-} // namespace dartino
+}  // namespace dartino

@@ -9,11 +9,9 @@
 namespace dartino {
 
 void SetBytecodeBreak(Opcode opcode) {
-  
 }
 
 void ClearBytecodeBreak(Opcode opcode) {
-  
 }
 
 }  // namespace dartino

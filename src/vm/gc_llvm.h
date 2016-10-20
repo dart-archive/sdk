@@ -17,7 +17,7 @@ class PointerVisitor;
 // See http://llvm.org/docs/StackMaps.html
 
 struct StackMapHeader {
-  uint8 version;    // Currently 1.
+  uint8 version;  // Currently 1.
   uint8 reserved1;
   uint16 reserved2;
   uint32 num_functions;
@@ -89,8 +89,8 @@ class StackMap {
 }  // namespace dartino
 
 extern "C" {
-  extern dartino::StackMapHeader __LLVM_StackMaps;
-  extern char* dartino_function_table;
+extern dartino::StackMapHeader __LLVM_StackMaps;
+extern char* dartino_function_table;
 }
 
 #endif  // SRC_VM_GC_LLVM_H_

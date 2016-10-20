@@ -538,7 +538,7 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
   ASSERT(target == NULL);
   static const Names::Id name = Names::kNoSuchMethodTrampoline;
   target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
-  
+
   ASSERT(target != NULL);
   cache->DemotePrimary(primary);
   primary->clazz = clazz;

@@ -56,11 +56,10 @@ struct CatchBlock {
 
 class World {
  public:
-  World(Program* program,
-        llvm::LLVMContext& context,
-        llvm::Module& module);
+  World(Program* program, llvm::LLVMContext* context, llvm::Module* module);
 
-  llvm::StructType* ObjectArrayType(int n, llvm::Type* entry_type, const char* name);
+  llvm::StructType* ObjectArrayType(int n, llvm::Type* entry_type,
+                                    const char* name);
   llvm::StructType* InstanceType(int n);
   llvm::PointerType* InstanceTypePtr(int n);
   llvm::StructType* OneByteStringType(int n);
@@ -69,7 +68,8 @@ class World {
 
   // Helper methods for creating/manipulating constants
   llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type);
-  llvm::Constant* CTagAddressSpaceZero(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
+  llvm::Constant* CTagAddressSpaceZero(llvm::Constant* constant,
+                                       llvm::Type* ptr_type = NULL);
   llvm::Constant* CBit(int8 value);
   llvm::Constant* CInt(int32 integer);
   llvm::Constant* CInt8(uint8 integer);
@@ -78,7 +78,8 @@ class World {
   llvm::Constant* CDouble(double value);
   llvm::Constant* CSmi(uint32 integer);
   llvm::Constant* CPointer2Int(llvm::Constant* constant);
-  llvm::Constant* CInt2Pointer(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
+  llvm::Constant* CInt2Pointer(llvm::Constant* constant,
+                               llvm::Type* ptr_type = NULL);
   llvm::Constant* CCast(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
 
   // Helper method for getting hold of a smi slow-case helper function for
@@ -91,8 +92,8 @@ class World {
   void CreateGCTrampoline();
 
   Program* const program_;
-  llvm::LLVMContext& context;
-  llvm::Module& module_;
+  llvm::LLVMContext* context;
+  llvm::Module* module_;
 
   // This is the word size (32 or 64) for the target, not llvm-codegen.
   int bits_per_word;
@@ -196,8 +197,10 @@ class World {
   std::map<int, llvm::Function*> smi_slow_cases;
 
   std::vector<llvm::Function*> natives_;
-  std::vector<llvm::Function*> natural_natives_ = std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
-  std::vector<llvm::Function*> natural_native_trampolines_ = std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
+  std::vector<llvm::Function*> natural_natives_ =
+      std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
+  std::vector<llvm::Function*> natural_native_trampolines_ =
+      std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
 };
 
 static const int kRegularNameSpace = 0;
@@ -205,24 +208,25 @@ static const int kGCNameSpace = 1;
 
 class LLVMCodegen {
  public:
-  LLVMCodegen(Program* program) : program_(program) { }
+  explicit LLVMCodegen(Program* program) : program_(program) {}
 
   void Generate(const char* filename, bool optimize, bool verify_module);
 
  private:
-  void VerifyModule(llvm::Module& module);
-  void OptimizeModule(llvm::Module& module, World& world);
-  void CreateGCSafepointPollFunction(llvm::Module& module, World& world, llvm::LLVMContext& context);
-  void LowerIntrinsics(llvm::Module& module, World& world);
-  void SaveModule(llvm::Module& module, const char* filename);
+  void VerifyModule(llvm::Module* module);
+  void OptimizeModule(llvm::Module* module, World* world);
+  void CreateGCSafepointPollFunction(llvm::Module* module, World* world,
+                                     llvm::LLVMContext* context);
+  void LowerIntrinsics(llvm::Module* module, World* world);
+  void SaveModule(llvm::Module* module, const char* filename);
 
   Program* const program_;
 };
 
 // ************ Utilities *******************
 
-char *name(const char* format, ...);
-char *bytecode_string(uint8* bcp);
+char* name(const char* format, ...);
+char* bytecode_string(uint8* bcp);
 
 }  // namespace dartino
 
