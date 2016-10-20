@@ -600,7 +600,7 @@ void Process::PrintStackTrace() const {
   }
 }
 
-BEGIN_NATIVE(ProcessQueueGetMessage) {
+extern "C" Object* NativeProcessQueueGetMessage(Process* process) {
   MessageMailbox* mailbox = process->mailbox();
 
   Message* queue = mailbox->CurrentMessage();
@@ -667,9 +667,9 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
   mailbox->AdvanceCurrentMessage();
   return result;
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessQueueSetupProcessDeath) {
+extern "C" Object* NativeProcessQueueSetupProcessDeath(Process* process,
+                                                       Instance* instance) {
   MessageMailbox* mailbox = process->mailbox();
   Message* queue = mailbox->CurrentMessage();
   Message::Kind kind = queue->kind();
@@ -686,17 +686,16 @@ BEGIN_NATIVE(ProcessQueueSetupProcessDeath) {
   ProcessHandle* handle = signal->handle();
   handle->IncrementRef();
   handle->InitializeDartObject(dart_process);
-  Instance::cast(arguments[0])->SetInstanceField(0, dart_process);
+  instance->SetInstanceField(0, dart_process);
 
   process->RegisterFinalizer(HeapObject::cast(dart_process),
                              Process::FinalizeProcess);
 
   mailbox->AdvanceCurrentMessage();
-  return arguments[0];
+  return instance;
 }
-END_NATIVE()
 
-BEGIN_NATIVE(ProcessQueueGetChannel) {
+extern "C" Object* NativeProcessQueueGetChannel(Process* process) {
   MessageMailbox* mailbox = process->mailbox();
 
   Message* queue = mailbox->CurrentMessage();
@@ -711,6 +710,5 @@ BEGIN_NATIVE(ProcessQueueGetChannel) {
   }
   return process->program()->null_object();
 }
-END_NATIVE()
 
 }  // namespace dartino

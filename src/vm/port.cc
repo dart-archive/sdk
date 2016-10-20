@@ -104,9 +104,7 @@ void Port::WeakCallback(HeapObject* object, Heap* heap) {
   port->DecrementRef();
 }
 
-BEGIN_NATIVE(PortCreate) {
-  Instance* channel = Instance::cast(arguments[0]);
-
+extern "C" Object* NativePortCreate(Process* process, Instance* channel) {
   Object* dart_port =
       process->NewInstance(process->program()->port_class(), true);
   if (dart_port->IsRetryAfterGCFailure()) return dart_port;
@@ -120,15 +118,12 @@ BEGIN_NATIVE(PortCreate) {
 
   return port_instance;
 }
-END_NATIVE()
 
-BEGIN_NATIVE(PortSend) {
-  Instance* instance = Instance::cast(arguments[0]);
-
-  Object* message = arguments[1];
+extern "C" Object* NativePortSend(Process* process, Instance* channel,
+                                  Object* message) {
   if (!message->IsImmutable()) return Failure::wrong_argument_type();
 
-  Port* port = Port::FromDartObject(instance);
+  Port* port = Port::FromDartObject(channel);
   if (port == NULL) return Failure::illegal_state();
 
   // We want to avoid holding a spinlock while doing an allocation, so:
@@ -157,10 +152,9 @@ BEGIN_NATIVE(PortSend) {
   }
   return process->program()->null_object();
 }
-END_NATIVE()
 
-BEGIN_NATIVE(PortSendExit) {
-  Instance* instance = Instance::cast(arguments[0]);
+extern "C" Object* NativePortSendExit(Process* process, Instance* instance,
+                                      Object* message) {
   Port* port = Port::FromDartObject(instance);
   if (port == NULL) return Failure::illegal_state();
 
@@ -168,8 +162,6 @@ BEGIN_NATIVE(PortSendExit) {
 
   Process* port_process = port->process();
   if (port_process != NULL && port_process != process) {
-    Object* message = arguments[1];
-
     // Enqueue the exit message and return the locked port. This
     // will allow the scheduler to schedule the owner of the port,
     // while it's still alive.
@@ -185,6 +177,5 @@ BEGIN_NATIVE(PortSendExit) {
   port->Unlock();
   return Failure::illegal_state();
 }
-END_NATIVE()
 
 }  // namespace dartino
