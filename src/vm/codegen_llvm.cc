@@ -790,6 +790,14 @@ class BasicBlockBuilder {
     SetLocal(0, exception);
   }
 
+  void SetNoGC(llvm::CallInst* call) {
+    llvm::AttributeSet attr_set = call->getAttributes();
+    attr_set = attr_set.addAttribute(context,
+                                     llvm::AttributeSet::FunctionIndex,
+                                     "gc-leaf-function", "1");
+    call->setAttributes(attr_set);
+  }
+
   void DoAllocate(Class* klass, bool immutable) {
     auto bb_retry = llvm::BasicBlock::Create(w.context, "bb_allocation_retry", llvm_function_);
 
@@ -802,6 +810,11 @@ class BasicBlockBuilder {
     auto instance = b.CreateCall(
         w.runtime__HandleAllocate,
         {llvm_process_, llvm_klass, w.CWord(immutable ? 1 : 0)});
+
+    // Strangely, the HandleAllocate call can't cause a GC (it just returns a
+    // failure indicating that GC is needed).
+    SetNoGC(instance);
+
     auto is_failure = h.CreateFailureCheck(instance);
     auto bb_success = llvm::BasicBlock::Create(w.context, "bb_allocation_success", llvm_function_);
     auto bb_failure = llvm::BasicBlock::Create(w.context, "bb_allocation_failure", llvm_function_);
@@ -2345,6 +2358,10 @@ llvm::Function* World::NativeTrampoline(Native nativeId, int arity) {
   builder.SetInsertPoint(bb_gc_retry);
   auto result = builder.CreateCall(declaration, args, "result");
 
+  // Natives can't cause GC (but they can return a value that indicates we
+  // need a GC).
+  b.SetNoGC(result);
+
   auto bb_call_gc = llvm::BasicBlock::Create(context, "call_gc", trampoline);
   auto bb_return = llvm::BasicBlock::Create(context, "return", trampoline);
 
@@ -2466,7 +2483,6 @@ void LLVMCodegen::VerifyModule(llvm::Module& module) {
 
 }
 
-// A pass to lower tagread intrinsics into actual instructions.
 struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
   static char ID; // Pass identification, replacement for typeid.
   World& w;
@@ -2475,12 +2491,18 @@ struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
   void setAttributes(llvm::BasicBlock& bb, const std::string& id){
     for (llvm::Instruction& instruction : bb) {
       if (llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(&instruction)){
+        if (llvm::Function* function = call->getCalledFunction()) {
+          if (function->hasFnAttribute("gc-leaf-function")) continue;
+        }
         call->addAttribute(llvm::AttributeSet::FunctionIndex, "statepoint-id", id);
       }
-      else if(llvm::InvokeInst* call = llvm::dyn_cast<llvm::InvokeInst>(&instruction)){
-        llvm::AttributeSet attributes = call->getAttributes();
+      else if(llvm::InvokeInst* invoke = llvm::dyn_cast<llvm::InvokeInst>(&instruction)){
+        if (llvm::Function* function = invoke->getCalledFunction()) {
+          if (function->hasFnAttribute("gc-leaf-function")) continue;
+        }
+        llvm::AttributeSet attributes = invoke->getAttributes();
         attributes = attributes.addAttribute(w.context, llvm::AttributeSet::FunctionIndex, "statepoint-id", id);
-        call->setAttributes(attributes);
+        invoke->setAttributes(attributes);
       }
     }
   }
