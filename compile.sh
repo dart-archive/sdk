@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DARTINO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-LLVM_BIN=$DARTINO_ROOT/third_party/llvm/llvm-build/bin
+LLVM_BIN=$DARTINO_ROOT/third_party/llvm/llvm-build-release/bin
 
 if [ ! -f "$1" ]; then
   echo "Usage: $0 file.dart";
@@ -15,6 +15,15 @@ function run {
   if [ $EXITCODE -ne 0 ]; then
     echo "Nonzero exit code: $EXITCODE. Exiting now ..."
     exit $EXITCODE
+  fi
+}
+
+function export_bytecode {
+  echo "Running: out/DebugX64/dartino export $@"
+  out/DebugX64/dartino export "$@" | tee $2.log
+  if grep 'Error:' $2.log ; then
+    echo "Error during compilation. Exiting"
+    exit 1
   fi
 }
 
@@ -38,7 +47,8 @@ run ninja -C out/DebugX64
 run ninja -C out/ReleaseX64 llvm_embedder
 run ninja -C out/DebugX64 llvm_embedder
 
-run out/DebugX64/dartino export $SOURCE $SNAPSHOT
+export_bytecode $SOURCE $SNAPSHOT
+
 run out/DebugX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc
 
 # Make text representation of LLVM IR (for debugging)
