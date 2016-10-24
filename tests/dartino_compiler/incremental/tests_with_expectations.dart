@@ -61,8 +61,10 @@ library dartino_compiler.test.tests_with_expectations;
 /// With expectation `ex3`
 ///
 ///
-/// It is possible to have several independent changes in the same patch. One
-/// should only specify the expectations once. For example:
+/// It is possible to have several independent changes in the same
+/// patch. However, most of the time, it's problematic to have more than one
+/// change in a patch. See topic below on "Making minimal changes". One should
+/// only specify the expectations once. For example:
 ///
 ///     ==> main.dart.patch <==
 ///     class Foo {
@@ -93,6 +95,84 @@ library dartino_compiler.test.tests_with_expectations;
 /// * a new [ProgramExpectation] instance is instantiated with its fields
 ///   initialized to the corresponding properties of the JSON object. See
 ///   [ProgramExpectation.fromJson].
+///
+/// Make minimal changes
+/// --------------------
+///
+/// When adding new tests, it's important to keep the changes to the necessary
+/// minimum. We do this to ensure that a test actually tests what we intend,
+/// and to avoid accidentally relying on side-effects of other changes making
+/// the test pass or fail unexpectedly.
+///
+/// Let's look at an example of testing what happens when an instance field is
+/// added.
+///
+/// A good test:
+///
+///     ==> main.dart.patch <==
+///     class Foo {
+///     <<<< ["instance is null", "setter threw", "getter threw"]
+///     ==== "v2"
+///       var bar;
+///     >>>>
+///     }
+///     var instance;
+///     main() {
+///       if (instance == null) {
+///         print("instance is null");
+///         instance = new Foo();
+///       }
+///       try {
+///         instance.bar = "v2";
+///       } catch (e) {
+///         print("setter threw");
+///       }
+///       try {
+///         print(instance.bar);
+///       } catch (e) {
+///         print("getter threw");
+///       }
+///     }
+///
+/// A problematic version of the same test:
+///
+///     ==> main.dart.patch <==
+///     class Foo {
+///     <<<< "v1"
+///     ==== "v2"
+///       var bar;
+///     >>>>
+///     }
+///     var instance;
+///     main() {
+///     <<<<
+//        instance = new Foo();
+///       print("v1");
+///     ====
+///       instance.bar = 42;
+///       print(instance.bar);
+///     >>>>
+///     }
+///
+/// The former version tests precisely what happens when an instance field is
+/// added to a class, we assume this is the intent of the test.
+///
+/// The latter version tests what happens when:
+///
+/// * An instance field is added to a class.
+///
+/// * A modification is made to a top-level method.
+///
+/// * A modifiction is made to the main method, which is a special case.
+///
+/// * Two more selectors are added to tree-shaking, the enqueuer: 'get:bar',
+///   and 'set:bar'.
+///
+/// The latter version does not test:
+///
+/// * If an instance field is added, does existing accessors correctly access
+///   the new field. As `main` was explicitly changed, we don't know if
+///   already compiled accessors behave correctly.
 const List<String> tests = const <String>[
   r'''
 hello_world
@@ -139,7 +219,7 @@ program_gc_with_processes
 import 'dart:dartino';
 
 class Comms {
-<<<< "Setup"
+<<<< "comms is null"
 ==== "Hello world"
   int late_arrival;
 >>>>
@@ -161,27 +241,26 @@ void SubProcess(Port pausedPort) {
 }
 
 main() {
-<<<<
-  // The setup takes place before the rewrite.
-  comms = new Comms();
+  if (comms == null) {
+    print("comms is null");
+    // The setup takes place before the rewrite.
+    comms = new Comms();
 
-  comms.paused = new Channel();
-  var pausedPort = comms.pausedPort = new Port(comms.paused);
+    comms.paused = new Channel();
+    var pausedPort = comms.pausedPort = new Port(comms.paused);
 
-  comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+    comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+  } else {
+    // After the rewrite we get the port from the sub-process and send the
+    // data it needs to resume running.
+    comms.resumePort = comms.paused.receive();
 
-  print("Setup");
-====
-  // After the rewrite we get the port from the sub-process and send the
-  // data it needs to resume running.
-  comms.resumePort = comms.paused.receive();
+    var monitor = new Channel();
 
-  var monitor = new Channel();
+    comms.process.monitor(new Port(monitor));
 
-  comms.process.monitor(new Port(monitor));
-
-  comms.resumePort.send(null);
->>>>
+    comms.resumePort.send(null);
+  }
 }
 ''',
 
@@ -329,6 +408,54 @@ main() {
 ''',
 
   r'''
+subclass_schema_3
+==> main.dart.patch <==
+// Test that multiple schema changes in subclasses work as intended.
+class A {
+  var x;
+<<<< "instance is null"
+  var y;
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
+  var y;
+>>>>
+}
+
+class B extends A {
+}
+
+class C extends B {
+  var z;
+<<<<
+====
+  var a;
+====
+  var a;
+  var b;
+>>>>
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
+  } else {
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
+  }
+}
+''',
+
+  r'''
 super_schema
 ==> main.dart.patch <==
 // Test that schema changes work in the presence of fields in the superclass
@@ -447,6 +574,79 @@ main() { print(
 ''',
 
   r'''
+two_updates_not_main
+==> main.dart.patch <==
+// Test that the test framework handles more than one update to a top-level
+// method that isn't main.
+foo() {
+<<<< "Hello darkness, my old friend"
+  print("Hello darkness, my old friend");
+==== "I've come to talk with you again"
+  print("I've come to talk with you again");
+==== "Because a vision softly creeping"
+  print('Because a vision softly creeping');
+>>>>
+}
+main() {
+  foo();
+}
+''',
+
+  r'''
+two_updates_instance_method
+==> main.dart.patch <==
+// Test that the test framework handles more than one update to an instance
+// method.
+class C {
+  foo() {
+<<<< ["instance is null", "Hello darkness, my old friend"]
+    print("Hello darkness, my old friend");
+==== "I've come to talk with you again"
+    print("I've come to talk with you again");
+==== "Because a vision softly creeping"
+    print("Because a vision softly creeping");
+>>>>
+  }
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print("instance is null");
+    instance = new C();
+  }
+  instance.foo();
+}
+''',
+
+  r'''
+two_updates_with_removal
+==> main.dart.patch <==
+// Test that the test framework handles more than one update when the last
+// update is a removal.
+
+<<<< "Hello, World!"
+foo() {
+  print("Hello, World!");
+}
+==== "Hello, Brave New World!"
+foo() {
+  print("Hello, Brave New World!");
+}
+==== "threw"
+>>>>
+
+main() {
+  try {
+    foo();
+  } catch (e) {
+    print("threw");
+  }
+}
+''',
+
+  r'''
 main_args
 ==> main.dart.patch <==
 // Test that that isolate support works
@@ -561,6 +761,175 @@ main() {
 ''',
 
   r'''
+local_function_closure
+==> main.dart.patch <==
+// Test that a stored closure of a local function changes behavior when updated
+
+var closure;
+class C {
+  m() {
+    l() {
+<<<< ["closure is null","v1"]
+      print('v1');
+==== "v2"
+      print('v2');
+>>>>
+    }
+    closure = l;
+  }
+}
+
+main() {
+  if (closure == null) {
+    print('closure is null');
+    new C().m();
+  }
+  closure();
+}
+
+''',
+
+  r'''
+new_instance_tearoff
+==> main.dart.patch <==
+// Test that we can tear off an exisiting instance method
+
+class C {
+  m(String s) {
+    print(s);
+  }
+
+  n() {
+<<<< ["instance is null","v1"]
+    m("v1");
+==== "v2"
+    var f = m;
+    f("v2");
+>>>>
+  }
+}
+var instance;
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  instance.n();
+}
+
+
+''',
+
+  r'''
+stored_instance_tearoff_with_named_parameters
+==> main.dart.patch <==
+// Test that a stored instance tearoff with named parameter changes behavior
+// when updated
+
+class C {
+  m({a: 'a'}) {
+<<<< ["closure is null","v1"]
+  print('v1');
+==== "v2"
+  print('v2');
+>>>>
+  }
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  closure(a: 'b');
+}
+
+
+''',
+
+  r'''
+stored_instance_tearoff_with_optional_positional_parameters
+==> main.dart.patch <==
+// Test that a stored instance tearoff with optional positional parameter
+// changes behavior when updated
+
+class C {
+  m([a ='a']) {
+<<<< ["closure is null","v1", "v1"]
+  print('v1');
+==== ["v2", "v2"]
+  print('v2');
+>>>>
+  }
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  closure('b');
+  closure();
+}
+
+
+''',
+
+  r'''
+invalidate_method_used_in_tearoff
+==> main.dart.patch <==
+// Test that we can introduce a change that causes a method used as tear-off
+// to be recompiled.
+
+class A {
+  m() => print("v1");
+}
+
+class B extends A {
+<<<< ["closure is null","v1"]
+==== []
+  m() => null;
+>>>>
+}
+
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new B().m;
+    closure();
+  }
+}
+
+
+''',
+
+  r'''
+invalidate_method_with_optional_parameters
+==> main.dart.patch <==
+// Test that we can introduce a change that causes a method with optional
+// parameters to be recompiled.
+
+class A {
+  m([a="a"]) => print("v1");
+}
+
+class B extends A {
+<<<< "v1"
+  m([a="a"]) => null;
+==== "v1"
+>>>>
+}
+
+main() {
+  new B();
+  new A().m();
+}
+
+
+''',
+
+  r'''
 remove_instance_method
 ==> main.dart.patch <==
 // Test that deleting an instance method works
@@ -590,6 +959,40 @@ main() {
 ''',
 
   r'''
+remove_instance_method_with_optional_parameters
+==> main.dart.patch <==
+// Test that deleting an instance method with optional parameters works
+
+class C {
+<<<< ["instance is null","v1","v1"]
+  m([a = "a"]) {
+    print('v1');
+  }
+==== ["threw","threw"]
+>>>>
+}
+var instance;
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  try {
+    instance.m();
+  } catch (e) {
+    print('threw');
+  }
+    try {
+    instance.m("b");
+  } catch (e) {
+    print('threw');
+  }
+}
+
+
+''',
+
+  r'''
 remove_instance_method_stored_in_tearoff
 ==> main.dart.patch <==
 // Test that deleting an instance method works, even if stored in a tear-off
@@ -599,7 +1002,7 @@ class C {
   m() {
     print('v1');
   }
-==== {"messages":["threw"]}
+==== {"messages":["threw", "threw"]}
 >>>>
 }
 var closure;
@@ -610,6 +1013,47 @@ main() {
   }
   try {
     closure();
+  } catch (e) {
+    print('threw');
+  }
+
+  try {
+    new C().m;
+  } catch (e) {
+    print("threw");
+  }
+}
+
+
+''',
+
+  r'''
+remove_instance_method_with_optional_parameters_stored_in_tearoff
+==> main.dart.patch <==
+// Test that deleting an instance method with optional parameters works, even if
+// stored in a tear-off
+
+class C {
+<<<< ["closure is null","v1","v1"]
+  m([a = "a"]) {
+    print('v1');
+  }
+==== ["threw", "threw"]
+>>>>
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  try {
+    closure();
+  } catch (e) {
+    print('threw');
+  }
+    try {
+    closure("b");
   } catch (e) {
     print('threw');
   }
@@ -649,6 +1093,138 @@ main() {
     instance = new C();
   }
   instance.m();
+}
+
+
+''',
+
+  r'''
+override_method_with_field_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  m() {}
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  var m;
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m;
+  }
+}
+
+
+''',
+
+  r'''
+override_field_with_method_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  var m;
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  m() {}
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m();
+  }
+}
+
+
+''',
+
+  r'''
+override_method_with_getter_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  m() {}
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  get m => null;
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m;
+  }
+}
+
+
+''',
+
+  r'''
+override_getter_with_method_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  get m => null;
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  m() {}
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m();
+  }
 }
 
 
@@ -1347,8 +1923,7 @@ var normal;
 foo() {
   print(normal);
 }
-==== {"messages":["v2","lazy"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+==== ["v2","lazy"]
 var lazy = bar();
 
 foo() {
@@ -1611,8 +2186,7 @@ add_compound_instance_field
 class C {
 <<<< ["[instance] is null","v1","[instance.y] threw"]
   int x;
-==== {"messages":["v1","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v1","v2"]
   int x, y;
 >>>>
 }
@@ -1650,8 +2224,7 @@ remove_compound_instance_field
 class C {
 <<<< ["[instance] is null","v1","v2"]
   int x, y;
-==== {"messages":["v1","[instance.y] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v1","[instance.y] threw"]
   int x;
 >>>>
 }
@@ -1688,8 +2261,7 @@ static_field_to_instance_field
 class C {
 <<<< ["[instance] is null","v1","[instance.x] threw"]
   static int x;
-==== {"messages":["[C.x] threw","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["[C.x] threw","v2"]
   int x;
 >>>>
 }
@@ -1727,8 +2299,7 @@ instance_field_to_static_field
 class C {
 <<<< ["[instance] is null","[C.x] threw","v1"]
   int x;
-==== {"messages":["v2","[instance.x] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v2","[instance.x] threw"]
   static int x;
 >>>>
 }
@@ -1853,8 +2424,7 @@ change_library_name
 // Test that a change in library name is handled
 <<<< "Hello, World!"
 library test.main1;
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 library test.main2;
 >>>>
 
@@ -1868,8 +2438,7 @@ add_import
 ==> main.dart.patch <==
 // Test that adding an import is handled
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 import 'dart:core';
 >>>>
 
@@ -1883,8 +2452,7 @@ add_export
 ==> main.dart.patch <==
 // Test that adding an export is handled
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 export 'dart:core';
 >>>>
 
@@ -1900,8 +2468,7 @@ add_part
 library test.main;
 
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 part 'part.dart';
 >>>>
 
@@ -1983,9 +2550,7 @@ compile_time_error_001
 // Reproduce a crash when a compile-time error is added
 main() {
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
   do for while if;
 >>>>
 }
@@ -2009,9 +2574,7 @@ compile_time_error_003
 ==> main.dart.patch <==
 // Reproduce a crash when a compile-time error is reported on a new class
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 abstract class A implements bool default F {
   A();
 }
@@ -2038,9 +2601,7 @@ compile_time_error_004
 // Reproduce a crash when a class has a bad hierarchy
 <<<< []
 typedef A(C c);
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 typedef A(Class c);
 >>>>
 
@@ -2070,8 +2631,7 @@ compile_time_error_005
 main() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   var funcnuf = (x) => ((x))=((x)) <= (x);
-==== {"messages":["Hello"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== "Hello"
   print("Hello");
 >>>>
 }
@@ -2081,9 +2641,7 @@ main() {
 compile_time_error_006
 ==> main.dart.patch <==
 <<<< "error"
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 test({b}) {
   if (?b) return b;
 }
@@ -2105,9 +2663,7 @@ generic_types_001
 <<<< []
 class A<T> {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 >>>>
 
 main() {
@@ -2123,9 +2679,7 @@ generic_types_002
 ==> main.dart.patch <==
 // Test adding a generic class.
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A<T> {
 }
 >>>>
@@ -2145,9 +2699,7 @@ generic_types_003
 <<<< []
 class A {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A<T> {
 }
 >>>>
@@ -2164,9 +2716,7 @@ generic_types_004
 <<<< []
 class A<T> {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A {
 }
 >>>>
@@ -2182,9 +2732,7 @@ add_named_mixin_application
 // Test that we can add a mixin application.
 class A {}
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
-// mixin applications.
+==== []
 class C = Object with A;
 >>>>
 main() {
@@ -2203,9 +2751,7 @@ remove_named_mixin_application
 class A {}
 <<<< []
 class C = Object with A;
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
-// mixin applications.
+==== []
 >>>>
 main() {
   new A();
@@ -2226,9 +2772,7 @@ class C = Object with A;
 main() {
   new C();
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
-  // named mixin applications.
+==== []
   new C();
 >>>>
 }
@@ -2253,8 +2797,7 @@ super_is_parameter
 ==> main.dart.patch <==
 <<<< []
 class A<S> {
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== []
 class A<S extends S> {
 >>>>
   S field;
@@ -2276,9 +2819,7 @@ main() {
   var a = "hello";
 <<<< "hello"
   print(a);
-==== {"messages":["hello from closure"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
-  // capture variables in closures.
+==== "hello from closure"
   (() => print('$a from closure'))();
 >>>>
 }
@@ -2350,8 +2891,7 @@ compile_time_error_partial_file
 class C {
 <<<< {"messages":[],"hasCompileTimeError":1}
   int sync*;
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates should not throw.
+==== []
   int sync;
 }
 main() {
@@ -2500,8 +3040,7 @@ main() {
 add_top_level_field
 ==> main.dart.patch <==
 <<<< "v1"
-==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== ["null","value"]
 var field;
 >>>>
 main() {
@@ -2520,8 +3059,7 @@ add_static_field
 ==> main.dart.patch <==
 class C {
 <<<< "v1"
-==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== ["null","value"]
   static var field;
 >>>>
 }
@@ -2544,8 +3082,7 @@ main_signature_change
 void main() {
   print("v1");
 }
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+==== "v2"
 main() {
   print("v2");
 }
@@ -2691,8 +3228,7 @@ r'''
 add_unused_enum_class
 ==> main.dart.patch <==
 <<<< []
-==== {"messages": [], "compileUpdatesShouldThrow":1}
-// TODO(ahe): Shouldn't throw
+==== []
 enum E { e0 }
 >>>>
 
@@ -2705,8 +3241,7 @@ remove_unused_enum_class
 ==> main.dart.patch <==
 <<<< []
 enum E { e0 }
-==== {"messages": [], "compileUpdatesShouldThrow":1}
-// TODO(ahe): Shouldn't throw
+==== []
 >>>>
 
 main() {

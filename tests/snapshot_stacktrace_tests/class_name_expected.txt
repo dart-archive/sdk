@@ -1,0 +1,15 @@
+<STDOUT>:
+Uncaught exception:
+a Instance: 
+  - class = A
+  - @0 = 1
+  - @1 = foo
+  - @2 = instance of B
+
+   0: main tests/snapshot_stacktrace_tests/class_name_test.dart:16:3
+   1: callMain lib/system/system.dart:72:24
+   2: entry lib/system/system.dart:97:14
+
+<STDERR>:
+
+<EXITCODE>:255

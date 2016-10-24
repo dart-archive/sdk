@@ -1,0 +1,28 @@
+Starting session. Type 'help' for a list of commands.
+
+> b main
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> r
+tests/debugger/unused_optional_test.dart:12:17
+12     Expect.equals(1, 1);
+> s
+tests/debugger/unused_optional_test.dart:12:20
+12     Expect.equals(1, 1);
+> s
+third_party/dart/pkg/expect/lib/expect.dart:93:65
+93     static void equals(var expected, var actual, [String reason = null]) {
+> l
+third_party/dart/pkg/expect/lib/expect.dart:93:65
+88     }
+89   
+90     /**
+91      * Checks whether the expected and actual values are equal (using `==`).
+92      */
+93     static void equals(var expected, var actual, [String reason = null]) {
+94       if (expected == actual) return;
+95       String msg = _getMessage(reason);
+96       if (expected is String && actual is String) {
+97         String stringDifference = _stringDifference(expected, actual);
+98         if (stringDifference != null) {
+> c
+### process terminated

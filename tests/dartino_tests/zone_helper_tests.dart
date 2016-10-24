@@ -13,9 +13,6 @@ import 'package:dartino_compiler/src/zone_helper.dart';
 
 import 'package:expect/expect.dart';
 
-import 'dart:io' show
-    Platform;
-
 final Uri fileWithCompileTimeError =
     Uri.base.resolve("tests/dartino_tests/file_with_compile_time_error.dart");
 

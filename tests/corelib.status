@@ -2,9 +2,11 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+stacktrace_current_test: CompileTimeError
+
 [ $system == macos ]
 # https://github.com/dartino/sdk/issues/401
-big_integer_huge_mul_vm_test: Pass, Slow, Timeout
+big_integer_huge_mul_vm_test: Pass, Slow, Timeout, Crash
 
 [ $runtime == dartino_compiler ]
 # -D option not implemented.
@@ -24,8 +26,9 @@ regexp/regexp_test: RuntimeError
 
 # Function.apply
 apply2_test: RuntimeError
-apply3_test: CompileTimeError
-apply4_test: RuntimeError
+apply3_test: CompileTimeError # https://github.com/dartino/sdk/issues/518
+apply4_test: RuntimeError # https://github.com/dartino/sdk/issues/518
+apply5_test: RuntimeError # https://github.com/dartino/sdk/issues/518
 apply_test: RuntimeError
 
 # int.parse not working for big integers.
@@ -87,9 +90,6 @@ package_resource_test: RuntimeError
 # DartVM specific, uses dart:io.
 file_resource_test: CompileTimeError
 http_resource_test: CompileTimeError
-
-# Missing set-if-null implementation
-data_uri_test: RuntimeError
 
 # Unexpected command line arguments to compiler.
 bool_from_environment_test: CompileTimeError
@@ -160,7 +160,6 @@ big_integer_arith_vm_test/div: RuntimeError
 big_integer_arith_vm_test/mod: RuntimeError
 big_integer_huge_mul_vm_test: Pass, Slow, Timeout
 compare_to_test: RuntimeError
-core_runtime_types_test: RuntimeError
 double_ceil_to_double_test: RuntimeError
 double_compare_test: RuntimeError
 double_floor_to_double_test: RuntimeError
@@ -180,15 +179,14 @@ list_test/none: Crash
 nan_infinity_test/01: RuntimeError
 nan_infinity_test/none: RuntimeError
 num_sign_test: Pass, Crash
-regexp/global_test: Fail
-regexp/regexp_test: Crash
-string_fromcharcodes_test: Crash
+regexp/global_test: Fail, RuntimeError, Pass
+# Out of memory: https://github.com/dartino/sdk/issues/464
+regexp/regexp_test: Crash, Timeout
 toInt_test: RuntimeError
 uri_base_test: Crash
 # These actually crash because of stack overflow. The overflow
 # is caused by the recursive snapshot reader.
 int_parse_radix_test/02: Timeout
-string_fromcharcodes_test: Timeout
 
 [ $mode == debug && $system == lk ]
 uri_parse_test: Slow, Pass, Timeout
@@ -196,9 +194,10 @@ int_parse_radix_test/01: Slow, Pass, Timeout
 int_parse_radix_test/none: Slow, Pass, Timeout
 num_sign_test: Slow, Pass, Timeout
 list_unmodifiable_test: Crash
+regexp/pcre_test: Slow, Pass
 
 [ $mode == debug || $asan ]
-regexp/global_test: Slow, Pass
+regexp/global_test: Slow, Pass, Timeout
 
 [ $mode == debug ]
 big_integer_huge_mul_vm_test: Slow, Pass
@@ -224,6 +223,7 @@ uri_ipv4_test: RuntimeError
 uri_ipv6_test: RuntimeError
 uri_normalize_path_test: RuntimeError
 uri_normalize_test: RuntimeError
+uri_parameters_all_test: CompileTimeError
 uri_parse_test: RuntimeError
 uri_path_test: RuntimeError
 uri_query_test: RuntimeError

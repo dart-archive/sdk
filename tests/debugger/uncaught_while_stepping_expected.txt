@@ -1,0 +1,15 @@
+Starting session. Type 'help' for a list of commands.
+
+> b main
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> r
+tests/debugger/uncaught_while_stepping_test.dart:8:9
+8      throw "Error";
+> s
+tests/debugger/uncaught_while_stepping_test.dart:8:3
+8      throw "Error";
+> s
+Uncaught exception: 'Error'
+* 0: main        @throw "Error"
+> quit
+Non-zero exit code from 'dartino-vm' (255).

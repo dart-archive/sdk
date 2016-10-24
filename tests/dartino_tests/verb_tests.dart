@@ -8,9 +8,6 @@ library dartino_tests.verb_tests;
 import 'dart:async' show
     Future;
 
-import 'package:expect/expect.dart' show
-    Expect;
-
 import 'package:dartino_compiler/src/verbs/help_verb.dart' as help_verb;
 
 /// Test verifies that the help text is the right shape.

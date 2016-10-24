@@ -14,9 +14,6 @@ spawn_empty_test: Pass, Timeout, Crash # https://github.com/dartino/sdk/issues/4
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
-# https://github.com/dartino/sdk/issues/395
-external_memory_triggers_gc_test: Skip
-
 [ $system == macos ]
 # https://github.com/dartino/sdk/issues/401
 dart2js_hello_world_test: Slow, Pass, Timeout
@@ -50,10 +47,13 @@ messaging_process_die_early_gc_on_delete_test: Fail
 messaging_program_gc_gc_on_delete_test: Fail
 messaging_program_gc_test: Fail
 random_test: Pass, Slow, Timeout
-shared_immutable_data_test: RuntimeError, Slow, Timeout # Stack overflow
+shared_immutable_data_test: Pass, Slow
 uri_base_test: Crash # Uri.base not implemented.
-messaging_process_die_early_test: Timeout, Crash # Timeout due to infinite loops in certain OOM cases
+
 messaging_many_to_single_test: Slow, Pass
+messaging_many_process_test: Slow, Pass
+messaging_benchmark_test: Slow, Pass
+corelib/regexp/pcre_test: Slow, Pass
 
 [ $mode == debug && $asan ]
 random_test: Slow, Pass

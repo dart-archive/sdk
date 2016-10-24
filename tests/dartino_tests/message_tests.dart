@@ -5,11 +5,11 @@
 import 'dart:async' show
     Completer,
     Future,
-    Stream,
     StreamController,
     Zone;
 
 import 'dart:convert' show
+    LineSplitter,
     UTF8;
 
 import 'package:expect/expect.dart' show
@@ -26,11 +26,9 @@ import 'package:dartino_compiler/src/hub/sentence_parser.dart' show
     Sentence,
     parseSentence;
 
-import 'package:dartino_compiler/src/verbs/actions.dart' show
-    Action;
-
 import 'package:dartino_compiler/src/hub/hub_main.dart' show
     ClientLogger,
+    ClientCommandSender,
     ClientConnection,
     IsolatePool,
     handleVerb;
@@ -51,7 +49,13 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
     analyzeSentence;
 
 import 'package:dartino_compiler/src/worker/developer.dart' show
-    parseSettings;
+    parseSettings,
+    parseDevice;
+
+import 'package:dartino_compiler/src/guess_configuration.dart' show
+    dartinoVersion;
+
+import 'package:dartino_compiler/src/hub/analytics.dart';
 
 final IsolatePool pool = new IsolatePool(workerMain);
 
@@ -79,6 +83,8 @@ Future<Null> checkExample(DiagnosticKind kind, Example example) async {
     await checkCommandLineExample(kind, example);
   } else if (example is SettingsExample) {
     checkSettingsExample(kind, example);
+  } else if (example is DeviceExample) {
+    checkDeviceConfigurationExample(kind, example);
   } else if (example is Untestable) {
     // Ignored.
   } else {
@@ -91,6 +97,23 @@ void checkSettingsExample(DiagnosticKind kind, SettingsExample example) {
   try {
     parseSettings(example.data, mockUri);
     throw "Settings example: '${example.data}' "
+        "didn't produce the expected '$kind' error";
+  } on InputError catch (e) {
+    Expect.isNotNull(e);
+    Expect.equals(kind, e.kind, '$e');
+    // Ensure that the diagnostic can be turned into a formatted error message.
+    String message = e.asDiagnostic().formatMessage();
+    Expect.isNotNull(message);
+  }
+}
+
+void checkDeviceConfigurationExample(
+    DiagnosticKind kind, DeviceExample example) {
+  Uri mockUri = new Uri(scheme: "org.dartlang.tests.mock");
+  Uri mockUri2 = new Uri(scheme: "org.dartlang.tests.mock2");
+  try {
+    parseDevice(example.data, mockUri, mockUri2);
+    throw "Device configuration example: '${example.data}' "
         "didn't produce the expected '$kind' error";
   } on InputError catch (e) {
     Expect.isNotNull(e);
@@ -136,9 +159,6 @@ Future<Null> checkCommandLineExample(
     Expect.stringEquals(
         message,
         new RegExp(expectedMessage).stringMatch(message));
-  } else if (kind == DiagnosticKind.attachToVmBeforeRun) {
-    await mock.done;
-    Expect.stringEquals(getMessage(kind), mock.stderrMessages.single);
   } else {
     Expect.isNotNull(mock.recordedError);
     Expect.equals(kind, mock.recordedError.kind, '${mock.recordedError}');
@@ -152,7 +172,10 @@ Future<Null> checkCommandLineExample(
 Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
-  await handleVerb(arguments, client, pool);
+  List<String> mainArgs =
+    [dartinoVersion, '/current/dir', 'detached', '01234', null]
+      ..addAll(arguments);
+  await handleVerb(mainArgs, client, null, pool);
   return client;
 }
 
@@ -165,14 +188,26 @@ class MockClientConnection implements ClientConnection {
 
   final Completer mockCompleter = new Completer();
 
+  final bool debug;
+
   final List<String> stderrMessages = <String>[];
+
+  List<String> stdoutMessages;
 
   final StreamController<ClientCommand> controller =
       new StreamController<ClientCommand>();
 
+  final Analytics analytics;
+
+  ClientCommandSender commandSender;
+
   AnalyzedSentence sentence;
 
-  MockClientConnection();
+  MockClientConnection({bool shouldPromptForOptIn: false, this.debug: false})
+      : analytics = new MockAnalytics(
+          shouldPromptForOptInValue: shouldPromptForOptIn) {
+    commandSender = new MockClientCommandSender(this);
+  }
 
   get completer => mockCompleter;
 
@@ -216,6 +251,7 @@ class MockClientConnection implements ClientConnection {
   }
 
   mockPrintLine(String line) {
+    if (!debug) return;
     Zone zone = Zone.current.parent;
     if (zone == null) {
       zone = Zone.current;
@@ -229,6 +265,7 @@ class MockClientConnection implements ClientConnection {
   }
 
   printLineOnStdout(line) {
+    stdoutMessages?.add(line);
     mockPrintLine('stdout: $line');
   }
 
@@ -245,9 +282,13 @@ class MockClientConnection implements ClientConnection {
     return 1;
   }
 
-  AnalyzedSentence parseArguments(List<String> arguments) {
+  AnalyzedSentence parseArguments(String version, String currentDirectory,
+      bool interactive, List<String> arguments) {
     Options options = Options.parse(arguments);
-    Sentence sentence = parseSentence(options.nonOptionArguments);
+    Sentence sentence = parseSentence(options.nonOptionArguments,
+        version: version,
+        currentDirectory: currentDirectory,
+        interactive: interactive);
     this.sentence = analyzeSentence(sentence, null);
     return this.sentence;
   }
@@ -255,16 +296,17 @@ class MockClientConnection implements ClientConnection {
   handleClientCommand(_) => throw "not supported";
   handleClientCommandError(e, s) => throw "not supported";
   handleClientCommandsDone() => throw "not supported";
+  promptUser(_) => throw "not supported";
   start() => throw "not supported";
   get arguments => throw "not supported";
   get argumentsCompleter => throw "not supported";
   set argumentsCompleter(_) => throw "not supported";
-  get commandSender => throw "not supported";
-  set commandSender(_) => throw "not supported";
   set completer(_) => throw "not supported";
   get dartinoVm => throw "not supported";
   set dartinoVm(_) => throw "not supported";
   get requiresWorker => throw "not supported";
+  get responseCompleter => throw "not supported";
+  set responseCompleter(_) => throw "not supported";
   get socket => throw "not supported";
   get subscription => throw "not supported";
   set subscription(_) => throw "not supported";
@@ -293,4 +335,74 @@ class MockClientLogger implements ClientLogger {
   get arguments => throw "not supported";
   set arguments(_) => throw "not supported";
   get notes => throw "not supported";
+}
+
+class MockAnalytics implements Analytics {
+  final bool shouldPromptForOptInValue;
+  MockAnalytics({this.shouldPromptForOptInValue: false});
+  int optInCount = 0;
+  get hasOptedIn => false;
+  get hasOptedOut => true;
+  get shouldPromptForOptIn => shouldPromptForOptInValue;
+  set shouldPromptForOptIn(_) => throw "not supported";
+  get serverUrl => throw "not supported";
+  get uuid => null;
+  get uuidUri => null;
+  clearUuid() => throw "not supported";
+  hash(String original) => throw "not supported";
+  hashAllUris(List<String> words) => throw "not supported";
+  hashUri(String str) => throw "not supported";
+  hashUriWords(String stringOfWords) => throw "not supported";
+  loadUuid() => throw "not supported";
+  logComplete(int exitCode) { /* ignored */ }
+  logError(error, [StackTrace stackTrace]) { /* ignored */ }
+  logErrorMessage(String userErrMsg) { /* ignored */ }
+  logRequest(String version, String currentDirectory, bool interactive,
+      String startTimeMillis, List<String> arguments) { /* ignored */ }
+  logResponse(String responseType, List<String> arguments) { /* ignored */}
+  logShutdown() { /* ignored */ }
+  logStartup() { /* ignored */ }
+  logVersion() { /* ignored */ }
+  readUuid() => throw "not supported";
+  shutdown() async { /* ignored */ }
+  bool writeNewUuid() {
+    ++optInCount;
+    return true;
+  }
+  bool writeOptOut() {
+    --optInCount;
+    return true;
+  }
+  writeUuid() => throw "not supported";
+}
+
+class MockClientCommandSender implements ClientCommandSender {
+  final MockClientConnection mockClientConnection;
+  final StreamController<List<int>> mockOut = new StreamController();
+  final StreamController<List<int>> mockErr = new StreamController();
+
+  MockClientCommandSender(MockClientConnection clientConnection)
+      : mockClientConnection = clientConnection {
+    mockOut.stream
+        .transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(mockClientConnection.printLineOnStdout);
+    mockErr.stream
+        .transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(mockClientConnection.printLineOnStderr);
+  }
+
+  void sendClose() => throw "not supported";
+  void sendDataCommand(ClientCommandCode code, List<int> data) =>
+      throw "not supported";
+  void sendEventLoopStarted() => throw "not supported";
+  void sendExitCode(int exitCode) {
+    mockClientConnection.printLineOnStdout('Exit code sent: $exitCode');
+  }
+  void sendStderr(String data) => throw "not supported";
+  void sendStderrBytes(List<int> data) => mockErr.add(data);
+  void sendStdout(String data) => throw "not supported";
+  void sendStdoutBytes(List<int> data) => mockOut.add(data);
+  Sink<List<int>> get sink => null;
 }

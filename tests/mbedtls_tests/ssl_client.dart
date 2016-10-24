@@ -4,14 +4,33 @@
 
 import 'dart:dartino.ffi';
 import 'package:ffi/ffi.dart';
+import 'package:socket/socket.dart'
+    show SocketException;
 import 'package:expect/expect.dart';
 
 import 'package:mbedtls/mbedtls.dart';
 import 'dart:math';
 
 const String serverPort = const String.fromEnvironment('SERVER_PORT');
+const String test = const String.fromEnvironment('TEST');
 
-void main() {
+Map<String, Function> testMapping = {
+  'NORMAL': normal_server,
+  'DISCONNECT': disconnecting_server,
+};
+
+isTLSException(e) => e is TLSException;
+
+void disconnecting_server() {
+  isTLSException(e) => e is TLSException;
+  var port = int.parse(serverPort);
+  var socket = new TLSSocket.connect('localhost', port);
+  Expect.throws(() => socket.read(42), isTLSException);
+  socket.close();
+  Expect.throws(() => socket.writeString('foobar'), isTLSException);
+}
+
+void normal_server() {
   var port = int.parse(serverPort);
   var socket = new TLSSocket.connect('localhost', port);
   const String data = "GET THE FOOBAR";
@@ -38,7 +57,21 @@ void main() {
   var longData = "";
   for (int i = 0; i < 197; i++) longData = "$longData$data";
   Expect.equals(combined, longData);
+
   socket.close();
+  Expect.throws(() => socket.read(42), isTLSException);
+  Expect.throws(() => socket.writeString('foobar'), isTLSException);
+  Expect.throws(() => new TLSSocket.connect('does.not.exists.dartino', 42));
+}
+
+void main() {
+  if (test != null) {
+    if (!testMapping.containsKey(test)) {
+      throw '$test is not defined in the testMapping';
+    }
+    testMapping[test]();
+    return;
+  }
 }
 
 String bufferToString(ForeignMemory buffer) {

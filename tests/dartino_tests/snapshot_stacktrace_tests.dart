@@ -10,6 +10,8 @@ import 'dart:async' show
 import 'dart:io' show
     Directory,
     File,
+    FileSystemEntity,
+    Platform,
     Process,
     ProcessResult;
 
@@ -22,7 +24,8 @@ import 'package:expect/expect.dart' show
 import '../dartino_compiler/run.dart' show
     export;
 
-import 'package:dartino_compiler/program_info.dart' as program_info;
+import 'package:dartino_compiler/src/decode_stacktraces.dart' show
+    decodeProgramMain;
 
 import 'utils.dart' show
     withTempDirectory;
@@ -41,16 +44,25 @@ final String dartinoVM = '$buildDirectory/dartino-vm';
 typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests(
-    [bool write_golden_files = false]) async {
-  var tests = <String, NoArgFuture>{
-    'snapshot_stacktrace_tests/uncaught_exception':
-        () => runTest('uncaught_exception', write_golden_files),
-    'snapshot_stacktrace_tests/nsm_exception':
-        () => runTest('nsm_exception', write_golden_files),
-    'snapshot_stacktrace_tests/coroutine_exception':
-        () => runTest('coroutine_exception', write_golden_files),
-  };
+    [bool writeGoldenFiles = false]) async {
+  Map<String, NoArgFuture> tests = new Map<String, NoArgFuture>();
 
+  Directory directory =
+    new Directory(testDirectory());
+
+  String suffix = "_test.dart";
+
+  Iterable<FileSystemEntity> testFiles = directory.listSync().where((FileSystemEntity e) {
+    return e is File && e.path.endsWith(suffix);
+  });
+
+  testFiles.forEach((File file) {
+    String path = file.path;
+    String filename = path.split(Platform.pathSeparator).last;
+    String name = filename.substring(0, filename.length - suffix.length);
+    tests["snapshot_stacktrace_tests/$name"] =
+        () => runTest(name, writeGoldenFiles);
+  });
 
   // Dummy use of [main] to make analyzer happy.
   main;
@@ -58,7 +70,7 @@ Future<Map<String, NoArgFuture>> listTests(
   return tests;
 }
 
-Future runTest(String testName, bool write_golden_files) {
+Future runTest(String testName, bool writeGoldenFiles) {
   return withTempDirectory((Directory temp) async {
     String snapshotFilename = '${temp.absolute.path}/test.snapshot';
 
@@ -67,20 +79,14 @@ Future runTest(String testName, bool write_golden_files) {
 
     // Part 2: Run VM.
     ProcessResult result = await Process.run(dartinoVM, [snapshotFilename]);
-    String expectationContent =
-        await new File(testExpectationFilename(testName)).readAsString();
 
     // Part 3: Transform stdout via stack trace decoder.
     var stdin = new Stream.fromIterable([UTF8.encode(result.stdout)]);
     var stdout = new StreamController();
     Future<List> stdoutBytes =
         stdout.stream.fold([], (buffer, data) => buffer..addAll(data));
-    var arguments = [
-        buildArch.toLowerCase() == 'x64' ? '64' : '32',
-        buildSystem.toLowerCase() == 'lk' ? 'float' : 'double',
-        '${snapshotFilename}.info.json',
-    ];
-    await program_info.decodeProgramMain(arguments, stdin, stdout);
+    await decodeProgramMain([testFilename(testName), snapshotFilename],
+        stdin, stdout);
 
     // Part 4: Build expectation string
     String stdoutString = UTF8.decode(await stdoutBytes);
@@ -90,7 +96,7 @@ Future runTest(String testName, bool write_golden_files) {
         '<EXITCODE>:${result.exitCode}';
 
     // Part 5: Compare actual/expected or write to golden files.
-    if (write_golden_files) {
+    if (writeGoldenFiles) {
       // Create golden file directory (if it doesn't exist).
       var dir = new Directory(testDirectory('_generated'));
       if (!await dir.exists()) await dir.create(recursive: true);
@@ -105,6 +111,8 @@ Future runTest(String testName, bool write_golden_files) {
       await new File(testExpectationFilename(testName, '_generated'))
           .writeAsString(actualOutput);
     } else {
+      String expectationContent =
+          await new File(testExpectationFilename(testName)).readAsString();
       Expect.stringEquals(expectationContent, actualOutput);
     }
   });

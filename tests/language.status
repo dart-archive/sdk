@@ -7,10 +7,316 @@
 
 closure_cycles_test: Slow, Pass # We see this test time out in various configs.
 
-[ $compiler == dartino_compiler || $runtime == dartino_compiler ]
+abstract_beats_arguments_test: RuntimeError
+accessor_conflict_export2_test: Crash
+accessor_conflict_export_test: Crash
+accessor_conflict_import2_test: RuntimeError
+accessor_conflict_import_prefixed2_test: RuntimeError
+accessor_conflict_import_prefixed_test: RuntimeError
+accessor_conflict_import_test: RuntimeError
+async_await_test: CompileTimeError
+async_star_no_cancel2_test: RuntimeError
+async_star_no_cancel_test: RuntimeError
+class_cycle2_test/01: MissingCompileTimeError
+class_cycle_test/00: MissingCompileTimeError
+class_cycle_test/01: MissingCompileTimeError
+config_import_test: CompileTimeError
+const_getter_test/01: MissingCompileTimeError
+deep_nesting1_negative_test: Crash
+deep_nesting2_negative_test: Crash
+deferred_import_core_test: RuntimeError
+function_syntax_test/36: RuntimeError, Pass
+generic_local_functions_test: CompileTimeError
+generic_functions_test: CompileTimeError
+generic_methods_test: CompileTimeError
+generic_sends_test: CompileTimeError
+generic_methods_function_type_test: CompileTimeError # Generic functions not implemented
+generic_methods_type_expression_test: CompileTimeError # Generic functions not implemented
+generic_methods_new_test: CompileTimeError # Generic functions not implemented
+issue_25671a_test/01: RuntimeError
+issue_25671b_test/01: RuntimeError
+library_env_test/has_mirror_support: RuntimeError
+library_env_test/has_no_html_support: RuntimeError
+library_env_test/has_no_io_support: RuntimeError
+method_name_test: RuntimeError
+mixin_of_mixin_test/01: CompileTimeError
+mixin_of_mixin_test/02: CompileTimeError
+mixin_of_mixin_test/03: CompileTimeError
+mixin_of_mixin_test/04: CompileTimeError
+mixin_of_mixin_test/05: CompileTimeError
+mixin_of_mixin_test/06: CompileTimeError
+mixin_of_mixin_test/07: CompileTimeError
+mixin_of_mixin_test/08: CompileTimeError
+mixin_of_mixin_test/09: CompileTimeError
+mixin_of_mixin_test/10: CompileTimeError
+mixin_of_mixin_test/11: CompileTimeError
+mixin_of_mixin_test/12: CompileTimeError
+mixin_of_mixin_test/13: CompileTimeError
+mixin_of_mixin_test/14: CompileTimeError
+mixin_of_mixin_test/15: CompileTimeError
+mixin_of_mixin_test/16: CompileTimeError
+mixin_of_mixin_test/17: CompileTimeError
+mixin_of_mixin_test/18: CompileTimeError
+mixin_of_mixin_test/19: CompileTimeError
+mixin_of_mixin_test/20: CompileTimeError
+mixin_of_mixin_test/21: CompileTimeError
+mixin_of_mixin_test/22: CompileTimeError
+mixin_of_mixin_test/none: CompileTimeError
+mixin_supertype_subclass2_test/01: CompileTimeError
+mixin_supertype_subclass2_test/02: CompileTimeError
+mixin_supertype_subclass2_test/03: CompileTimeError
+mixin_supertype_subclass2_test/04: CompileTimeError
+mixin_supertype_subclass2_test/05: CompileTimeError
+mixin_supertype_subclass2_test/none: CompileTimeError
+mixin_supertype_subclass3_test/01: CompileTimeError
+mixin_supertype_subclass3_test/02: CompileTimeError
+mixin_supertype_subclass3_test/03: CompileTimeError
+mixin_supertype_subclass3_test/04: CompileTimeError
+mixin_supertype_subclass3_test/05: CompileTimeError
+mixin_supertype_subclass3_test/none: CompileTimeError
+mixin_supertype_subclass4_test/01: CompileTimeError
+mixin_supertype_subclass4_test/02: CompileTimeError
+mixin_supertype_subclass4_test/03: CompileTimeError
+mixin_supertype_subclass4_test/04: CompileTimeError
+mixin_supertype_subclass4_test/05: CompileTimeError
+mixin_supertype_subclass4_test/none: CompileTimeError
+mixin_supertype_subclass_test/01: CompileTimeError
+mixin_supertype_subclass_test/02: CompileTimeError
+mixin_supertype_subclass_test/03: CompileTimeError
+mixin_supertype_subclass_test/04: CompileTimeError
+mixin_supertype_subclass_test/05: CompileTimeError
+mixin_supertype_subclass_test/none: CompileTimeError
+regress_23996_test: RuntimeError
+regress_24567_test: RuntimeError
+regress_24935_test/none: RuntimeError
+regress_26175_test: RuntimeError
+super_no_such_method1_test/01: RuntimeError
+super_no_such_method2_test/01: RuntimeError
+super_no_such_method3_test/01: RuntimeError
+super_no_such_method4_test/01: RuntimeError
+super_no_such_method5_test/01: RuntimeError
+type_variable_closure3_test: RuntimeError
+type_variable_closure4_test: RuntimeError
+type_variable_field_initializer2_test: RuntimeError
+type_variable_field_initializer_closure2_test: RuntimeError
+
+[ $compiler == dartino_compiler || $runtime == dartino_compiler ||
+ $compiler == dartino_llvm ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError
+
+arg_param_trailing_comma_test/100: MissingCompileTimeError
+arg_param_trailing_comma_test/101: MissingCompileTimeError
+arg_param_trailing_comma_test/102: MissingCompileTimeError
+arg_param_trailing_comma_test/103: MissingCompileTimeError
+arg_param_trailing_comma_test/104: MissingCompileTimeError
+arg_param_trailing_comma_test/105: MissingCompileTimeError
+arg_param_trailing_comma_test/106: MissingCompileTimeError
+arg_param_trailing_comma_test/107: MissingCompileTimeError
+arg_param_trailing_comma_test/108: RuntimeError
+arg_param_trailing_comma_test/109: RuntimeError
+arg_param_trailing_comma_test/10: MissingCompileTimeError
+arg_param_trailing_comma_test/110: RuntimeError
+arg_param_trailing_comma_test/111: RuntimeError
+arg_param_trailing_comma_test/112: RuntimeError
+arg_param_trailing_comma_test/113: RuntimeError
+arg_param_trailing_comma_test/114: RuntimeError
+arg_param_trailing_comma_test/115: RuntimeError
+arg_param_trailing_comma_test/116: RuntimeError
+arg_param_trailing_comma_test/117: RuntimeError
+arg_param_trailing_comma_test/118: RuntimeError
+arg_param_trailing_comma_test/119: RuntimeError
+arg_param_trailing_comma_test/11: MissingCompileTimeError
+arg_param_trailing_comma_test/120: RuntimeError
+arg_param_trailing_comma_test/121: RuntimeError
+arg_param_trailing_comma_test/122: RuntimeError
+arg_param_trailing_comma_test/123: RuntimeError
+arg_param_trailing_comma_test/124: RuntimeError
+arg_param_trailing_comma_test/125: RuntimeError
+arg_param_trailing_comma_test/126: RuntimeError
+arg_param_trailing_comma_test/127: RuntimeError
+arg_param_trailing_comma_test/128: RuntimeError
+arg_param_trailing_comma_test/129: RuntimeError
+arg_param_trailing_comma_test/12: MissingCompileTimeError
+arg_param_trailing_comma_test/130: RuntimeError
+arg_param_trailing_comma_test/131: RuntimeError
+arg_param_trailing_comma_test/132: RuntimeError
+arg_param_trailing_comma_test/133: RuntimeError
+arg_param_trailing_comma_test/134: RuntimeError
+arg_param_trailing_comma_test/135: RuntimeError
+arg_param_trailing_comma_test/136: RuntimeError
+arg_param_trailing_comma_test/137: RuntimeError
+arg_param_trailing_comma_test/138: RuntimeError
+arg_param_trailing_comma_test/139: RuntimeError
+arg_param_trailing_comma_test/13: MissingCompileTimeError
+arg_param_trailing_comma_test/140: RuntimeError
+arg_param_trailing_comma_test/141: RuntimeError
+arg_param_trailing_comma_test/142: RuntimeError
+arg_param_trailing_comma_test/143: RuntimeError
+arg_param_trailing_comma_test/144: RuntimeError
+arg_param_trailing_comma_test/145: RuntimeError
+arg_param_trailing_comma_test/146: RuntimeError
+arg_param_trailing_comma_test/147: RuntimeError
+arg_param_trailing_comma_test/148: RuntimeError
+arg_param_trailing_comma_test/149: RuntimeError
+arg_param_trailing_comma_test/14: MissingCompileTimeError
+arg_param_trailing_comma_test/150: RuntimeError
+arg_param_trailing_comma_test/151: RuntimeError
+arg_param_trailing_comma_test/152: RuntimeError
+arg_param_trailing_comma_test/153: RuntimeError
+arg_param_trailing_comma_test/154: RuntimeError
+arg_param_trailing_comma_test/155: RuntimeError
+arg_param_trailing_comma_test/156: RuntimeError
+arg_param_trailing_comma_test/157: RuntimeError
+arg_param_trailing_comma_test/158: RuntimeError
+arg_param_trailing_comma_test/159: RuntimeError
+arg_param_trailing_comma_test/15: MissingCompileTimeError
+arg_param_trailing_comma_test/160: RuntimeError
+arg_param_trailing_comma_test/161: RuntimeError
+arg_param_trailing_comma_test/162: RuntimeError
+arg_param_trailing_comma_test/163: RuntimeError
+arg_param_trailing_comma_test/164: RuntimeError
+arg_param_trailing_comma_test/165: RuntimeError
+arg_param_trailing_comma_test/166: RuntimeError
+arg_param_trailing_comma_test/167: MissingCompileTimeError
+arg_param_trailing_comma_test/168: MissingCompileTimeError
+arg_param_trailing_comma_test/169: MissingCompileTimeError
+arg_param_trailing_comma_test/16: MissingCompileTimeError
+arg_param_trailing_comma_test/170: MissingCompileTimeError
+arg_param_trailing_comma_test/171: MissingCompileTimeError
+arg_param_trailing_comma_test/172: MissingCompileTimeError
+arg_param_trailing_comma_test/173: MissingCompileTimeError
+arg_param_trailing_comma_test/174: MissingCompileTimeError
+arg_param_trailing_comma_test/175: MissingCompileTimeError
+arg_param_trailing_comma_test/176: MissingCompileTimeError
+arg_param_trailing_comma_test/177: MissingCompileTimeError
+arg_param_trailing_comma_test/178: MissingCompileTimeError
+arg_param_trailing_comma_test/179: MissingCompileTimeError
+arg_param_trailing_comma_test/17: MissingCompileTimeError
+arg_param_trailing_comma_test/180: MissingCompileTimeError
+arg_param_trailing_comma_test/181: MissingCompileTimeError
+arg_param_trailing_comma_test/182: MissingCompileTimeError
+arg_param_trailing_comma_test/183: MissingCompileTimeError
+arg_param_trailing_comma_test/184: MissingCompileTimeError
+arg_param_trailing_comma_test/185: MissingCompileTimeError
+arg_param_trailing_comma_test/186: MissingCompileTimeError
+arg_param_trailing_comma_test/187: MissingCompileTimeError
+arg_param_trailing_comma_test/188: MissingCompileTimeError
+arg_param_trailing_comma_test/189: MissingCompileTimeError
+arg_param_trailing_comma_test/18: MissingCompileTimeError
+arg_param_trailing_comma_test/190: MissingCompileTimeError
+arg_param_trailing_comma_test/191: MissingCompileTimeError
+arg_param_trailing_comma_test/192: MissingCompileTimeError
+arg_param_trailing_comma_test/193: MissingCompileTimeError
+arg_param_trailing_comma_test/194: MissingCompileTimeError
+arg_param_trailing_comma_test/195: MissingCompileTimeError
+arg_param_trailing_comma_test/196: MissingCompileTimeError
+arg_param_trailing_comma_test/197: MissingCompileTimeError
+arg_param_trailing_comma_test/198: MissingCompileTimeError
+arg_param_trailing_comma_test/199: MissingCompileTimeError
+arg_param_trailing_comma_test/19: MissingCompileTimeError
+arg_param_trailing_comma_test/1: MissingCompileTimeError
+arg_param_trailing_comma_test/200: MissingCompileTimeError
+arg_param_trailing_comma_test/201: MissingCompileTimeError
+arg_param_trailing_comma_test/202: MissingCompileTimeError
+arg_param_trailing_comma_test/203: MissingCompileTimeError
+arg_param_trailing_comma_test/204: MissingCompileTimeError
+arg_param_trailing_comma_test/205: MissingCompileTimeError
+arg_param_trailing_comma_test/206: MissingCompileTimeError
+arg_param_trailing_comma_test/207: MissingCompileTimeError
+arg_param_trailing_comma_test/208: MissingCompileTimeError
+arg_param_trailing_comma_test/209: MissingCompileTimeError
+arg_param_trailing_comma_test/20: MissingCompileTimeError
+arg_param_trailing_comma_test/210: MissingCompileTimeError
+arg_param_trailing_comma_test/21: MissingCompileTimeError
+arg_param_trailing_comma_test/22: MissingCompileTimeError
+arg_param_trailing_comma_test/23: MissingCompileTimeError
+arg_param_trailing_comma_test/24: MissingCompileTimeError
+arg_param_trailing_comma_test/25: MissingCompileTimeError
+arg_param_trailing_comma_test/26: MissingCompileTimeError
+arg_param_trailing_comma_test/27: RuntimeError
+arg_param_trailing_comma_test/28: RuntimeError
+arg_param_trailing_comma_test/29: RuntimeError
+arg_param_trailing_comma_test/2: MissingCompileTimeError
+arg_param_trailing_comma_test/30: RuntimeError
+arg_param_trailing_comma_test/31: RuntimeError
+arg_param_trailing_comma_test/32: RuntimeError
+arg_param_trailing_comma_test/33: RuntimeError
+arg_param_trailing_comma_test/34: RuntimeError
+arg_param_trailing_comma_test/35: RuntimeError
+arg_param_trailing_comma_test/36: RuntimeError
+arg_param_trailing_comma_test/37: RuntimeError
+arg_param_trailing_comma_test/38: RuntimeError
+arg_param_trailing_comma_test/39: RuntimeError
+arg_param_trailing_comma_test/3: MissingCompileTimeError
+arg_param_trailing_comma_test/40: RuntimeError
+arg_param_trailing_comma_test/41: RuntimeError
+arg_param_trailing_comma_test/42: RuntimeError
+arg_param_trailing_comma_test/43: RuntimeError
+arg_param_trailing_comma_test/44: RuntimeError
+arg_param_trailing_comma_test/45: RuntimeError
+arg_param_trailing_comma_test/46: RuntimeError
+arg_param_trailing_comma_test/47: RuntimeError
+arg_param_trailing_comma_test/48: RuntimeError
+arg_param_trailing_comma_test/49: MissingCompileTimeError
+arg_param_trailing_comma_test/4: MissingCompileTimeError
+arg_param_trailing_comma_test/50: MissingCompileTimeError
+arg_param_trailing_comma_test/51: MissingCompileTimeError
+arg_param_trailing_comma_test/52: MissingCompileTimeError
+arg_param_trailing_comma_test/53: MissingCompileTimeError
+arg_param_trailing_comma_test/54: MissingCompileTimeError
+arg_param_trailing_comma_test/55: MissingCompileTimeError
+arg_param_trailing_comma_test/56: MissingCompileTimeError
+arg_param_trailing_comma_test/57: MissingCompileTimeError
+arg_param_trailing_comma_test/58: MissingCompileTimeError
+arg_param_trailing_comma_test/59: MissingCompileTimeError
+arg_param_trailing_comma_test/5: MissingCompileTimeError
+arg_param_trailing_comma_test/60: MissingCompileTimeError
+arg_param_trailing_comma_test/61: MissingCompileTimeError
+arg_param_trailing_comma_test/62: MissingCompileTimeError
+arg_param_trailing_comma_test/63: MissingCompileTimeError
+arg_param_trailing_comma_test/64: MissingCompileTimeError
+arg_param_trailing_comma_test/65: MissingCompileTimeError
+arg_param_trailing_comma_test/66: MissingCompileTimeError
+arg_param_trailing_comma_test/67: MissingCompileTimeError
+arg_param_trailing_comma_test/68: MissingCompileTimeError
+arg_param_trailing_comma_test/69: MissingCompileTimeError
+arg_param_trailing_comma_test/6: MissingCompileTimeError
+arg_param_trailing_comma_test/70: MissingCompileTimeError
+arg_param_trailing_comma_test/71: MissingCompileTimeError
+arg_param_trailing_comma_test/72: MissingCompileTimeError
+arg_param_trailing_comma_test/73: MissingCompileTimeError
+arg_param_trailing_comma_test/74: MissingCompileTimeError
+arg_param_trailing_comma_test/75: MissingCompileTimeError
+arg_param_trailing_comma_test/76: MissingCompileTimeError
+arg_param_trailing_comma_test/77: MissingCompileTimeError
+arg_param_trailing_comma_test/78: MissingCompileTimeError
+arg_param_trailing_comma_test/79: MissingCompileTimeError
+arg_param_trailing_comma_test/7: MissingCompileTimeError
+arg_param_trailing_comma_test/80: MissingCompileTimeError
+arg_param_trailing_comma_test/81: MissingCompileTimeError
+arg_param_trailing_comma_test/82: MissingCompileTimeError
+arg_param_trailing_comma_test/83: MissingCompileTimeError
+arg_param_trailing_comma_test/84: MissingCompileTimeError
+arg_param_trailing_comma_test/85: MissingCompileTimeError
+arg_param_trailing_comma_test/86: MissingCompileTimeError
+arg_param_trailing_comma_test/87: MissingCompileTimeError
+arg_param_trailing_comma_test/88: MissingCompileTimeError
+arg_param_trailing_comma_test/89: MissingCompileTimeError
+arg_param_trailing_comma_test/8: MissingCompileTimeError
+arg_param_trailing_comma_test/90: MissingCompileTimeError
+arg_param_trailing_comma_test/91: MissingCompileTimeError
+arg_param_trailing_comma_test/92: MissingCompileTimeError
+arg_param_trailing_comma_test/93: MissingCompileTimeError
+arg_param_trailing_comma_test/94: MissingCompileTimeError
+arg_param_trailing_comma_test/95: MissingCompileTimeError
+arg_param_trailing_comma_test/96: MissingCompileTimeError
+arg_param_trailing_comma_test/97: MissingCompileTimeError
+arg_param_trailing_comma_test/98: MissingCompileTimeError
+arg_param_trailing_comma_test/99: MissingCompileTimeError
+arg_param_trailing_comma_test/9: MissingCompileTimeError
+
 assertion_test: RuntimeError
 assign_to_type_test/01: RuntimeError
 assign_to_type_test/02: RuntimeError
@@ -21,7 +327,6 @@ async_and_or_test: RuntimeError
 async_await_catch_regression_test: RuntimeError
 async_await_syntax_test/a05a: RuntimeError
 async_await_syntax_test/a05b: RuntimeError
-async_await_syntax_test/a05h: RuntimeError
 async_await_syntax_test/a06a: RuntimeError
 async_await_syntax_test/a07a: RuntimeError
 async_await_syntax_test/a08a: RuntimeError
@@ -42,8 +347,6 @@ async_await_syntax_test/c07a: RuntimeError
 async_await_syntax_test/c08a: RuntimeError
 async_await_syntax_test/c09a: RuntimeError
 async_await_syntax_test/c10a: RuntimeError
-async_await_syntax_test/c11a: MissingCompileTimeError
-async_await_syntax_test/c11b: RuntimeError
 async_await_syntax_test/d05a: RuntimeError
 async_await_syntax_test/d06a: RuntimeError
 async_await_syntax_test/d07a: RuntimeError
@@ -116,7 +419,6 @@ await_for_use_local_test: RuntimeError
 await_future_test: RuntimeError
 await_nonfuture_test: RuntimeError
 await_not_started_immediately_test: RuntimeError
-await_null_aware_test: RuntimeError
 await_postfix_expr_test: RuntimeError
 await_regression_test: RuntimeError
 await_test: RuntimeError
@@ -174,7 +476,6 @@ closures_initializer2_test: RuntimeError
 closures_initializer_test: RuntimeError
 compile_time_constant_test/01: RuntimeError
 compound_assignment_operator_test: RuntimeError
-const_constructor_nonconst_field_test/01: MissingCompileTimeError
 const_dynamic_type_literal_test/01: RuntimeError
 const_error_multiply_initialized_test/02: CompileTimeError
 const_error_multiply_initialized_test/04: CompileTimeError
@@ -408,80 +709,13 @@ generic_object_type_test: RuntimeError
 generic_parameterized_extends_test: RuntimeError
 generic_test: RuntimeError
 getter_setter_in_lib_test: RuntimeError
-if_null_assignment_behavior_test/01: RuntimeError
-if_null_assignment_behavior_test/02: RuntimeError
-if_null_assignment_behavior_test/03: RuntimeError
-if_null_assignment_behavior_test/04: RuntimeError
-if_null_assignment_behavior_test/05: RuntimeError
-if_null_assignment_behavior_test/06: RuntimeError
-if_null_assignment_behavior_test/07: RuntimeError
-if_null_assignment_behavior_test/08: RuntimeError
-if_null_assignment_behavior_test/09: RuntimeError
-if_null_assignment_behavior_test/10: RuntimeError
-if_null_assignment_behavior_test/11: RuntimeError
-if_null_assignment_behavior_test/12: RuntimeError
-if_null_assignment_behavior_test/13: RuntimeError
-if_null_assignment_behavior_test/14: RuntimeError
-if_null_assignment_behavior_test/15: RuntimeError
-if_null_assignment_behavior_test/16: RuntimeError
-if_null_assignment_behavior_test/17: RuntimeError
-if_null_assignment_behavior_test/18: RuntimeError
-if_null_assignment_behavior_test/19: RuntimeError
-if_null_assignment_behavior_test/20: RuntimeError
-if_null_assignment_behavior_test/21: RuntimeError
-if_null_assignment_behavior_test/22: RuntimeError
-if_null_assignment_behavior_test/23: RuntimeError
-if_null_assignment_behavior_test/24: RuntimeError
-if_null_assignment_behavior_test/25: RuntimeError
-if_null_assignment_behavior_test/26: RuntimeError
-if_null_assignment_behavior_test/27: RuntimeError
-if_null_assignment_behavior_test/28: RuntimeError
-if_null_assignment_behavior_test/31: RuntimeError
-if_null_assignment_behavior_test/32: RuntimeError
-if_null_assignment_behavior_test/none: RuntimeError
-if_null_assignment_static_test/01: RuntimeError
-if_null_assignment_static_test/02: RuntimeError
-if_null_assignment_static_test/03: RuntimeError
-if_null_assignment_static_test/04: RuntimeError
-if_null_assignment_static_test/05: RuntimeError
-if_null_assignment_static_test/06: RuntimeError
-if_null_assignment_static_test/07: RuntimeError
-if_null_assignment_static_test/08: RuntimeError
-if_null_assignment_static_test/09: RuntimeError
-if_null_assignment_static_test/10: RuntimeError
-if_null_assignment_static_test/11: RuntimeError
-if_null_assignment_static_test/12: RuntimeError
-if_null_assignment_static_test/13: RuntimeError
-if_null_assignment_static_test/14: RuntimeError
-if_null_assignment_static_test/15: RuntimeError
-if_null_assignment_static_test/16: RuntimeError
-if_null_assignment_static_test/17: RuntimeError
-if_null_assignment_static_test/18: RuntimeError
-if_null_assignment_static_test/19: RuntimeError
-if_null_assignment_static_test/20: RuntimeError
-if_null_assignment_static_test/21: RuntimeError
-if_null_assignment_static_test/22: RuntimeError
-if_null_assignment_static_test/23: RuntimeError
-if_null_assignment_static_test/24: RuntimeError
-if_null_assignment_static_test/25: RuntimeError
-if_null_assignment_static_test/26: RuntimeError
-if_null_assignment_static_test/27: RuntimeError
-if_null_assignment_static_test/28: RuntimeError
-if_null_assignment_static_test/29: RuntimeError
-if_null_assignment_static_test/30: RuntimeError
-if_null_assignment_static_test/31: RuntimeError
-if_null_assignment_static_test/32: RuntimeError
-if_null_assignment_static_test/33: RuntimeError
-if_null_assignment_static_test/34: RuntimeError
-if_null_assignment_static_test/35: RuntimeError
-if_null_assignment_static_test/36: RuntimeError
-if_null_assignment_static_test/37: RuntimeError
-if_null_assignment_static_test/38: RuntimeError
-if_null_assignment_static_test/39: RuntimeError
-if_null_assignment_static_test/40: RuntimeError
-if_null_assignment_static_test/41: RuntimeError
-if_null_assignment_static_test/42: RuntimeError
-if_null_assignment_static_test/none: RuntimeError
+if_null_assignment_behavior_test/15: RuntimeError # Class literals not implemented.
+initializing_formal_access_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_final_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_capture_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_type_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_promotion_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_scope_test: CompileTimeError # Initializing formal access not implemented
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
@@ -566,9 +800,9 @@ mixin_type_parameters_simple_test: RuntimeError
 mixin_type_parameters_super_extends_test: RuntimeError
 mixin_type_parameters_super_test: RuntimeError
 mixin_super_use_test: CompileTimeError
-multiline_newline_test/01: CompileTimeError
-multiline_newline_test/02: CompileTimeError
-multiline_newline_test/03: CompileTimeError
+multiline_newline_test/01: RuntimeError
+multiline_newline_test/02: RuntimeError
+multiline_newline_test/03: RuntimeError
 multiline_newline_test/04: RuntimeError
 multiline_newline_test/05: RuntimeError
 multiline_newline_test/06: RuntimeError
@@ -589,7 +823,6 @@ not_enough_positional_arguments_test/02: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 null_is2_test: RuntimeError
 null_test/none: CompileTimeError
-nullaware_opt_test: RuntimeError
 number_identity2_test: RuntimeError
 on_catch_malformed_type_test: RuntimeError
 overridden_no_such_method_test: CompileTimeError
@@ -615,6 +848,7 @@ regress_13462_1_test: CompileTimeError
 regress_13494_test: RuntimeError
 regress_17382_test: RuntimeError
 regress_18535_test: CompileTimeError
+regress_18713_test: RuntimeError # https://github.com/dart-lang/sdk/issues/26743
 regress_20935_test: Fail
 regress_21795_test: RuntimeError
 regress_22438_test: RuntimeError
@@ -622,6 +856,7 @@ regress_22443_test: RuntimeError
 regress_22445_test: RuntimeError
 regress_22579_test: RuntimeError
 regress_22700_test: RuntimeError
+regress_26530_test: RuntimeError # https://github.com/dartino/sdk/issues/561
 regress_22777_test: RuntimeError
 regress_22936_test/01: RuntimeError
 regress_22976_test/01: CompileTimeError
@@ -632,7 +867,9 @@ regress_23500_test/01: RuntimeError
 regress_23500_test/02: RuntimeError
 regress_23500_test/none: RuntimeError
 regress_23650_test: RuntimeError
+regress_26133_test: RuntimeError
 regress_r24720_test: RuntimeError
+regress_26668_test: RuntimeError
 reify_typevar_test: RuntimeError
 runtime_type_test: CompileTimeError
 scope_variable_test/01: MissingCompileTimeError
@@ -662,9 +899,6 @@ symbol_literal_test/01: CompileTimeError
 symbol_literal_test/none: CompileTimeError
 sync_generator1_test/01: RuntimeError
 sync_generator1_test/none: RuntimeError
-sync_generator2_test/07: RuntimeError
-sync_generator2_test/08: RuntimeError
-sync_generator2_test/10: RuntimeError
 sync_generator2_test/20: RuntimeError
 sync_generator2_test/30: RuntimeError
 sync_generator2_test/40: RuntimeError
@@ -691,6 +925,7 @@ top_level_getter_no_setter2_test/01: RuntimeError
 try_catch_on_syntax_test/10: MissingRuntimeError
 try_catch_on_syntax_test/11: MissingRuntimeError
 try_catch_optimized1_test: RuntimeError
+try_catch_test/01: MissingCompileTimeError # The compile-time-error is never met.
 type_argument_substitution_test: RuntimeError
 type_check_test: RuntimeError
 type_checks_in_factory_method_test: RuntimeError
@@ -749,7 +984,15 @@ generic_creation_test: RuntimeError
 mixin_regress_13688_test: RuntimeError
 null2_test: RuntimeError
 
-[ $compiler == dartino_compiler ]
+# These tests are written expecting dart:developer to always be present.
+# We want to support at least parts of dart:developer - issue #562.
+library_env_test/none: RuntimeError
+library_env_test/has_io_support: RuntimeError
+library_env_test/has_no_mirror_support: RuntimeError
+library_env_test/has_no_html_support: RuntimeError
+library_env_test/has_html_support: RuntimeError
+
+[ $compiler == dartino_compiler || $compiler == dartino_llvm ]
 
 async_test/constructor2: MissingCompileTimeError
 async_test/constructor3: MissingCompileTimeError
@@ -777,7 +1020,7 @@ this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
 
-[ $runtime == dartino_compiler ]
+[ $runtime == dartino_compiler || $runtime == llvm ]
 
 # Dartino reports runtime error, but should report compile-time error.
 async_test/constructor2: RuntimeError
@@ -828,7 +1071,7 @@ bit_operations_test/02: Crash
 bit_operations_test/03: Crash
 bit_operations_test/04: Crash
 bit_operations_test/none: Crash
-closure_cycles_test: Crash
+closure_cycles_test: Pass, Timeout
 double_int_to_string_test: RuntimeError
 double_to_string_as_exponential3_test: RuntimeError
 double_to_string_as_exponential_test: RuntimeError
@@ -836,7 +1079,7 @@ double_to_string_as_fixed_test: RuntimeError
 double_to_string_as_precision3_test: RuntimeError
 double_to_string_as_precision_test: RuntimeError
 double_to_string_test: RuntimeError
-gc_test: Crash
+gc_test: Pass, Slow
 intrinsified_methods_test: RuntimeError
 large_class_declaration_test: RuntimeError
 nan_identical_test: Crash
@@ -844,11 +1087,6 @@ number_identity2_test: Crash
 round_test: RuntimeError
 constant_string_interpolation2_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
-vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
-# These actually overflow the stack because the snapshot reader is
-# recursive.
-large_class_declaration_test: Timeout
-smaller_4_Interface_Types_A11_t01_test: Crash
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
@@ -861,6 +1099,8 @@ async_continue_label_test/await_in_init: CompileTimeError
 async_continue_label_test/await_in_update: CompileTimeError
 async_continue_label_test/none: CompileTimeError
 async_regression_23058_test: CompileTimeError
+async_star_no_cancel_test: CompileTimeError
+async_star_no_cancel2_test: CompileTimeError
 async_this_bound_test: CompileTimeError
 asyncstar_concat_test: CompileTimeError
 await_not_started_immediately_test: CompileTimeError
@@ -1016,6 +1256,12 @@ regress_23498_test: CompileTimeError
 regress_23500_test/01: CompileTimeError
 regress_23500_test/02: CompileTimeError
 regress_23500_test/none: CompileTimeError
+regress_23996_test: CompileTimeError
+regress_24935_test/01: CompileTimeError
+regress_24935_test/none: CompileTimeError
+regress_25620_test: CompileTimeError
+regress_26133_test: CompileTimeError
+regress_26175_test: CompileTimeError
 vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 closure_cycles_test: CompileTimeError
 
@@ -1033,12 +1279,9 @@ deferred_type_dependency_test/type_annotation: CompileTimeError
 mixin_prefix_test: CompileTimeError
 
 # No async on embedded, so these give the correct compile-time error:
-async_await_syntax_test/a05h: Pass
 async_await_syntax_test/b00a: Pass
 async_await_syntax_test/b00b: Pass
 async_await_syntax_test/b00c: Pass
-async_await_syntax_test/c11a: Pass
-async_await_syntax_test/c11b: Pass
 async_await_syntax_test/e4: Pass
 async_await_syntax_test/e5: Pass
 async_await_syntax_test/e6: Pass
@@ -1049,9 +1292,6 @@ async_test/setter1: Pass
 await_backwards_compatibility_test/await2: Pass
 await_backwards_compatibility_test/await3: Pass
 await_backwards_compatibility_test/await4: Pass
-sync_generator2_test/07: Pass
-sync_generator2_test/08: Pass
-sync_generator2_test/10: Pass
 sync_generator2_test/20: Pass
 sync_generator2_test/30: Pass
 sync_generator2_test/40: Pass
@@ -1069,3 +1309,7 @@ vm/regress_22621_vm_test: RuntimeError
 
 # No uri on embedded
 unsorted/uri_base_test: RuntimeError
+
+[ $system == macos && $mode == debug && $asan ]
+override_inheritance_no_such_method_test/none: Pass, Crash # Issue 434
+setter_override_test/none: Pass, Crash # Issue 434

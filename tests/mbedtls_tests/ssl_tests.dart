@@ -12,6 +12,9 @@ import 'dart:convert' show
     UTF8,
     Utf8Decoder;
 
+/// Tests for the mbedtls package. The corresponding dartino file is
+/// ssl_client.dart next to this file.
+
 main() async {
   await testServerClient();
 }
@@ -31,31 +34,77 @@ SecurityContext createContext() {
   var testDirUri = new Uri.file(testsDir);
   var chain = testDirUri.resolve('../$certPath/server_chain.pem');
   var key = testDirUri.resolve('../$certPath/server_key.pem');
-  return new SecurityContext()
+  var context = new SecurityContext();
+  return context
     ..useCertificateChain(chain.toFilePath())
     ..usePrivateKey(key.toFilePath(), password: 'dartdart');
 }
 
-Future testServerClient() async {
+Future testGoodServer() async {
   var server = await SecureServerSocket.bind(InternetAddress.LOOPBACK_IP_V4,
                                              0,
                                              createContext());
+  int received = 0;
   server.listen((SecureSocket client) {
     client
       .transform(UTF8.decoder)
-      .listen((s) => client.write(s), onDone: () => client.close());
-  });
+      .listen((s) {
+        received += s.length;
+        client.write(s);
+        }, onDone: () => client.close());
+      });
+  var testDirUri = new Uri.file(testsDir);
+  var client = testDirUri.resolve('mbedtls_tests/ssl_client.dart');
 
+  var tempTest = '$buildDirectory/tests';
+  await new Directory(tempTest).create(recursive: true);
+  var snapshot = '$tempTest/ssl_client.snapshot';
+  var environment = {
+    'TEST': 'NORMAL',
+    'SERVER_PORT': '${server.port}'
+  };
+  await export(client.toFilePath(), snapshot, constants:environment);
+
+  var process = await Process.start(dartinoVmExecutable, [snapshot]);
+  //  We print this, in the normal case there is no output, but in case of error
+  // we actually want it all.
+  var stdoutFuture = process.stdout.transform(UTF8.decoder)
+      .transform(new LineSplitter())
+      .listen((s) => print('dartino-vm(stdout): $s')).asFuture();
+  var stderrFuture = process.stderr.transform(UTF8.decoder)
+      .transform(new LineSplitter())
+      .listen((s) => print('dartino-vm(stderr): $s')).asFuture();
+  var result = await process.exitCode;
+  await server.close();
+  await stdoutFuture;
+  await stderrFuture;
+  Expect.equals(result, 0);
+  Expect.equals(received, 14 * 10 + 14 * 200);
+}
+
+Future testServerDisconnect() async {
+  var server = await SecureServerSocket.bind(InternetAddress.LOOPBACK_IP_V4,
+                                             0,
+                                             createContext());
+  int connections = 0;
+  server.listen((SecureSocket client) {
+    connections++;
+    client.close();
+    client
+      .transform(UTF8.decoder)
+      .listen((s) {
+      });
+  });
   var testDirUri = new Uri.file(testsDir);
   var client = testDirUri.resolve('mbedtls_tests/ssl_client.dart');
   var tempTest = '$buildDirectory/tests';
   await new Directory(tempTest).create(recursive: true);
   var snapshot = '$tempTest/ssl_client.snapshot';
   var environment = {
-    'SERVER_PORT': '${server.port}'
+    'SERVER_PORT': '${server.port}',
+    'TEST': 'DISCONNECT'
   };
   await export(client.toFilePath(), snapshot, constants:environment);
-
   var process = await Process.start(dartinoVmExecutable, [snapshot]);
   // We print this, in the normal case there is no output, but in case of error
   // we actually want it all.
@@ -69,6 +118,11 @@ Future testServerClient() async {
   await server.close();
   await stdoutFuture;
   await stderrFuture;
+  Expect.equals(connections, 1);
   Expect.equals(result, 0);
+}
 
+Future testServerClient() async {
+  await testGoodServer();
+  //  await testServerDisconnect();
 }

@@ -1,16 +1,16 @@
 <STDOUT>:
 NoSuchMethodError: Foo.bar
-   0: Object.noSuchMethod
-   1: Object._noSuchMethod
-   2: Object._noSuchMethodTrampoline
-   3: <internal>.call
-   4: Coroutine._coroutineStart
+   0: Object.noSuchMethod lib/core/core_patch.dart:34:7
+   1: Object._noSuchMethod lib/core/core_patch.dart:47:12
+   2: Object._noSuchMethodTrampoline 
+   3: foo.<anonymous> tests/snapshot_stacktrace_tests/coroutine_exception_test.dart:9:31
+   4: Coroutine._coroutineStart lib/dartino/dartino.dart:235:18
  <<called-by-coroutine>>
-   0: Coroutine.call
-   1: foo
-   2: main
-   3: callMain
-   4: entry
+   0: Coroutine.call lib/dartino/dartino.dart:212:48
+   1: foo tests/snapshot_stacktrace_tests/coroutine_exception_test.dart:9:10
+   2: main tests/snapshot_stacktrace_tests/coroutine_exception_test.dart:7:11
+   3: callMain lib/system/system.dart:72:24
+   4: entry lib/system/system.dart:97:14
 
 <STDERR>:
 

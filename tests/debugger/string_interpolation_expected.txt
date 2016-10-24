@@ -3,7 +3,7 @@ Starting session. Type 'help' for a list of commands.
 > t verbose
 ### verbose printing set to: false
 > b main
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > r
 main    @'${foo()} and ${bar()}'
 > s

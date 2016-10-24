@@ -1,9 +1,9 @@
 Starting session. Type 'help' for a list of commands.
 
 > b main
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > b breakHere
-breakpoint set: id: '1' method: 'breakHere' bytecode index: '0'
+### set breakpoint id: '1' method: 'breakHere' bytecode index: '0'
 > lb
 ### breakpoints:
 id: '0' method: 'main' bytecode index: '0'

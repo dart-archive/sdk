@@ -1,0 +1,13 @@
+Starting session. Type 'help' for a list of commands.
+
+> b main
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> r
+tests/debugger/step_over_end_test.dart:8:9
+8      print("hello");
+> n
+tests/debugger/step_over_end_test.dart:8:3
+8      print("hello");
+> n
+hello
+### process terminated

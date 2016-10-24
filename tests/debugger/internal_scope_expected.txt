@@ -1,0 +1,38 @@
+Starting session. Type 'help' for a list of commands.
+
+> b main
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> r
+tests/debugger/internal_scope_test.dart:20:13
+20     var rnd = new Random();
+> n
+tests/debugger/internal_scope_test.dart:21:3
+21     rnd.nextInt(255);
+> toggle internal
+### internal frame visibility set to: true
+> s
+tests/debugger/internal_scope_test.dart:21:15
+21     rnd.nextInt(255);
+> s
+tests/debugger/internal_scope_test.dart:21:3
+21     rnd.nextInt(255);
+> s
+lib/math/math_patch.dart:63:16
+63       int mask = max - 1;
+> bt
+* 0: _Random.nextInt @max
+  1: main            @rnd.nextInt(255)
+  2: callMain        @invokeMain(arguments)
+  3: entry           @callMain(new _Arguments())
+> p
+max: 255
+this: Instance of '_Random'
+> toggle internal
+### internal frame visibility set to: false
+> bt
+* 0: main            @rnd.nextInt(255)
+> p
+rnd: Instance of '_Random'
+> p rnd
+Instance of '_Random'
+> q

@@ -27,8 +27,9 @@ void testSettingsRoundTrip(Settings settings) {
   Settings after = parseSettings(const JsonCodec().encode(json),
       Uri.parse("file:///dummy.dartino-settings"));
   Expect.equals(before.packages, after.packages);
-  Expect.listEquals(before.options, after.options);
+  Expect.listEquals(before.compilerOptions, after.compilerOptions);
   Expect.mapEquals(before.constants, after.constants);
+  Expect.listEquals(before.embedderOptions, after.embedderOptions);
   Expect.equals(before.deviceAddress, after.deviceAddress);
   Expect.equals(before.deviceType, after.deviceType);
   Expect.equals(before.incrementalMode, after.incrementalMode);
@@ -40,6 +41,8 @@ Future<Null> main() async {
       fileUri(".packages", Uri.base),
       ["a", "b", "c"],
       {"a": "A", "b": "b"},
+      ["x", "y", "z"],
+      "device",
       new Address("localhost", 8080),
       DeviceType.embedded,
       IncrementalMode.experimental));
