@@ -5,7 +5,6 @@
 #ifndef SRC_VM_CODEGEN_LLVM_H_
 #define SRC_VM_CODEGEN_LLVM_H_
 
-#include "src/vm/assembler.h"
 #include "src/vm/program.h"
 #include "src/vm/vector.h"
 

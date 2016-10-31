@@ -198,7 +198,6 @@
         '../../third_party/yasm/yasm_compile.gypi'
       ],
       'sources': [
-        '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
         'ffi.cc',
         'ffi_disabled.cc',
         'ffi.h',
@@ -217,24 +216,7 @@
         'tick_sampler.h',
         'tick_sampler_other.cc',
         'tick_sampler_posix.cc',
-      ],
-      'actions': [
-        {
-          'action_name': 'generate_generated_S',
-          'inputs': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'dartino_vm_library_generator'
-            '<(EXECUTABLE_SUFFIX)',
-          ],
-          'outputs': [
-            '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
-          ],
-          'action': [
-            '<@(_inputs)',
-            '<@(_outputs)',
-          ],
-        },
-      ],
+      ]
     },
     {
       'target_name': 'libdartino',
@@ -248,7 +230,7 @@
       'sources': [
         # TODO(ager): Lint target default requires a source file. Not
         # sure how to work around that.
-        'assembler.h',
+        'assert.h',
       ],
       'actions': [
         {
@@ -272,45 +254,6 @@
           ]
         },
       ]
-    },
-    {
-      'target_name': 'dartino_vm_library_generator',
-      'type': 'executable',
-      'toolsets': ['host'],
-      'dependencies': [
-        '../shared/shared.gyp:dartino_shared',
-      ],
-      'conditions': [
-        [ 'OS=="mac"', {
-          'dependencies': [
-            '../shared/shared.gyp:copy_asan#host',
-          ],
-          'sources': [
-            '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
-          ],
-        }],
-      ],
-      'sources': [
-        'assembler_arm64_linux.cc',
-        'assembler_arm64_macos.cc',
-        'assembler_arm.cc',
-        'assembler_arm.h',
-        'assembler_arm_thumb_linux.cc',
-        'assembler_arm_linux.cc',
-        'assembler_arm_macos.cc',
-        'assembler.h',
-        'assembler_x64.cc',
-        'assembler_x64.h',
-        'assembler_x64_linux.cc',
-        'assembler_x64_macos.cc',
-        'assembler_x86.cc',
-        'assembler_x86.h',
-        'assembler_x86_linux.cc',
-        'assembler_x86_macos.cc',
-        'assembler_x86_win.cc',
-        'generator.h',
-        'generator.cc',
-      ],
     },
     {
       'target_name': 'llvm-codegen',

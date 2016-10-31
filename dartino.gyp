@@ -64,14 +64,6 @@
       ],
     },
     {
-      'target_name': 'flashtool',
-      'type': 'none',
-      'toolsets': ['host'],
-      'dependencies': [
-        'src/tools/flashtool/flashtool.gyp:flashtool',
-      ],
-    },
-    {
       'target_name': 'toplevel_dartino',
       'type': 'none',
       'toolsets': ['target'],
