@@ -288,6 +288,7 @@
           '-lLLVMCodeGen',
           '-lLLVMCore',
           '-lLLVMInstCombine',
+          '-lLLVMipo',
           #'-lLLVMipa',
           '-lLLVMMC',
           '-lLLVMMCParser',

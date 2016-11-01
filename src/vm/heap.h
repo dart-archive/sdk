@@ -182,7 +182,7 @@ class TwoSpaceHeap : public Heap {
   explicit TwoSpaceHeap(RandomXorShift* random);
   virtual ~TwoSpaceHeap();
 
-  static const word kFixedSemiSpaceSize = 256 * KB;
+  static const word kFixedSemiSpaceSize = 2048 * KB;
 
   OldSpace* old_space() { return old_space_; }
   SemiSpace* unused_space() { return unused_semispace_; }

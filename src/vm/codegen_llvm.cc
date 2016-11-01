@@ -296,7 +296,7 @@ class HeapBuilder : public HeapObjectVisitor {
     std::vector<llvm::Constant*> class_entries = {
         heap_object, is_root ? w->CCast(null, w->class_ptr_type)
                              : BuildConstant(klass->super_class()),
-        BuildInstanceFormat(klass), w->CSmi(klass->id()),
+        BuildInstanceFormat(klass), w->CWord(klass->id()),
         w->CSmi(klass->child_id()),
         has_methods
             ? w->CCast(BuildConstant(klass->methods()), w->array_header_ptr)
@@ -1387,10 +1387,9 @@ class BasicBlockBuilder {
     klass->addIncoming(smi_klass, bb_smi);
     klass->addIncoming(custom_klass, bb_nonsmi);
 
-    auto classid =
-        h.DecodeSmi(h.LoadField(klass, Class::kIdOrTransformationTargetOffset,
-                                "id_or_transformation_target"),
-                    "id_or_transformation_target_untagged");
+    auto classid = b->CreatePtrToInt(
+        h.LoadField(klass, Class::kIdOrTransformationTargetOffset),
+         w->intptr_type, "id_or_transformation_target");
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
     auto entry = DispatchTableEntry(offset);
@@ -2423,7 +2422,12 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
   dartino_gc_trampoline = llvm::Function::Create(
       gc_trampoline_type, llvm::Function::ExternalLinkage,
       "dartino_gc_trampoline", module_);
+  llvm::AttributeSet attr_set = dartino_gc_trampoline->getAttributes();
+  attr_set = attr_set.addAttribute(
+      *context, llvm::AttributeSet::FunctionIndex, llvm::Attribute::NoInline);
+  dartino_gc_trampoline->setAttributes(attr_set);
   CreateGCTrampoline();
+
   runtime__HandleAllocate = llvm::Function::Create(
       handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate",
       module_);
@@ -2959,9 +2963,14 @@ void LLVMCodegen::OptimizeModule(llvm::Module* module, World* world) {
 
   // TODO(llvm): We should find out what other optimization passes would makes
   // sense.
+  llvm::legacy::PassManager mpm;
+  mpm.add(llvm::createFunctionInliningPass());
+  mpm.run(*module);
+
   fpm.add(llvm::createPromoteMemoryToRegisterPass());
   fpm.add(llvm::createCFGSimplificationPass());
   fpm.add(llvm::createConstantPropagationPass());
+  fpm.add(llvm::createLICMPass());
 
   for (auto& f : *module) fpm.run(f);
 }
