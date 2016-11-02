@@ -1997,7 +1997,8 @@ class BasicBlocksExplorer {
         case kReturn:
           return;
         case kSubroutineCall:
-          Enqueue(bci + Utils::ReadInt32(bcp + 1), stacksize);
+          // Subroutines are executed with return address delta on a stack.
+          Enqueue(bci + Utils::ReadInt32(bcp + 1), stacksize + 1);
         default:
           break;
       }
@@ -2034,11 +2035,7 @@ class BasicBlocksExplorer {
       todo[bci] = stacksize;
       labels[bci] = stacksize;
     } else {
-      // TODO(dmitryolsh): temporary workaround for subroutines.
-      // Basically it should calculate different StackDiff depending on
-      // the place it's called from - from the exception handler or on normal
-      // path.
-      labels[bci] = std::max(stacksize, labels[bci]);
+      ASSERT(stacksize == labels[bci]);
     }
   }
 
