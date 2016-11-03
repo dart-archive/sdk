@@ -1138,7 +1138,7 @@ class BasicBlockBuilder {
       } else {
         smi_result = b->CreateIntToPtr(result, w->object_ptr_type);
       }
-      if (no_overflow == NULL) {
+      if (Flags::wrap_smis || no_overflow == NULL) {
         b->CreateBr(bb_join);
       } else {
         b->CreateCondBr(no_overflow, bb_join, bb_nonsmi, assume_true);
@@ -1194,9 +1194,18 @@ class BasicBlockBuilder {
       method_args[index--] = pop();
     }
     ASSERT(index == 0);
-    auto result = InvokeMethodHelper(bci, selector, method_args);
 
-    push(result);
+    Function* fn;
+    if (Flags::assume_no_nsm && (fn = OnlyOneMethodMatches(selector))) {
+      // There's only one method of this name (selector), so since there are
+      // assumed to be no NoSuchMethod events, just call it (or inline it).
+      auto code = w->llvm_functions[fn];
+      auto result = CreateInvokeOrCall(bci, code, method_args, "method_result");
+      push(result);
+    } else {
+      auto result = InvokeMethodHelper(bci, selector, method_args);
+      push(result);
+    }
   }
 
   llvm::Value* DispatchTableEntry(llvm::Value* offset) {
@@ -1209,35 +1218,68 @@ class BasicBlockBuilder {
     return dte;
   }
 
+  bool SmiMatchesSelector(int selector) {
+    return SmiMatchesSelectorId(Selector::IdField::decode(selector));
+  }
+
+  bool SmiMatchesSelectorId(int selector_id) {
+    Array* dispatch_table = w->program_->dispatch_table();
+    Class* smi_klass = w->program_->smi_class();
+    int class_id = smi_klass->id();
+    Object* e = dispatch_table->get(class_id + selector_id);
+    dartino::DispatchTableEntry* entry = dartino::DispatchTableEntry::cast(e);
+    return entry->offset()->value() == selector_id;
+  }
+
+  Function* OnlyOneMethodMatches(int selector) {
+    Function* fn = nullptr;
+    Array* dispatch_table = w->program_->dispatch_table();
+    for (int i = 0; i < dispatch_table->length(); i++) {
+      Object* e = dispatch_table->get(i);
+      dartino::DispatchTableEntry* entry = dartino::DispatchTableEntry::cast(e);
+      if (entry->offset()->value() == Selector::IdField::decode(selector)) {
+        if (fn == nullptr) {
+          fn = entry->target();
+        } else if (fn != entry->target()) {
+          return nullptr;
+        }
+      }
+    }
+    return fn;
+  }
+
   llvm::Value* InvokeMethodHelper(int bci, int selector,
                                   std::vector<llvm::Value*> args) {
     int arity = args.size() - 2;
     auto receiver = args[1];
     auto entry = LookupDispatchTableEntry(receiver, selector);
-    auto expected_offset = b->CreatePtrToInt(
-        LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
-    auto smi_selector_offset = Selector::IdField::decode(selector)
-                               << Smi::kTagSize;
-    auto actual_offset = w->CWord(smi_selector_offset);
+    if (!Flags::assume_no_nsm) {
+      auto expected_offset = b->CreatePtrToInt(
+          LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
+      auto smi_selector_offset = Selector::IdField::decode(selector)
+                                 << Smi::kTagSize;
+      auto actual_offset = w->CWord(smi_selector_offset);
 
-    auto bb_lookup_failure = llvm::BasicBlock::Create(
-        *w->context, "bb_lookup_failure", llvm_function_);
-    auto bb_lookup_success = llvm::BasicBlock::Create(
-        *w->context, "bb_lookup_success", llvm_function_);
-    auto bb_start = b->GetInsertBlock();
-    b->CreateCondBr(b->CreateICmpEQ(actual_offset, expected_offset),
-                    bb_lookup_success, bb_lookup_failure);
+      auto bb_lookup_failure = llvm::BasicBlock::Create(
+          *w->context, "bb_lookup_failure", llvm_function_);
+      auto bb_lookup_success = llvm::BasicBlock::Create(
+          *w->context, "bb_lookup_success", llvm_function_);
+      auto bb_start = b->GetInsertBlock();
+      b->CreateCondBr(b->CreateICmpEQ(actual_offset, expected_offset),
+                      bb_lookup_success, bb_lookup_failure);
 
-    b->SetInsertPoint(bb_lookup_failure);
-    auto nsm_entry = DispatchTableEntry(
-        w->CWord(0));  // NSM is 0th element in dispatch table.
-    b->CreateBr(bb_lookup_success);
+      b->SetInsertPoint(bb_lookup_failure);
+      // NSM is 0th element in dispatch table.
+      auto nsm_entry = DispatchTableEntry(w->CWord(0));
+      b->CreateBr(bb_lookup_success);
 
-    b->SetInsertPoint(bb_lookup_success);
-    auto phi = b->CreatePHI(w->dte_ptr_type, 2);
-    phi->addIncoming(entry, bb_start);
-    phi->addIncoming(nsm_entry, bb_lookup_failure);
-    auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(phi),
+      b->SetInsertPoint(bb_lookup_success);
+      auto phi = b->CreatePHI(w->dte_ptr_type, 2);
+      phi->addIncoming(entry, bb_start);
+      phi->addIncoming(nsm_entry, bb_lookup_failure);
+      entry = phi;
+    }
+    auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(entry),
                               w->FunctionPtrType(1 + arity));
     return CreateInvokeOrCall(bci, code, args, "method_result");
   }
@@ -1365,27 +1407,35 @@ class BasicBlockBuilder {
   }
 
   llvm::Value* LookupDispatchTableEntry(llvm::Value* receiver, int selector) {
-    auto bb_smi = llvm::BasicBlock::Create(*context, "smi", llvm_function_);
-    auto bb_nonsmi =
-        llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
-    auto bb_lookup =
-        llvm::BasicBlock::Create(*context, "lookup", llvm_function_);
+    llvm::Value* klass;
+    if (!Flags::assume_no_nsm || SmiMatchesSelector(selector)) {
+      auto bb_smi = llvm::BasicBlock::Create(*context, "smi", llvm_function_);
+      auto bb_nonsmi =
+          llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
+      auto bb_lookup =
+          llvm::BasicBlock::Create(*context, "lookup", llvm_function_);
 
-    auto is_smi = h.CreateSmiCheck(receiver);
-    b->CreateCondBr(is_smi, bb_smi, bb_nonsmi);
+      auto is_smi = h.CreateSmiCheck(receiver);
+      b->CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
-    b->SetInsertPoint(bb_smi);
-    auto smi_klass = w->tagged_aspace0[w->program_->smi_class()];
-    b->CreateBr(bb_lookup);
+      b->SetInsertPoint(bb_smi);
+      auto smi_klass = w->tagged_aspace0[w->program_->smi_class()];
+      b->CreateBr(bb_lookup);
 
-    b->SetInsertPoint(bb_nonsmi);
-    auto custom_klass = h.LoadClass(receiver);
-    b->CreateBr(bb_lookup);
+      b->SetInsertPoint(bb_nonsmi);
+      auto custom_klass = h.LoadClass(receiver);
+      b->CreateBr(bb_lookup);
 
-    b->SetInsertPoint(bb_lookup);
-    auto klass = b->CreatePHI(w->class_ptr_type, 2, "klass");
-    klass->addIncoming(smi_klass, bb_smi);
-    klass->addIncoming(custom_klass, bb_nonsmi);
+      b->SetInsertPoint(bb_lookup);
+      auto phi = b->CreatePHI(w->class_ptr_type, 2, "klass");
+      phi->addIncoming(smi_klass, bb_smi);
+      phi->addIncoming(custom_klass, bb_nonsmi);
+      klass = phi;
+    } else {
+      // Since we assume no NoSuchMethod and Smi does not have this
+      // method, there is no need to check for Smis.
+      klass = h.LoadClass(receiver);
+    }
 
     auto classid = b->CreatePtrToInt(
         h.LoadField(klass, Class::kIdOrTransformationTargetOffset),

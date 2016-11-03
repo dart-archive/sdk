@@ -26,37 +26,40 @@ namespace dartino {
 #define FLAG_CSTRING(macro, name, value, doc) \
   macro(const char*, String, name, value, doc)
 
-#define APPLY_TO_FLAGS(debug, release)                                    \
-  FLAG_BOOLEAN(release, expose_gc, false,                                 \
-               "Expose invoking GC to native call.")                      \
-  FLAG_BOOLEAN(release, abort_on_sigterm, false,                          \
-               "Call abort() when receiving SIGTERM.")                    \
-  FLAG_BOOLEAN(debug, validate_stack, false,                              \
-               "Validate stack at each interperter step")                 \
-  FLAG_BOOLEAN(release, unfold_program, false,                            \
-               "Unfold the program before running")                       \
-  FLAG_BOOLEAN(release, gc_on_delete, false,                              \
-               "GC the heap at when terminating isolate")                 \
-  FLAG_BOOLEAN(release, validate_heaps, false,                            \
-               "Validate consistency of heaps.")                          \
-  FLAG_BOOLEAN(debug, log_decoder, false, "Log decoding")                 \
-  FLAG_BOOLEAN(debug, print_program_statistics, false,                    \
-               "Print statistics about the program")                      \
-  FLAG_BOOLEAN(release, print_heap_statistics, false,                     \
-               "Print heap statistics before GC")                         \
-  FLAG_BOOLEAN(release, verbose, false, "Verbose output")                 \
-  FLAG_BOOLEAN(debug, print_flags, false, "Print flags")                  \
-  FLAG_INTEGER(release, profile_interval, 1000, "Profile interval in us") \
-  FLAG_CSTRING(release, filter, NULL, "Filter string for unit testing")   \
-  FLAG_BOOLEAN(release, tick_sampler, false,                              \
-               "Collect execution time sampels of the entire VM")         \
-  FLAG_CSTRING(release, tick_file, "dartino.ticks",                       \
-               "Write tick samples in this file")                         \
-  /* Temporary compiler flags */                                          \
-  FLAG_BOOLEAN(release, trace_compiler, false, "")                        \
-  FLAG_BOOLEAN(release, trace_library, false, "")                         \
-  FLAG_BOOLEAN(release, codegen_64, false,                                \
-               "Generate x64 code (llvm-codegen)")
+#define APPLY_TO_FLAGS(debug, release)                                         \
+  FLAG_BOOLEAN(release, expose_gc, false,                                      \
+               "Expose invoking GC to native call.")                           \
+  FLAG_BOOLEAN(release, abort_on_sigterm, false,                               \
+               "Call abort() when receiving SIGTERM.")                         \
+  FLAG_BOOLEAN(debug, validate_stack, false,                                   \
+               "Validate stack at each interperter step")                      \
+  FLAG_BOOLEAN(release, unfold_program, false,                                 \
+               "Unfold the program before running")                            \
+  FLAG_BOOLEAN(release, gc_on_delete, false,                                   \
+               "GC the heap at when terminating isolate")                      \
+  FLAG_BOOLEAN(release, validate_heaps, false,                                 \
+               "Validate consistency of heaps.")                               \
+  FLAG_BOOLEAN(debug, log_decoder, false, "Log decoding")                      \
+  FLAG_BOOLEAN(debug, print_program_statistics, false,                         \
+               "Print statistics about the program")                           \
+  FLAG_BOOLEAN(release, print_heap_statistics, false,                          \
+               "Print heap statistics before GC")                              \
+  FLAG_BOOLEAN(release, verbose, false, "Verbose output")                      \
+  FLAG_BOOLEAN(debug, print_flags, false, "Print flags")                       \
+  FLAG_INTEGER(release, profile_interval, 1000, "Profile interval in us")      \
+  FLAG_CSTRING(release, filter, NULL, "Filter string for unit testing")        \
+  FLAG_BOOLEAN(release, tick_sampler, false,                                   \
+               "Collect execution time sampels of the entire VM")              \
+  FLAG_CSTRING(release, tick_file, "dartino.ticks",                            \
+               "Write tick samples in this file")                              \
+  /* Temporary compiler flags */                                               \
+  FLAG_BOOLEAN(release, trace_compiler, false, "")                             \
+  FLAG_BOOLEAN(release, trace_library, false, "")                              \
+  FLAG_BOOLEAN(release, codegen_64, false, "Generate x64 code (llvm-codegen)") \
+  FLAG_BOOLEAN(release, assume_no_nsm, false,                                  \
+               "Assume no-such-method never happens (LLVM codegen)")           \
+  FLAG_BOOLEAN(release, wrap_smis, false,                                      \
+               "Arithmetic on Smis wraps")
 
 #ifdef DEBUG
 #define DECLARE_DEBUG_FLAG(type, prefix, name, value, doc) static type name;

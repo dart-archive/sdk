@@ -40,7 +40,7 @@ run ninja -C out/DebugX64 llvm_embedder
 run rm -f $EXECUTABLE
 run rm -f $BASENAME.bc $BASENAME.ll $BASENAME.S $BASENAME.o
 
-run out/ReleaseX64/llvm-codegen -Xcodegen-64 $SNAPSHOT $BASENAME.bc 2> $BASENAME-codegen-out.txt
+run out/ReleaseX64/llvm-codegen -Xwrap-smis -Xcodegen-64 $SNAPSHOT $BASENAME.bc 2> $BASENAME-codegen-out.txt
 
 # Make text representation of LLVM IR (for debugging)
 run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
