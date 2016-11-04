@@ -77,7 +77,7 @@ class World {
   llvm::Constant* CInt64(int64 value);
   llvm::Constant* CWord(intptr_t value);
   llvm::Constant* CDouble(double value);
-  llvm::Constant* CSmi(uint32 integer);
+  llvm::Constant* CSmi(word integer);
   llvm::Constant* CPointer2Int(llvm::Constant* constant);
   llvm::Constant* CInt2Pointer(llvm::Constant* constant,
                                llvm::Type* ptr_type = NULL);

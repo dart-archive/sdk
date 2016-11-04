@@ -2640,7 +2640,7 @@ llvm::Constant* World::CDouble(double value) {
   return llvm::ConstantFP::get(float_type, value);
 }
 
-llvm::Constant* World::CSmi(uint32 integer) {
+llvm::Constant* World::CSmi(word integer) {
   return CWord(reinterpret_cast<intptr_t>(Smi::FromWord(integer)));
 }
 
