@@ -31,6 +31,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -215,6 +216,7 @@ class LLVMCodegen {
  private:
   void VerifyModule(llvm::Module* module);
   void OptimizeModule(llvm::Module* module, World* world);
+  void OptimizeAfterLowering(llvm::Module* module, World* world);
   void CreateGCSafepointPollFunction(llvm::Module* module, World* world,
                                      llvm::LLVMContext* context);
   void LowerIntrinsics(llvm::Module* module, World* world);

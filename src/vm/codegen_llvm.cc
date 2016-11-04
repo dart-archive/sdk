@@ -530,6 +530,13 @@ class IRHelper {
         {w->object_ptr_type, w->object_ptr_type, w->object_ptr_ptr_type});
   }
 
+  llvm::Value* RememberedSetBiasGEP(llvm::Value* process) {
+    std::vector<llvm::Value*> bias_index = {
+        w->CInt(Process::kRememberedSetBiasOffset / kWordSize)};
+    return b->CreateGEP(Cast(process, w->int8_ptr_ptr_type), bias_index,
+                        "bias_gep");
+  }
+
   void WriteFieldNoWriteBarrier(llvm::Value* tagged_cell, llvm::Value* value) {
     auto pointer =
         b->CreatePointerBitCastOrAddrSpaceCast(tagged_cell, w->int8_ptr_type);
@@ -595,9 +602,18 @@ class IRHelper {
     b->CreateCall(TaggedWrite(), {receiver, value, slot});
   }
 
-  llvm::Value* LoadFieldFromAddressSpaceZero(llvm::Value* gep) {
-    auto value = b->CreateLoad(gep);
-    return b->CreatePointerBitCastOrAddrSpaceCast(value, w->object_ptr_type);
+  // Both the object pointer and the result are guaranteed to be constants and
+  // so don't need to be tracked by the GC. The input pointer is tagged though.
+  llvm::Value* LoadFieldAddressSpaceZero(llvm::Value* object, int offset,
+                                         const char* name) {
+    auto receiver_as_byte_pointer =
+        b->CreatePointerBitCastOrAddrSpaceCast(object, w->int8_ptr_type);
+    auto slot = b->CreateGEP(receiver_as_byte_pointer, {w->CInt(offset - 1)});
+    auto value =
+        b->CreateLoad(Cast(slot, w->object_ptr_aspace0_ptr_aspace0_type), name);
+    value->setMetadata(w->module_->getMDKindID("invariant.load"),
+                       llvm::MDNode::get(*w->context, llvm::None));
+    return value;
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
@@ -610,8 +626,18 @@ class IRHelper {
     return b->CreateCall(TaggedRead(), {GetArrayPointer(array, offset)});
   }
 
+  // Loads instance format as an integer. This is an untagged int at LLVM
+  // runtime.
   llvm::Value* LoadInstanceFormat(llvm::Value* klass) {
-    return LoadField(klass, Class::kInstanceFormatOffset, "instance_format");
+    auto smi_address_space0 = LoadFieldAddressSpaceZero(
+        klass, Class::kInstanceFormatOffset, "instance_format");
+    return b->CreatePtrToInt(smi_address_space0, w->intptr_type);
+  }
+
+  llvm::Value* LoadClassId(llvm::Value* klass) {
+    auto smi_address_space0 = LoadFieldAddressSpaceZero(
+        klass, Class::kIdOrTransformationTargetOffset, "class_id");
+    return b->CreatePtrToInt(smi_address_space0, w->intptr_type);
   }
 
   // Loads the statics array, which is an on-heap (but in the
@@ -973,15 +999,13 @@ class BasicBlockBuilder {
 
       b->SetInsertPoint(bb_not_smi);
       auto klass = h.LoadClass(statics_entry);
-      auto instance_format =
-          h.DecodeSmi(h.LoadInstanceFormat(klass), "instance_format_untagged");
+      auto instance_format = h.LoadInstanceFormat(klass);
       auto tmp = b->CreateAnd(instance_format,
-                              w->CWord(InstanceFormat::TypeField::mask() >> 1),
+                              w->CWord(InstanceFormat::TypeField::mask()),
                               "instance_type");
       auto is_initializer =
           b->CreateICmpEQ(tmp, w->CWord(InstanceFormat::TypeField::encode(
-                                            InstanceFormat::INITIALIZER_TYPE) >>
-                                        1),
+                                   InstanceFormat::INITIALIZER_TYPE)),
                           "is_initializer");
       b->CreateCondBr(is_initializer, bb_initializer, bb_join);
 
@@ -1439,7 +1463,7 @@ class BasicBlockBuilder {
 
     auto classid = b->CreatePtrToInt(
         h.LoadField(klass, Class::kIdOrTransformationTargetOffset),
-         w->intptr_type, "id_or_transformation_target");
+        w->intptr_type, "id_or_transformation_target");
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
     auto entry = DispatchTableEntry(offset);
@@ -2470,8 +2494,8 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
       gc_trampoline_type, llvm::Function::ExternalLinkage,
       "dartino_gc_trampoline", module_);
   llvm::AttributeSet attr_set = dartino_gc_trampoline->getAttributes();
-  attr_set = attr_set.addAttribute(
-      *context, llvm::AttributeSet::FunctionIndex, llvm::Attribute::NoInline);
+  attr_set = attr_set.addAttribute(*context, llvm::AttributeSet::FunctionIndex,
+                                   llvm::Attribute::NoInline);
   dartino_gc_trampoline->setAttributes(attr_set);
   CreateGCTrampoline();
 
@@ -2821,6 +2845,10 @@ void LLVMCodegen::Generate(const char* filename, bool optimize,
 
   LowerIntrinsics(&module, &world);
 
+  if (optimize) {
+    OptimizeAfterLowering(&module, &world);
+  }
+
   SaveModule(&module, filename);
 }
 
@@ -2881,8 +2909,10 @@ struct AddStatepointIDsToCallSites : public llvm::FunctionPass {
 struct RewriteGCIntrinsics : public llvm::FunctionPass {
   static char ID;  // Pass identification, replacement for typeid.
   World* w;
+  llvm::Module* m;
   llvm::Value* process;
-  explicit RewriteGCIntrinsics(World* world) : FunctionPass(ID), w(world) {}
+  RewriteGCIntrinsics(World* world, llvm::Module* module)
+      : FunctionPass(ID), w(world), m(module) {}
 
   bool tryRewrite(llvm::BasicBlock& bb) {
     for (llvm::Instruction& instruction : bb) {
@@ -2920,11 +2950,10 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
               auto card1 = b.CreateLShr(
                   b.CreatePtrToInt(call->getArgOperand(0), w->intptr_type),
                   w->CWord(GCMetadata::kCardBits), "card1");
-              std::vector<llvm::Value*> bias_index = {
-                  w->CInt(Process::kRememberedSetBiasOffset / kWordSize)};
-              auto bias_gep = b.CreateGEP(h.Cast(process, w->int8_ptr_ptr_type),
-                                          bias_index, "bias_gep");
+              auto bias_gep = h.RememberedSetBiasGEP(process);
               auto bias = b.CreateLoad(bias_gep);
+              bias->setMetadata(m->getMDKindID("invariant.load"),
+                                llvm::MDNode::get(*w->context, llvm::None));
               auto mark = b.CreateGEP(bias, card1, "mark");
               // Cast the receiver to a byte and use that to store into the
               // byte-sized card mark. The receiver is always tagged with 1, so
@@ -3027,13 +3056,21 @@ void LLVMCodegen::LowerIntrinsics(llvm::Module* module, World* world) {
 
   fpm.add(new AddStatepointIDsToCallSites(world));
   fpm.add(llvm::createPlaceSafepointsPass());
-  fpm.add(new RewriteGCIntrinsics(world));
+  fpm.add(new RewriteGCIntrinsics(world, module));
 
   for (auto& f : *module) fpm.run(f);
 
   llvm::legacy::PassManager mpm;
   mpm.add(llvm::createRewriteStatepointsForGCPass());
   mpm.run(*module);
+}
+
+void LLVMCodegen::OptimizeAfterLowering(llvm::Module* module, World* world) {
+  llvm::legacy::FunctionPassManager fpm(module);
+
+  fpm.add(llvm::createEarlyCSEPass());
+
+  for (auto& f : *module) fpm.run(f);
 }
 
 void LLVMCodegen::SaveModule(llvm::Module* module, const char* filename) {
