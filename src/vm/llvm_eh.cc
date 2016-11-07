@@ -61,7 +61,7 @@ extern "C" void ThrowException(Process* process, Object* ex) {
   auto ret = _Unwind_RaiseException(e);
   if (ret == _URC_END_OF_STACK) {
     fprintf(stderr, "Uncaught exception.\n");
-    exit(1);
+    exit(255);
   }
   ASSERT(false);
 }

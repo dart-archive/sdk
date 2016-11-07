@@ -257,7 +257,7 @@ class DartinoLLVMRuntimeConfiguration extends RuntimeConfiguration {
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     var executable = artifact.filename;
-    return <Command>[commandBuilder.getProcessCommand(
-      "dartino-llvm", executable, [], environmentOverrides)];
+    return <Command>[commandBuilder.getVmCommand(
+      executable, [], environmentOverrides)];
   }
 }
