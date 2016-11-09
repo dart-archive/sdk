@@ -1409,12 +1409,22 @@ class BasicBlockBuilder {
 
  private:
   llvm::Instruction* FindSubroutineExit(llvm::BasicBlock* start) {
+    std::set<llvm::BasicBlock*> visited;
+    return FindSubroutineExitImpl(start, &visited);
+  }
+
+  llvm::Instruction* FindSubroutineExitImpl(llvm::BasicBlock* start,
+      std::set<llvm::BasicBlock*>* visited) {
+    visited->insert(start);
     auto terminator = start->getTerminator();
     if (!terminator) return nullptr;
     if (terminator->getMetadata("dartino.exit_type")) return terminator;
     for (size_t i = 0; i < terminator->getNumSuccessors(); i++) {
-      auto inst = FindSubroutineExit(terminator->getSuccessor(i));
-      if (inst) return inst;
+      auto next = terminator->getSuccessor(i);
+      if (visited->find(next) == visited->end()) {
+        auto inst = FindSubroutineExitImpl(next, visited);
+        if (inst) return inst;
+      }
     }
     return nullptr;
   }
