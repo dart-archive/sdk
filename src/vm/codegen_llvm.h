@@ -207,6 +207,8 @@ class World {
       std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
   std::vector<llvm::Function*> natural_native_trampolines_ =
       std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
+
+  llvm::Function* use_llvm_function = nullptr;
 };
 
 static const int kRegularNameSpace = 0;

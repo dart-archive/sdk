@@ -820,6 +820,39 @@ class BasicBlockBuilder {
 
   void DoPrologue() { b->SetInsertPoint(bb_entry_); }
 
+  void ScanForUseLLVM() {
+    int bci = 0;
+    while (true) {
+      uint8* bcp = function_->bytecode_address_for(bci);
+      Opcode opcode = static_cast<Opcode>(*bcp);
+      switch (opcode) {
+        case kLoadConst: {
+          Object* constant = Function::ConstantForBytecode(
+              function_->bytecode_address_for(bci));
+          if (constant->IsOneByteString()) {
+            OneByteString* str = OneByteString::cast(constant);
+            if (str->length() == 8 && str->get_char_code(0) == 'u' &&
+                str->get_char_code(1) == 's' && str->get_char_code(2) == 'e' &&
+                str->get_char_code(3) == ' ' && str->get_char_code(4) == 'l' &&
+                str->get_char_code(5) == 'l' && str->get_char_code(6) == 'v' &&
+                str->get_char_code(7) == 'm') {
+              use_llvm_ = true;
+              return;
+            }
+          }
+          break;
+        }
+
+        case kMethodEnd:
+          return;
+
+        default:
+          break;
+      }
+      bci = bci + Bytecode::Size(opcode);
+    }
+  }
+
   void DoLoadArguments() {
     DoPrologue();
     int arity = function_->arity();
@@ -1131,8 +1164,66 @@ class BasicBlockBuilder {
                          "identical_result"));
   }
 
+  void CheatSmiOperation(Opcode opcode, int selector, int if_true_bci,
+                         int if_false_bci) {
+    auto tagged_argument = pop();
+    auto tagged_receiver = pop();
+
+    auto argument = b->CreatePtrToInt(tagged_argument, w->intptr_type);
+    auto receiver = b->CreatePtrToInt(tagged_receiver, w->intptr_type);
+
+    llvm::Value* result = nullptr;
+    bool boolify = false;
+    if (opcode == kInvokeAdd) {
+      result = b->CreateAdd(receiver, argument);
+    } else if (opcode == kInvokeSub) {
+      result = b->CreateSub(receiver, argument);
+    } else if (opcode == kInvokeBitAnd) {
+      result = b->CreateAnd(receiver, argument, "bitwise_smi_and");
+    } else if (opcode == kInvokeBitOr) {
+      result = b->CreateOr(receiver, argument, "bitwise_smi_or");
+    } else if (opcode == kInvokeBitXor) {
+      result = b->CreateXor(receiver, argument, "bitwise_smi_xor");
+    } else if (opcode == kInvokeEq) {
+      result = b->CreateICmpEQ(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeGe) {
+      result = b->CreateICmpSGE(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeGt) {
+      result = b->CreateICmpSGT(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeLe) {
+      result = b->CreateICmpSLE(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeLt) {
+      result = b->CreateICmpSLT(receiver, argument);
+      boolify = true;
+    } else {
+      UNREACHABLE();
+    }
+
+    if (if_true_bci == -1) {
+      if (boolify) {
+        auto true_obj = w->tagged_aspace1[w->program_->true_object()];
+        auto false_obj = w->tagged_aspace1[w->program_->false_object()];
+        push(b->CreateSelect(result, true_obj, false_obj, "compare_result"));
+      } else {
+        push(b->CreateIntToPtr(result, w->object_ptr_type));
+      }
+    } else {
+      auto pos = GetBasicBlockAt(if_true_bci);
+      auto neg = GetBasicBlockAt(if_false_bci);
+      b->CreateCondBr(result, pos, neg);
+    }
+  }
+
   void DoInvokeSmiOperation(Opcode opcode, int selector, int if_true_bci = -1,
                             int if_false_bci = -1) {
+    if (use_llvm_) {
+      CheatSmiOperation(opcode, selector, if_true_bci, if_false_bci);
+      return;
+    }
     auto bb_smi_receiver =
         llvm::BasicBlock::Create(*context, "smi_receiver", llvm_function_);
     auto bb_smis = llvm::BasicBlock::Create(*context, "smis", llvm_function_);
@@ -1470,6 +1561,8 @@ class BasicBlockBuilder {
     return FindSubroutineExit(start) != nullptr;
   }
 
+  bool use_llvm() { return use_llvm_; }
+
  private:
   llvm::Instruction* FindSubroutineExit(llvm::BasicBlock* start) {
     std::set<llvm::BasicBlock*> visited;
@@ -1604,6 +1697,10 @@ class BasicBlockBuilder {
   const std::vector<std::pair<int, int>>& catch_ranges_;
   std::map<int, llvm::BasicBlock*> catch_block_bodies;
   std::map<int, SubroutineEntry> subroutines_;
+  // Make optimistic and illegal assumptions to simulate a Strong Mode world
+  // where types are generally known.  Most operators only work on Smis in this
+  // mode.
+  bool use_llvm_ = false;
 };
 
 class BasicBlocksExplorer {
@@ -1635,6 +1732,11 @@ class BasicBlocksExplorer {
 
     llvm::IRBuilder<> builder(*w->context);
     BasicBlockBuilder b(w, function_, llvm_function, &builder, catch_ranges_);
+
+    b.ScanForUseLLVM();
+
+    if (b.use_llvm()) w->use_llvm_function = llvm_function;
+
     // Phase 1: Create basic blocks
     for (auto& pair : labels) {
       b.AddBasicBlockAtBCI(pair.first, pair.second);
