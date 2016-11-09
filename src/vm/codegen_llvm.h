@@ -104,6 +104,7 @@ class World {
   llvm::IntegerType* intptr_type;
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
+  llvm::PointerType* int8_ptr_aspace1_type;
   llvm::PointerType* int8_ptr_ptr_type;
   llvm::IntegerType* int32_type;
   llvm::IntegerType* int64_type;
@@ -184,6 +185,10 @@ class World {
   llvm::Function* raise_exception;
   llvm::Function* current_exception;
   llvm::Function* dart_personality;
+
+  llvm::MDNode* remembered_set_alias_analysis_node;
+  llvm::MDNode* regular_field_alias_analysis_node;
+  llvm::MDNode* invariant_alias_analysis_node;
 
   // Constants, tagged and in the GC-ed space.
   std::map<HeapObject*, llvm::Constant*> tagged_aspace1;

@@ -318,6 +318,12 @@ class HeapBuilder : public HeapObjectVisitor {
     llvm_function->setGC("statepoint-example");
     w->llvm_functions[function] = llvm_function;
 
+    llvm::AttributeSet attr_set = llvm_function->getAttributes();
+    int first_argument_index = 1;
+    attr_set = attr_set.addDereferenceableAttr(
+        *w->context, first_argument_index, sizeof(Process));
+    llvm_function->setAttributes(attr_set);
+
     auto klass = llvm::ConstantStruct::get(
         w->heap_object_type, {BuildConstant(function->get_class())});
 
@@ -533,8 +539,7 @@ class IRHelper {
   llvm::Value* RememberedSetBiasGEP(llvm::Value* process) {
     std::vector<llvm::Value*> bias_index = {
         w->CInt(Process::kRememberedSetBiasOffset / kWordSize)};
-    return b->CreateGEP(Cast(process, w->int8_ptr_ptr_type), bias_index,
-                        "bias_gep");
+    return b->CreateGEP(process, bias_index, "bias_gep");
   }
 
   void WriteFieldNoWriteBarrier(llvm::Value* tagged_cell, llvm::Value* value) {
@@ -542,7 +547,9 @@ class IRHelper {
         b->CreatePointerBitCastOrAddrSpaceCast(tagged_cell, w->int8_ptr_type);
     auto gep = b->CreateGEP(pointer, {w->CInt(-1)});
     gep = b->CreatePointerCast(gep, w->object_ptr_ptr_unsafe_type);
-    b->CreateStore(value, gep);
+    auto store = b->CreateStore(value, gep);
+    store->setMetadata(llvm::LLVMContext::MD_tbaa,
+                       w->regular_field_alias_analysis_node);
   }
 
   llvm::Function* SmiToInt() {
@@ -577,20 +584,61 @@ class IRHelper {
     return gep;
   }
 
-  llvm::Value* LoadField(llvm::Value* gep, const char* name = "field") {
+  // We don't have a read barrier, so we don't need an intrinsic to hide the
+  // load. This makes the load available for the optimizer.
+  llvm::Value* LoadField(llvm::Value* gep, const char* name = "field",
+                         bool invariant = false, int size = 0) {
     ASSERT(gep->getType() == w->object_ptr_ptr_type);
-    auto answer = b->CreateCall(TaggedRead(), {gep}, name);
+    // Untag before loading, but leave address-space-1 on the pointer, so it is
+    // GC marked.  The GC should still be able to distinguish this pointer from
+    // a Smi because it gets base-derived pairs, and the base will still be
+    // tagged.
+    auto byte_gep = b->CreatePointerCast(gep, w->int8_ptr_aspace1_type);
+    auto field_address = b->CreateGEP(byte_gep, {w->CInt(-1)});
+    auto answer = b->CreateLoad(
+        b->CreatePointerCast(field_address, w->object_ptr_ptr_type, name));
+    if (invariant) {
+      answer->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                          llvm::MDNode::get(*w->context, llvm::None));
+      if (size) {
+        answer->setMetadata(
+            llvm::LLVMContext::MD_dereferenceable,
+            llvm::MDNode::get(*w->context, llvm::ConstantAsMetadata::get(
+                                               w->CInt64(sizeof(Class)))));
+      }
+    }
+    answer->setMetadata(llvm::LLVMContext::MD_tbaa,
+                        w->regular_field_alias_analysis_node);
     return answer;
   }
 
   llvm::Value* LoadField(llvm::Value* arg, int offset,
-                         const char* name = "field") {
+                         const char* name = "field", bool invariant = false,
+                         int size = 0) {
     auto receiver =
-        b->CreatePointerBitCastOrAddrSpaceCast(arg, w->object_ptr_ptr_type);
-    std::vector<llvm::Value*> indices = {w->CInt(offset / kWordSize)};
-    // Creates a tagged, GC-address-space inner pointer into the object.
-    auto gep = b->CreateGEP(receiver, indices, "tagged_gep");
-    return LoadField(gep, name);
+        b->CreatePointerBitCastOrAddrSpaceCast(arg, w->int8_ptr_aspace1_type);
+    // Untag before loading, but leave address-space-1 on the pointer, so it is
+    // GC marked.  The GC should still be able to distinguish this pointer from
+    // a Smi because it gets base-derived pairs, and the base will still be
+    // tagged.
+    std::vector<llvm::Value*> indices = {
+        w->CInt((w->bits_per_word * offset / (kWordSize * 8)) - 1)};
+    auto gep = b->CreateGEP(receiver, indices, "untagged_gep");
+    auto answer =
+        b->CreateLoad(b->CreatePointerCast(gep, w->object_ptr_ptr_type), name);
+    if (invariant) {
+      answer->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                          llvm::MDNode::get(*w->context, llvm::None));
+      if (size) {
+        answer->setMetadata(
+            llvm::LLVMContext::MD_dereferenceable,
+            llvm::MDNode::get(*w->context, llvm::ConstantAsMetadata::get(
+                                               w->CInt64(sizeof(Class)))));
+      }
+    }
+    answer->setMetadata(llvm::LLVMContext::MD_tbaa,
+                        w->regular_field_alias_analysis_node);
+    return answer;
   }
 
   void StoreField(int offset, llvm::Value* receiver, llvm::Value* value) {
@@ -611,13 +659,14 @@ class IRHelper {
     auto slot = b->CreateGEP(receiver_as_byte_pointer, {w->CInt(offset - 1)});
     auto value =
         b->CreateLoad(Cast(slot, w->object_ptr_aspace0_ptr_aspace0_type), name);
-    value->setMetadata(w->module_->getMDKindID("invariant.load"),
+    value->setMetadata(llvm::LLVMContext::MD_invariant_load,
                        llvm::MDNode::get(*w->context, llvm::None));
     return value;
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
-    auto gc_pointer = LoadField(heap_object, HeapObject::kClassOffset, "class");
+    auto gc_pointer = LoadField(heap_object, HeapObject::kClassOffset, "class",
+                                true, sizeof(Class));
     return b->CreatePointerBitCastOrAddrSpaceCast(gc_pointer,
                                                   w->class_ptr_type);
   }
@@ -1114,19 +1163,27 @@ class BasicBlockBuilder {
     llvm::Value* no_overflow = NULL;
     llvm::Value* result = NULL;
     if (opcode == kInvokeAdd) {
-      llvm::Function* f = llvm::Intrinsic::getDeclaration(
-          w->module_, llvm::Intrinsic::sadd_with_overflow, {w->intptr_type});
-      auto s = b->CreateCall(f, {receiver, argument});
-      auto overflow_bit = b->CreateExtractValue(s, {1});
-      no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
-      result = b->CreateExtractValue(s, {0});
+      if (Flags::wrap_smis) {
+        result = b->CreateAdd(receiver, argument);
+      } else {
+        llvm::Function* f = llvm::Intrinsic::getDeclaration(
+            w->module_, llvm::Intrinsic::sadd_with_overflow, {w->intptr_type});
+        auto s = b->CreateCall(f, {receiver, argument});
+        auto overflow_bit = b->CreateExtractValue(s, {1});
+        no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
+        result = b->CreateExtractValue(s, {0});
+      }
     } else if (opcode == kInvokeSub) {
-      llvm::Function* f = llvm::Intrinsic::getDeclaration(
-          w->module_, llvm::Intrinsic::ssub_with_overflow, {w->intptr_type});
-      auto s = b->CreateCall(f, {receiver, argument});
-      auto overflow_bit = b->CreateExtractValue(s, {1});
-      no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
-      result = b->CreateExtractValue(s, {0});
+      if (Flags::wrap_smis) {
+        result = b->CreateSub(receiver, argument);
+      } else {
+        llvm::Function* f = llvm::Intrinsic::getDeclaration(
+            w->module_, llvm::Intrinsic::ssub_with_overflow, {w->intptr_type});
+        auto s = b->CreateCall(f, {receiver, argument});
+        auto overflow_bit = b->CreateExtractValue(s, {1});
+        no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
+        result = b->CreateExtractValue(s, {0});
+      }
     } else if (opcode == kInvokeBitAnd) {
       result = b->CreateAnd(receiver, argument, "bitwise_smi_and");
     } else if (opcode == kInvokeBitOr) {
@@ -1162,7 +1219,7 @@ class BasicBlockBuilder {
       } else {
         smi_result = b->CreateIntToPtr(result, w->object_ptr_type);
       }
-      if (Flags::wrap_smis || no_overflow == NULL) {
+      if (no_overflow == NULL) {
         b->CreateBr(bb_join);
       } else {
         b->CreateCondBr(no_overflow, bb_join, bb_nonsmi, assume_true);
@@ -1238,7 +1295,13 @@ class BasicBlockBuilder {
     auto gep = b->CreateGEP(
         typed, b->CreateAdd(offset, w->CWord(Array::kSize / kPointerSize)));
     auto dte = b->CreateLoad(gep);
-
+    dte->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                     llvm::MDNode::get(*w->context, llvm::None));
+    dte->setMetadata(
+        llvm::LLVMContext::MD_dereferenceable,
+        llvm::MDNode::get(*w->context,
+                          llvm::ConstantAsMetadata::get(
+                              w->CInt64(sizeof(dartino::DispatchTableEntry)))));
     return dte;
   }
 
@@ -1430,19 +1493,20 @@ class BasicBlockBuilder {
   }
 
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
-    return h.LoadField(entry, DispatchTableEntry::kCodeOffset, "code");
+    return h.LoadField(entry, DispatchTableEntry::kCodeOffset, "code", true, 0);
   }
 
   llvm::Value* LookupDispatchTableOffsetFromEntry(llvm::Value* entry) {
-    llvm::Value* offset =
-        h.LoadField(entry, DispatchTableEntry::kOffsetOffset, "offset");
+    llvm::Value* offset = h.LoadField(entry, DispatchTableEntry::kOffsetOffset,
+                                      "offset", true, 0);
 
     return offset;
   }
 
   llvm::Value* LookupDispatchTableEntry(llvm::Value* receiver, int selector) {
     llvm::Value* klass;
-    if (!Flags::assume_no_nsm || SmiMatchesSelector(selector)) {
+    bool smi_matches = SmiMatchesSelector(selector);
+    if (!Flags::assume_no_nsm || smi_matches) {
       auto bb_smi = llvm::BasicBlock::Create(*context, "smi", llvm_function_);
       auto bb_nonsmi =
           llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
@@ -1472,7 +1536,8 @@ class BasicBlockBuilder {
     }
 
     auto classid = b->CreatePtrToInt(
-        h.LoadField(klass, Class::kIdOrTransformationTargetOffset),
+        h.LoadField(klass, Class::kIdOrTransformationTargetOffset,
+                    "class_id_uncast", true, 0),
         w->intptr_type, "id_or_transformation_target");
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
@@ -2280,6 +2345,7 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
       intptr_type(NULL),
       int8_type(NULL),
       int8_ptr_type(NULL),
+      int8_ptr_aspace1_type(NULL),
       int32_type(NULL),
       int64_type(NULL),
       float_type(NULL),
@@ -2316,8 +2382,11 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
       runtime__HandleAllocate(NULL),
       runtime__HandleAllocateBoxed(NULL),
       runtime__HandleObjectFromFailure(NULL) {
+  llvm::MDBuilder md_builder(*context);
+
   int8_type = llvm::Type::getInt8Ty(*context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
+  int8_ptr_aspace1_type = llvm::PointerType::get(int8_type, 1);
   int8_ptr_ptr_type = llvm::PointerType::get(int8_ptr_type, 0);
   int32_type = llvm::Type::getInt32Ty(*context);
   int64_type = llvm::Type::getInt64Ty(*context);
@@ -2382,7 +2451,7 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
 
   // This pointer just needs to be in the right address space for the
   // compilation to work.
-  process_ptr_type = int8_ptr_type;
+  process_ptr_type = int8_ptr_ptr_type;
 
   dte_type = llvm::StructType::create(*context, "DispatchTableEntry");
   dte_ptr_type = llvm::PointerType::get(dte_type, 0);
@@ -2543,6 +2612,14 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
                                             llvm::Function::ExternalLinkage,
                                             "DartPersonality", module_);
   caught_result_type = llvm::Type::getTokenTy(*context);
+
+  llvm::MDNode* root = md_builder.createAnonymousTBAARoot();
+  remembered_set_alias_analysis_node =
+      md_builder.createTBAANode("remembered_set", root);
+  regular_field_alias_analysis_node =
+      md_builder.createTBAANode("dart_field", root);
+  invariant_alias_analysis_node =
+      md_builder.createTBAANode("invariant", root, true);
 }
 
 llvm::StructType* World::ObjectArrayType(int n, llvm::Type* entry_type,
@@ -2962,14 +3039,19 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
                   w->CWord(GCMetadata::kCardBits), "card1");
               auto bias_gep = h.RememberedSetBiasGEP(process);
               auto bias = b.CreateLoad(bias_gep);
-              bias->setMetadata(m->getMDKindID("invariant.load"),
+              bias->setMetadata(llvm::LLVMContext::MD_invariant_load,
                                 llvm::MDNode::get(*w->context, llvm::None));
+              bias->setMetadata(llvm::LLVMContext::MD_tbaa,
+                                w->invariant_alias_analysis_node);
               auto mark = b.CreateGEP(bias, card1, "mark");
               // Cast the receiver to a byte and use that to store into the
               // byte-sized card mark. The receiver is always tagged with 1, so
               // we know it is not going to be zero.
-              b.CreateStore(b.CreatePtrToInt(receiver, w->int8_type), mark);
-
+              auto remembered_set_store =
+                  b.CreateStore(b.CreatePtrToInt(receiver, w->int8_type), mark);
+              remembered_set_store->setMetadata(
+                  llvm::LLVMContext::MD_tbaa,
+                  w->remembered_set_alias_analysis_node);
               call->eraseFromParent();
               return true;
             }
@@ -3057,6 +3139,8 @@ void LLVMCodegen::OptimizeModule(llvm::Module* module, World* world) {
   fpm.add(llvm::createCFGSimplificationPass());
   fpm.add(llvm::createConstantPropagationPass());
   fpm.add(llvm::createLICMPass());
+  fpm.add(llvm::createEarlyCSEPass());
+  fpm.add(llvm::createGVNPass());
 
   for (auto& f : *module) fpm.run(f);
 }
@@ -3079,6 +3163,8 @@ void LLVMCodegen::OptimizeAfterLowering(llvm::Module* module, World* world) {
   llvm::legacy::FunctionPassManager fpm(module);
 
   fpm.add(llvm::createEarlyCSEPass());
+  fpm.add(llvm::createDeadStoreEliminationPass());
+  fpm.add(llvm::createLICMPass());
 
   for (auto& f : *module) fpm.run(f);
 }
