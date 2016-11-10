@@ -1513,7 +1513,7 @@ class BasicBlockBuilder {
     b->CreateCall(w->libc__exit, {w->CInt(1)});
   }
 
-  void DoSubroutineCall(int target) {
+  bool DoSubroutineCall(int target) {
     llvm::BasicBlock* block = bci2bb_[target];
     llvm::Instruction* inst;
     llvm::Value* marker;
@@ -1529,21 +1529,30 @@ class BasicBlockBuilder {
       inst = e.end;
       subroutines_[target].counter++;
     }
-    b->CreateStore(w->CInt(subroutines_[target].counter), marker);
-    b->CreateBr(block);
-    llvm::BasicBlock* continuation =
-        llvm::BasicBlock::Create(*context, "contSub", llvm_function_);
-    llvm::BasicBlock* endOfSub =
-        llvm::BasicBlock::Create(*context, "endSub", llvm_function_);
-    b->SetInsertPoint(inst);
-    llvm::Value* val = b->CreateLoad(marker);
-    val = b->CreateICmpEQ(val, w->CInt(subroutines_[target].counter));
-    auto continuationInst = b->CreateCondBr(val, continuation, endOfSub);
-    inst->replaceAllUsesWith(continuationInst);
-    inst->eraseFromParent();
-    b->SetInsertPoint(endOfSub);
-    subroutines_[target].end = b->CreateUnreachable();
-    b->SetInsertPoint(continuation);
+    // "inst is null" means subroutine is unconditionally exited via
+    // other control-flow.
+    if (inst == nullptr) {
+      subroutines_[target].end = nullptr;
+      b->CreateBr(block);
+      return true;
+    } else {
+      b->CreateStore(w->CInt(subroutines_[target].counter), marker);
+      b->CreateBr(block);
+      llvm::BasicBlock* continuation =
+          llvm::BasicBlock::Create(*context, "contSub", llvm_function_);
+      llvm::BasicBlock* endOfSub =
+          llvm::BasicBlock::Create(*context, "endSub", llvm_function_);
+      b->SetInsertPoint(inst);
+      llvm::Value* val = b->CreateLoad(marker);
+      val = b->CreateICmpEQ(val, w->CInt(subroutines_[target].counter));
+      auto continuationInst = b->CreateCondBr(val, continuation, endOfSub);
+      inst->replaceAllUsesWith(continuationInst);
+      inst->eraseFromParent();
+      b->SetInsertPoint(endOfSub);
+      subroutines_[target].end = b->CreateUnreachable();
+      b->SetInsertPoint(continuation);
+      return false;
+    }
   }
 
   void DoSubroutineReturn() {
@@ -1558,7 +1567,7 @@ class BasicBlockBuilder {
       return true;
     }
     llvm::BasicBlock* start = bci2bb_[bci];
-    return FindSubroutineExit(start) != nullptr;
+    return start->getTerminator() != nullptr;
   }
 
   bool use_llvm() { return use_llvm_; }
@@ -2022,7 +2031,10 @@ class BasicBlocksExplorer {
 
         case kSubroutineCall: {
           int target = bci + Utils::ReadInt32(bcp + 1);
-          b->DoSubroutineCall(target);
+          // If unconditional control flow in subroutine - stop.
+          if (b->DoSubroutineCall(target)) {
+            stop = true;
+          }
           break;
         }
 
