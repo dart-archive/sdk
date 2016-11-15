@@ -58,8 +58,8 @@ namespace dartino {
   FLAG_BOOLEAN(release, codegen_64, false, "Generate x64 code (llvm-codegen)") \
   FLAG_BOOLEAN(release, assume_no_nsm, false,                                  \
                "Assume no-such-method never happens (LLVM codegen)")           \
-  FLAG_BOOLEAN(release, wrap_smis, false,                                      \
-               "Arithmetic on Smis wraps")
+  FLAG_BOOLEAN(release, wrap_smis, false, "Arithmetic on Smis wraps")          \
+  FLAG_BOOLEAN(release, optimize, true, "Run LLVM optimization passes")
 
 #ifdef DEBUG
 #define DECLARE_DEBUG_FLAG(type, prefix, name, value, doc) static type name;

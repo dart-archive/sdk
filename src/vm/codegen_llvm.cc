@@ -604,7 +604,7 @@ class IRHelper {
         answer->setMetadata(
             llvm::LLVMContext::MD_dereferenceable,
             llvm::MDNode::get(*w->context, llvm::ConstantAsMetadata::get(
-                                               w->CInt64(sizeof(Class)))));
+                                               w->CInt64(Class::kSize))));
       }
     }
     answer->setMetadata(llvm::LLVMContext::MD_tbaa,
@@ -633,7 +633,7 @@ class IRHelper {
         answer->setMetadata(
             llvm::LLVMContext::MD_dereferenceable,
             llvm::MDNode::get(*w->context, llvm::ConstantAsMetadata::get(
-                                               w->CInt64(sizeof(Class)))));
+                                               w->CInt64(Class::kSize))));
       }
     }
     answer->setMetadata(llvm::LLVMContext::MD_tbaa,
@@ -661,12 +661,16 @@ class IRHelper {
         b->CreateLoad(Cast(slot, w->object_ptr_aspace0_ptr_aspace0_type), name);
     value->setMetadata(llvm::LLVMContext::MD_invariant_load,
                        llvm::MDNode::get(*w->context, llvm::None));
+    // TODO(erikcorry): Use llvm::LLVMContext::MD_never_faults when we have the
+    // right LLVM version everywhere.
+    value->setMetadata("never.faults",
+                       llvm::MDNode::get(*w->context, llvm::None));
     return value;
   }
 
   llvm::Value* LoadClass(llvm::Value* heap_object) {
     auto gc_pointer = LoadField(heap_object, HeapObject::kClassOffset, "class",
-                                true, sizeof(Class));
+                                true, Class::kSize);
     return b->CreatePointerBitCastOrAddrSpaceCast(gc_pointer,
                                                   w->class_ptr_type);
   }
@@ -1380,7 +1384,7 @@ class BasicBlockBuilder {
     }
   }
 
-  llvm::Value* DispatchTableEntry(llvm::Value* offset) {
+  llvm::Value* GetDispatchTableEntry(llvm::Value* offset) {
     auto untyped = w->untagged_aspace0[w->program_->dispatch_table()];
     auto typed = b->CreatePointerCast(untyped, w->dte_ptr_ptr_type);
     auto gep = b->CreateGEP(
@@ -1388,11 +1392,12 @@ class BasicBlockBuilder {
     auto dte = b->CreateLoad(gep);
     dte->setMetadata(llvm::LLVMContext::MD_invariant_load,
                      llvm::MDNode::get(*w->context, llvm::None));
+    dte->setMetadata("never.faults",
+                     llvm::MDNode::get(*w->context, llvm::None));
     dte->setMetadata(
         llvm::LLVMContext::MD_dereferenceable,
-        llvm::MDNode::get(*w->context,
-                          llvm::ConstantAsMetadata::get(
-                              w->CInt64(sizeof(dartino::DispatchTableEntry)))));
+        llvm::MDNode::get(*w->context, llvm::ConstantAsMetadata::get(w->CInt64(
+                                           DispatchTableEntry::kSize))));
     return dte;
   }
 
@@ -1405,7 +1410,7 @@ class BasicBlockBuilder {
     Class* smi_klass = w->program_->smi_class();
     int class_id = smi_klass->id();
     Object* e = dispatch_table->get(class_id + selector_id);
-    dartino::DispatchTableEntry* entry = dartino::DispatchTableEntry::cast(e);
+    auto entry = DispatchTableEntry::cast(e);
     return entry->offset()->value() == selector_id;
   }
 
@@ -1414,7 +1419,7 @@ class BasicBlockBuilder {
     Array* dispatch_table = w->program_->dispatch_table();
     for (int i = 0; i < dispatch_table->length(); i++) {
       Object* e = dispatch_table->get(i);
-      dartino::DispatchTableEntry* entry = dartino::DispatchTableEntry::cast(e);
+      auto entry = DispatchTableEntry::cast(e);
       if (entry->offset()->value() == Selector::IdField::decode(selector)) {
         if (fn == nullptr) {
           fn = entry->target();
@@ -1448,7 +1453,7 @@ class BasicBlockBuilder {
 
       b->SetInsertPoint(bb_lookup_failure);
       // NSM is 0th element in dispatch table.
-      auto nsm_entry = DispatchTableEntry(w->CWord(0));
+      auto nsm_entry = GetDispatchTableEntry(w->CWord(0));
       b->CreateBr(bb_lookup_success);
 
       b->SetInsertPoint(bb_lookup_success);
@@ -1578,8 +1583,8 @@ class BasicBlockBuilder {
     return FindSubroutineExitImpl(start, &visited);
   }
 
-  llvm::Instruction* FindSubroutineExitImpl(llvm::BasicBlock* start,
-      std::set<llvm::BasicBlock*>* visited) {
+  llvm::Instruction* FindSubroutineExitImpl(
+      llvm::BasicBlock* start, std::set<llvm::BasicBlock*>* visited) {
     visited->insert(start);
     auto terminator = start->getTerminator();
     if (!terminator) return nullptr;
@@ -1595,7 +1600,8 @@ class BasicBlockBuilder {
   }
 
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
-    return h.LoadField(entry, DispatchTableEntry::kCodeOffset, "code", true, 0);
+    return h.LoadFieldAddressSpaceZero(entry, DispatchTableEntry::kCodeOffset,
+                                       "code");
   }
 
   llvm::Value* LookupDispatchTableOffsetFromEntry(llvm::Value* entry) {
@@ -1643,7 +1649,7 @@ class BasicBlockBuilder {
         w->intptr_type, "id_or_transformation_target");
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
-    auto entry = DispatchTableEntry(offset);
+    auto entry = GetDispatchTableEntry(offset);
     return entry;
   }
 
@@ -3255,8 +3261,22 @@ void LLVMCodegen::OptimizeModule(llvm::Module* module, World* world) {
   fpm.add(llvm::createLICMPass());
   fpm.add(llvm::createEarlyCSEPass());
   fpm.add(llvm::createGVNPass());
+  fpm.add(llvm::createAggressiveDCEPass());
 
-  for (auto& f : *module) fpm.run(f);
+  if (Flags::optimize) {
+    for (auto& f : *module) fpm.run(f);
+  } else {
+    // Even with -Xno-optimize we optimize the one function that has "use llvm".
+    for (auto& f : *module) {
+      if (world->use_llvm_function) {
+        if (world->use_llvm_function == &f) {
+          fpm.run(f);
+        }
+      } else {
+        fpm.run(f);
+      }
+    }
+  }
 }
 
 void LLVMCodegen::LowerIntrinsics(llvm::Module* module, World* world) {
@@ -3280,7 +3300,20 @@ void LLVMCodegen::OptimizeAfterLowering(llvm::Module* module, World* world) {
   fpm.add(llvm::createDeadStoreEliminationPass());
   fpm.add(llvm::createLICMPass());
 
-  for (auto& f : *module) fpm.run(f);
+  if (Flags::optimize) {
+    for (auto& f : *module) fpm.run(f);
+  } else {
+    // Even with -Xno-optimize we optimize the one function that has "use llvm".
+    for (auto& f : *module) {
+      if (world->use_llvm_function) {
+        if (world->use_llvm_function == &f) {
+          fpm.run(f);
+        }
+      } else {
+        fpm.run(f);
+      }
+    }
+  }
 }
 
 void LLVMCodegen::SaveModule(llvm::Module* module, const char* filename) {

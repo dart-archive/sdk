@@ -506,7 +506,6 @@ void Program::CollectSharedGarbage(char* fp) {
   }
 }
 
-
 void Program::PerformSharedGarbageCollection(char* fp) {
   // Mark all reachable objects.  We mark all live objects in new-space too, to
   // detect liveness paths that go through new-space, but we just clear the
@@ -1001,7 +1000,6 @@ void Program::CollectNewSpace(char* fp) {
 
   // Second space argument is used to size the new-space.
   data_heap->SwapSemiSpaces();
-
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
