@@ -1474,6 +1474,12 @@ no_such_method_dispatcher_test: Skip, OK
 interceptor5_test: Skip, OK
 super_inferrer_test: Skip, OK
 getter_no_setter_test/00: Skip, OK
+vm/regress_22621_vm_test: Skip, OK
+reg_exp_test: Skip, OK
+reg_exp2_test: Skip, OK
+invocation_mirror_test: Skip, OK
+list_test: Skip, OK
+
 
 # Skipping all Async/Await related tests
 await_for_use_local_test: Skip, OK
@@ -1623,9 +1629,118 @@ mixin_illegal_cycles_test/06: Skip, OK
 function_type_alias7_test/02: Skip, OK
 function_type_alias7_test/00: Skip, OK
 
+# Contains "hints" of unimplemented features during bytecode export
+nullaware_opt_test: Skip, OK
+deferred_static_seperate_test: Skip, OK
+if_null_assignment_static_test/07: Skip, OK
+if_null_assignment_static_test/02: Skip, OK
+if_null_assignment_static_test/01: Skip, OK
+if_null_assignment_static_test/03: Skip, OK
+if_null_assignment_static_test/04: Skip, OK
+if_null_assignment_static_test/06: Skip, OK
+if_null_assignment_static_test/05: Skip, OK
+if_null_assignment_static_test/08: Skip, OK
+if_null_assignment_static_test/09: Skip, OK
+if_null_assignment_static_test/12: Skip, OK
+if_null_assignment_static_test/10: Skip, OK
+if_null_assignment_static_test/11: Skip, OK
+if_null_assignment_static_test/14: Skip, OK
+if_null_assignment_static_test/13: Skip, OK
+if_null_assignment_static_test/21: Skip, OK
+if_null_assignment_static_test/15: Skip, OK
+if_null_assignment_static_test/16: Skip, OK
+if_null_assignment_static_test/18: Skip, OK
+if_null_assignment_static_test/19: Skip, OK
+if_null_assignment_static_test/17: Skip, OK
+if_null_assignment_static_test/25: Skip, OK
+if_null_assignment_static_test/20: Skip, OK
+if_null_assignment_static_test/24: Skip, OK
+if_null_assignment_static_test/28: Skip, OK
+if_null_assignment_static_test/23: Skip, OK
+if_null_assignment_static_test/22: Skip, OK
+if_null_assignment_static_test/26: Skip, OK
+if_null_assignment_static_test/27: Skip, OK
+if_null_assignment_static_test/29: Skip, OK
+if_null_assignment_static_test/30: Skip, OK
+if_null_assignment_static_test/31: Skip, OK
+if_null_assignment_static_test/32: Skip, OK
+if_null_assignment_static_test/33: Skip, OK
+if_null_assignment_static_test/35: Skip, OK
+if_null_assignment_static_test/34: Skip, OK
+if_null_assignment_static_test/38: Skip, OK
+if_null_assignment_static_test/42: Skip, OK
+if_null_assignment_static_test/37: Skip, OK
+if_null_assignment_static_test/36: Skip, OK
+if_null_assignment_static_test/39: Skip, OK
+if_null_assignment_static_test/none: Skip, OK
+if_null_assignment_static_test/40: Skip, OK
+if_null_assignment_static_test/41: Skip, OK
+deferred_global_test: Skip, OK
+if_null_assignment_behavior_test/01: Skip, OK
+if_null_assignment_behavior_test/02: Skip, OK
+if_null_assignment_behavior_test/03: Skip, OK
+if_null_assignment_behavior_test/04: Skip, OK
+if_null_assignment_behavior_test/05: Skip, OK
+if_null_assignment_behavior_test/06: Skip, OK
+if_null_assignment_behavior_test/08: Skip, OK
+if_null_assignment_behavior_test/07: Skip, OK
+if_null_assignment_behavior_test/09: Skip, OK
+if_null_assignment_behavior_test/12: Skip, OK
+if_null_assignment_behavior_test/10: Skip, OK
+if_null_assignment_behavior_test/11: Skip, OK
+if_null_assignment_behavior_test/13: Skip, OK
+if_null_assignment_behavior_test/14: Skip, OK
+if_null_assignment_behavior_test/16: Skip, OK
+if_null_assignment_behavior_test/18: Skip, OK
+if_null_assignment_behavior_test/17: Skip, OK
+if_null_assignment_behavior_test/19: Skip, OK
+if_null_assignment_behavior_test/20: Skip, OK
+if_null_assignment_behavior_test/none: Skip, OK
+if_null_assignment_behavior_test/21: Skip, OK
+if_null_assignment_behavior_test/22: Skip, OK
+if_null_assignment_behavior_test/23: Skip, OK
+if_null_assignment_behavior_test/25: Skip, OK
+if_null_assignment_behavior_test/24: Skip, OK
+if_null_assignment_behavior_test/26: Skip, OK
+if_null_assignment_behavior_test/27: Skip, OK
+if_null_assignment_behavior_test/28: Skip, OK
+if_null_assignment_behavior_test/31: Skip, OK
+if_null_assignment_behavior_test/32: Skip, OK
+deferred_shared_and_unshared_classes_test: Skip, OK
+deferred_constant_list_test: Skip, OK
+deferred_no_such_method_test: Skip, OK
+deferred_load_constants_test/none: Skip, OK
+deferred_mixin_test: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_non_deferred: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_null: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation1: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_generic1: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_generic2: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_generic3: Skip, OK
+deferred_constraints_type_annotation_test/new: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_generic4: Skip, OK
+deferred_constraints_type_annotation_test/new_generic1: Skip, OK
+deferred_constraints_type_annotation_test/new_generic2: Skip, OK
+deferred_constraints_type_annotation_test/new_generic3: Skip, OK
+deferred_constraints_type_annotation_test/is_check: Skip, OK
+deferred_constraints_type_annotation_test/catch_check: Skip, OK
+deferred_constraints_type_annotation_test/as_operation: Skip, OK
+deferred_constraints_type_annotation_test/static_method: Skip, OK
+deferred_constraints_type_annotation_test/type_annotation_top_level: Skip, OK
+deferred_constraints_type_annotation_test/none: Skip, OK
+invocation_mirror_test: Skip, OK
 
 # Large integer not implemented
 bit_operations_test: Skip, OK
+mint_compares_test: Skip, OK
+
+# Wrong place of error - run-time vs compile-time
+main_not_a_function_test: Skip, OK
+no_main_test: Skip, OK
+main_test/03: Skip, OK
+
+# No run-time error for main having too many arguments
+multitest_language_main_test_03: Skip, OK
 
 # TwobyteString not implemented
 string_interpolate_test: Skip, OK
@@ -1645,3 +1760,31 @@ vm/load_to_load_forwarding_vm_test: Skip, OK
 number_identity2_test: Skip, OK
 interceptor9_test: Skip, OK
 
+# DoIdentical not implemented
+comparison_test: Skip, OK
+number_identity_test: Skip, OK
+vm/optimized_identical_test: Skip, OK
+
+# Async test unexpected result
+async_regression_23058_test: Skip, OK
+async_await_syntax_test/c11a: Skip, OK
+
+# Stuck in LLVM optimizer - GVN pass
+many_method_calls_test: Skip, OK
+larger_implicit_getter_test: Skip, OK
+classes_static_method_clash_test: Skip, OK
+large_class_declaration_test: Skip, OK
+large_implicit_getter_test: Skip, OK
+
+# Stack overflow instead of run-time error
+issue_22780_test: Skip, OK
+stack_overflow_stacktrace_test: Skip, OK
+stack_overflow_test: Skip, OK
+final_syntax_test/08: Skip, OK
+
+# No run-time error for reserved word as function names
+method_name_test: Skip, OK
+
+# Coroutines not implemented
+closure_cycles_test: Skip, OK
+vm/store_to_load_forwarding_phis_vm_test: Skip, OK
