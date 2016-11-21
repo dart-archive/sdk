@@ -26,6 +26,143 @@
 
 namespace dartino {
 
+class BasicBlockBuilder;
+class IRHelper;
+
+// Natives written in a Forth dialect:
+
+void ForthByteCode::Init() {
+  if (!initialized && source) {
+    char last = source[strlen(source) - 1];
+    switch (last) {
+      case '!':
+        instruction = F_ASSIGN;
+        break;
+      case '@':
+        instruction = F_READ;
+        break;
+      case ':':
+        instruction = F_LABEL;
+        label1 = source;
+        break;
+      case ')':
+        ASSERT(strlen(source) > 2);
+        ASSERT(source[strlen(source) - 2] == '(');
+        instruction = F_EXPAND_MACRO;
+        break;
+      default:
+        // Strings in in this Forth dialect should end in a special character
+        // that determines their function.
+        UNREACHABLE();
+    }
+    initialized = true;
+  }
+}
+
+class ForthFunction {
+ public:
+  ForthFunction(const char* name, std::vector<const char*> vars,
+                std::vector<ForthByteCode> codes)
+      : name_(name), variable_names_(vars), codes_(codes) {}
+
+  void Init() { Init(&codes_); }
+
+  void Init(std::vector<ForthByteCode>* codes) {
+    for (ForthByteCode& bc : *codes) {
+      bc.Init();
+      if (bc.instruction == F_LABEL) {
+        labels_.push_back(bc.label1);
+      }
+    }
+  }
+
+  void Codegen(World* w, BasicBlockBuilder* b, IRHelper* h) const {
+    std::vector<llvm::Value*> empty_stack;
+    Codegen(w, b, h, &empty_stack);
+  }
+
+  void Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
+               std::vector<llvm::Value*>* forth_stack) const;
+
+ private:
+  const char* name_;
+  std::vector<const char*> variable_names_;
+  std::vector<ForthByteCode> codes_;
+  std::vector<const char*> labels_;
+};
+
+static ForthFunction kSmiNegateMacro("SmiNegate", {}, {
+    F_STACK0, 0x8000000000000000ul, F_TO_PTR, F_EQ,
+        { F_IF_ELSE, "error", "ok" },
+  "ok:", F_STACK0, F_TO_INT, F_NEG, F_TO_PTR, F_RETURN,
+  "error:", Failure::kTaggedIndexOutOfBounds, F_TO_PTR, F_PUSH
+});
+
+static ForthFunction kSmiMulMacro("SmiMul", {}, {
+    F_STACK1, F_SMI_CHECK, { F_IF_ELSE, "smis", "wat" },
+  "smis:", F_STACK0, F_TO_INT, F_STACK1, F_UNTAG, F_SMUL_OVERFLOW,
+    {F_IF_ELSE, "wat", "ok"},
+  // The 'if' popped one of the values that the SMUL pushed (the overflow
+  // flag), but the actual answer is still there, and gets popped by the next
+  // line.  It's somewhat dodgy to have a value on the stack across a branch...
+  "ok:", F_TO_PTR, F_RETURN,
+  "wat:", Failure::kTaggedWrongArgumentType, F_TO_PTR, F_PUSH
+});
+
+static ForthFunction kSmiShrMacro("SmiShr", {"int shift", "result"}, {
+    F_STACK1, F_SMI_CHECK, { F_IF_ELSE, "smis", "wat" },
+  "smis:", F_STACK1, F_UNTAG, "shift!",
+    "shift@", (uword)0, F_SLT, { F_IF_ELSE, "oob", "not_negative"},
+  "not_negative:", "shift@", 63, F_UGE, { F_IF_ELSE, "too_large", "ok"},
+  "too_large:", 63, "shift!", { F_GOTO, "ok" },
+  "ok:", F_STACK0, F_TO_INT, "shift@", F_ASHR,
+    1, F_NOT, F_AND, F_TO_PTR, F_RETURN,
+  "oob:", Failure::kTaggedIndexOutOfBounds, F_TO_PTR, "result!",
+    {F_GOTO, "handle_error"},
+  "wat:", Failure::kTaggedWrongArgumentType, F_TO_PTR, "result!",
+    {F_GOTO, "handle_error"},
+  "handle_error:", "result@", F_PUSH
+});
+
+static ForthFunction kStringLengthMacro("StringLength", {}, {
+    F_STACK0, BaseArray::kLengthOffset, F_LOAD, F_RETURN,
+  "error:", (uword)0, F_TO_PTR, F_PUSH
+});
+
+// arrayLoad: Takes BaseArray and index n the array (in words).  Adds the
+// header size of BaseArray in words, and then performs tagged load.
+// TODO(erikcorry): We should shift by 2, not 3 for 32 bit target.
+static ForthFunction kArrayLoadMacro("arrayLoad", {}, {
+  BaseArray::kSize / kWordSize, F_ADD, 3, F_SHL, F_LOAD
+});
+
+static ForthFunction kListLengthNative("ListLength",
+  {"list", "length"}, {
+    F_STACK0, Instance::kSize, F_LOAD, "list!",
+    "list@", BaseArray::kLengthOffset, F_LOAD, "length!",
+    "length@", F_RETURN,
+  "error:", "length@", F_PUSH
+});
+
+static ForthFunction kListIndexGetNative("ListIndexGet",
+  {"list", "length", "index", "result"}, {
+    F_STACK0, Instance::kSize, F_LOAD, "list!",
+    "list@", BaseArray::kLengthOffset, F_LOAD, "length!",
+    "length@", F_SMI_CHECK, {F_IF_ELSE, "smi_index", "wat"},
+  "smi_index:",
+    F_STACK1, "index!",
+    "index@", "length@", F_UGE, {F_IF_ELSE, "oob", "load"},
+  "load:",
+    "list@", "index@", F_UNTAG, "arrayLoad()", F_RETURN,
+  "wat:",
+    Failure::kTaggedWrongArgumentType, F_TO_PTR, "result!",
+    {F_GOTO, "error"},
+  "oob:",
+    Failure::kTaggedIndexOutOfBounds, F_TO_PTR, "result!",
+    {F_GOTO, "error"},
+  "error:", "result@", F_PUSH
+});
+
 // This function calculates the stack difference of a specific bytecode
 // instruction. It uses [Bytecode::StackDiff] for fixed stack-difference
 // bytecodes and calculates the stack difference manually for all other
@@ -584,6 +721,15 @@ class IRHelper {
     return gep;
   }
 
+  llvm::Value* GetArrayPointer(llvm::Value* array, llvm::Value* index) {
+    std::vector<llvm::Value*> indices = {
+        b->CreateAdd(index, w->CWord(Array::kSize / kWordSize))};
+    auto receiver = b->CreateBitCast(array, w->object_ptr_ptr_type);
+    // Creates a tagged, GC-address-space inner pointer into the array.
+    auto gep = b->CreateGEP(receiver, indices, "tagged_array_gep");
+    return gep;
+  }
+
   // We don't have a read barrier, so we don't need an intrinsic to hide the
   // load. This makes the load available for the optimizer.
   llvm::Value* LoadField(llvm::Value* gep, const char* name = "field",
@@ -675,7 +821,7 @@ class IRHelper {
                                                   w->class_ptr_type);
   }
 
-  llvm::Value* LoadArrayEntry(llvm::Value* array, int offset) {
+  llvm::Value* LoadArrayEntry(llvm::Value* array, llvm::Value* offset) {
     return b->CreateCall(TaggedRead(), {GetArrayPointer(array, offset)});
   }
 
@@ -821,8 +967,17 @@ class BasicBlockBuilder {
   }
 
   // Methods for generating code inside one basic block.
+  //
+  int stack_pos() { return stack_pos_; }
+  void set_stack_pos(int pos) { stack_pos_ = pos; }
 
   void DoPrologue() { b->SetInsertPoint(bb_entry_); }
+  void TerminateEntryBlock() {
+    // Now that all locals have been added to the entry block, append a branch
+    // to the actual start of the function.
+    b->SetInsertPoint(bb_entry_);
+    b->CreateBr(GetBasicBlockAt(0));
+  }
 
   void ScanForUseLLVM() {
     int bci = 0;
@@ -895,8 +1050,6 @@ class BasicBlockBuilder {
     }
     ASSERT(static_cast<int>(stack_.size()) ==
            (arity + kAuxiliarySlots + max_stack_height_));
-
-    b->CreateBr(GetBasicBlockAt(0));
   }
 
   void DoLoadLocal(int offset) { push(local(offset)); }
@@ -1134,6 +1287,31 @@ class BasicBlockBuilder {
   }
 
   void DoInvokeNative(Native nativeId, int arity) {
+    if (nativeId == kListLength) {
+      kListLengthNative.Init();
+      kListLengthNative.Codegen(w, this, &h);
+      return;
+    } else if (nativeId == kListIndexGet) {
+      kListIndexGetNative.Init();
+      kListIndexGetNative.Codegen(w, this, &h);
+      return;
+    } else if (nativeId == kStringLength) {
+      kStringLengthMacro.Init();
+      kStringLengthMacro.Codegen(w, this, &h);
+      return;
+    } else if (nativeId == kSmiNegate) {
+      kSmiNegateMacro.Init();
+      kSmiNegateMacro.Codegen(w, this, &h);
+      return;
+    } else if (nativeId == kSmiMul) {
+      kSmiMulMacro.Init();
+      kSmiMulMacro.Codegen(w, this, &h);
+      return;
+    } else if (nativeId == kSmiBitShr) {
+      kSmiShrMacro.Init();
+      kSmiShrMacro.Codegen(w, this, &h);
+      return;
+    }
     std::vector<llvm::Value*> args(1 + arity, NULL);
     for (int i = 0; i < arity; i++) {
       args[arity - i] = b->CreateLoad(stack_[arity - i - 1]);
@@ -1480,7 +1658,7 @@ class BasicBlockBuilder {
     auto comp = b->CreateICmpEQ(actual_offset, expected_offset);
     auto true_obj = w->tagged_aspace1[w->program_->true_object()];
     auto false_obj = w->tagged_aspace1[w->program_->false_object()];
-    push(b->CreateSelect(comp, true_obj, false_obj, "compare_result"));
+    push(b->CreateSelect(comp, true_obj, false_obj, "invoke_compare_result"));
   }
 
   void DoBranch(int bci) {
@@ -1576,6 +1754,7 @@ class BasicBlockBuilder {
   }
 
   bool use_llvm() { return use_llvm_; }
+  llvm::Function* llvm_function() { return llvm_function_; }
 
  private:
   llvm::Instruction* FindSubroutineExit(llvm::BasicBlock* start) {
@@ -1716,6 +1895,8 @@ class BasicBlockBuilder {
   // where types are generally known.  Most operators only work on Smis in this
   // mode.
   bool use_llvm_ = false;
+
+  friend class ForthFunction;
 };
 
 class BasicBlocksExplorer {
@@ -1784,6 +1965,7 @@ class BasicBlocksExplorer {
       current = delayed;
       delayed.clear();
     }
+    b.TerminateEntryBlock();
     VerifyFunction();
   }
 
@@ -3383,6 +3565,196 @@ char* bytecode_string(uint8* bcp) {
   }
 
   return name("Unknown bytecode format %s", bytecode_format);
+}
+
+static void Push(std::vector<llvm::Value*>* forth_stack, llvm::Value* x) {
+  forth_stack->push_back(x);
+}
+
+static llvm::Value* Pop(std::vector<llvm::Value*>* forth_stack) {
+  ASSERT(forth_stack->size() != 0);
+  auto x = forth_stack->back();
+  forth_stack->pop_back();
+  return x;
+}
+
+static llvm::BasicBlock* ResolveBasicBlock(
+    const std::vector<const char*>& labels,
+    const std::vector<llvm::BasicBlock*>& blocks, const char* label) {
+  ASSERT(blocks.size() == labels.size());
+  int len = strlen(label);
+  for (unsigned i = 0; i < blocks.size(); i++) {
+    if (!strncmp(label, labels[i], len)) return blocks[i];
+  }
+  UNREACHABLE();  // Misspelled or undefined label.
+  return nullptr;
+}
+
+void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
+                            std::vector<llvm::Value*>* forth_stack) const {
+  llvm::IRBuilder<>* irb = b->b;
+  std::vector<llvm::BasicBlock*> blocks;
+  for (auto label : labels_) {
+    auto block =
+        llvm::BasicBlock::Create(*w->context, label, b->llvm_function());
+    blocks.push_back(block);
+  }
+  std::vector<llvm::Value*> locals;
+  for (auto var : variable_names_) {
+    // We have to add the allocas to the entry block, not the current block,
+    // otherwise the mem2reg pass cannot turn them into SSA values.
+    llvm::BasicBlock* current = irb->GetInsertBlock();
+    irb->SetInsertPoint(b->bb_entry_);
+    llvm::Value* slot;
+    if (!strncmp("int ", var, 4)) {
+      slot = irb->CreateAlloca(w->intptr_type, NULL, var + 4);
+    } else {
+      slot = irb->CreateAlloca(w->object_ptr_type, NULL, var);
+    }
+    irb->SetInsertPoint(current);
+    locals.push_back(slot);
+  }
+  for (auto bc : codes_) {
+    switch (bc.instruction) {
+      case F_STACK0:
+        Push(forth_stack, irb->CreateLoad(b->stack_[0]));
+        break;
+      case F_STACK1:
+        Push(forth_stack, irb->CreateLoad(b->stack_[1]));
+        break;
+      case F_LOAD: {
+        auto index = Pop(forth_stack);
+        auto object = Pop(forth_stack);
+        auto receiver = irb->CreatePointerBitCastOrAddrSpaceCast(
+            object, w->int8_ptr_aspace1_type);
+        // Untag before loading, but leave address-space-1 on the pointer, so
+        // it is GC marked.  The GC should still be able to distinguish this
+        // pointer from a Smi because it gets base-derived pairs, and the base
+        // will still be tagged.
+        // TODO(erikcorry): Fix the offset if the host and the target have
+        // different word sizes.
+        std::vector<llvm::Value*> indices = {
+            irb->CreateAdd(index, w->CWord(-1))};
+        auto gep = irb->CreateGEP(receiver, indices, "untagged_gep");
+        auto loaded = irb->CreateLoad(
+            irb->CreatePointerCast(gep, w->object_ptr_ptr_type));
+        Push(forth_stack, loaded);
+        break;
+      }
+      case F_RETURN:
+        irb->CreateRet(Pop(forth_stack));
+        break;
+      case F_PUSH:
+        // Pop off the Forth stack and push on the Dart stack.
+        b->push(Pop(forth_stack));
+        break;
+      case F_SMI_CHECK:
+        Push(forth_stack, h->CreateSmiCheck(Pop(forth_stack)));
+        break;
+      case F_IF_ELSE: {
+        auto if_true = ResolveBasicBlock(labels_, blocks, bc.label1);
+        auto if_false = ResolveBasicBlock(labels_, blocks, bc.label2);
+        irb->CreateCondBr(Pop(forth_stack), if_true, if_false);
+        break;
+      }
+      case F_UNTAG:
+        Push(forth_stack, h->DecodeSmi(Pop(forth_stack)));
+        break;
+      case F_TO_PTR:
+        Push(forth_stack,
+             irb->CreateIntToPtr(Pop(forth_stack), w->object_ptr_type));
+        break;
+      case F_TO_INT:
+        Push(forth_stack,
+             irb->CreatePtrToInt(Pop(forth_stack), w->intptr_type));
+        break;
+      case F_NEG:
+        Push(forth_stack, irb->CreateNeg(Pop(forth_stack)));
+        break;
+      case F_NOT:
+        Push(forth_stack, irb->CreateNot(Pop(forth_stack)));
+        break;
+      case F_SMUL_OVERFLOW: {
+        auto rhs = Pop(forth_stack);
+        auto lhs = Pop(forth_stack);
+        llvm::Function* f = llvm::Intrinsic::getDeclaration(
+            w->module_, llvm::Intrinsic::smul_with_overflow, {w->intptr_type});
+        auto s = irb->CreateCall(f, {lhs, rhs});
+        Push(forth_stack, irb->CreateExtractValue(s, {0}));  // Result.
+        Push(forth_stack, irb->CreateExtractValue(s, {1}));  // Overflow bit.
+        break;
+      }
+      case F_DISCARD:
+        Pop(forth_stack);
+        break;
+      case F_GOTO: {
+        auto dest = ResolveBasicBlock(labels_, blocks, bc.label1);
+        irb->CreateBr(dest);
+        break;
+      }
+      case F_LABEL: {
+        auto bb = ResolveBasicBlock(labels_, blocks, bc.label1);
+        irb->SetInsertPoint(bb);
+        break;
+      }
+      case F_EQ:
+      case F_UGE:
+      case F_SLT:
+      case F_ADD:
+      case F_UDIV:
+      case F_ASHR:
+      case F_SHL:
+      case F_AND: {
+        auto rhs = Pop(forth_stack);
+        auto lhs = Pop(forth_stack);
+        llvm::Value* res;
+        switch (bc.instruction) {
+          case F_EQ: res = irb->CreateICmpEQ(lhs, rhs); break;
+          case F_UGE: res = irb->CreateICmpUGE(lhs, rhs); break;
+          case F_SLT: res = irb->CreateICmpSLT(lhs, rhs); break;
+          case F_ADD: res = irb->CreateAdd(lhs, rhs); break;
+          case F_UDIV: res = irb->CreateUDiv(lhs, rhs); break;
+          case F_ASHR: res = irb->CreateAShr(lhs, rhs); break;
+          case F_SHL: res = irb->CreateShl(lhs, rhs); break;
+          case F_AND: res = irb->CreateAnd(lhs, rhs); break;
+          default: UNREACHABLE();
+        }
+        Push(forth_stack, res);
+        break;
+      }
+      case F_READ:
+      case F_ASSIGN: {
+        int index = -1;
+        int len = strlen(bc.source) - 1;
+        for (unsigned i = 0; i <= variable_names_.size(); i++) {
+          // Misspelled or undeclared variable.
+          ASSERT(i != variable_names_.size());
+          const char* var = variable_names_[i];
+          if (!strncmp("int ", var, 4)) var += 4;
+          if (!strncmp(var, bc.source, len)) {
+            index = i;
+            break;
+          }
+        }
+        if (bc.instruction == F_READ) {
+          Push(forth_stack, irb->CreateLoad(locals[index]));
+        } else {
+          ASSERT(bc.instruction == F_ASSIGN);
+          irb->CreateStore(Pop(forth_stack), locals[index]);
+        }
+        break;
+      }
+      case F_CONSTANT:
+        Push(forth_stack, w->CWord(bc.constant));
+        break;
+      case F_EXPAND_MACRO:
+        kArrayLoadMacro.Init();
+        kArrayLoadMacro.Codegen(w, b, h, forth_stack);
+        break;
+      case F_NONE:
+        UNREACHABLE();
+    }
+  }
 }
 
 }  // namespace dartino

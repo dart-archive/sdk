@@ -639,6 +639,11 @@ class Failure : public Object {
   static const uword kMaxPayload = (1ul << kPayloadSize) - 1;
   static const uword kPayloadMask = kMaxPayload << kPayloadShift;
 
+  static const uword kTaggedWrongArgumentType =
+      (WRONG_ARGUMENT_TYPE << kTagSize) | kTag;
+  static const uword kTaggedIndexOutOfBounds =
+      (INDEX_OUT_OF_BOUNDS << kTagSize) | kTag;
+
  private:
   static Failure* Create(FailureType type) {
     return reinterpret_cast<Failure*>(type << kTagSize | kTag);

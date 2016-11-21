@@ -60,7 +60,7 @@ typedef uint64 dartino_double_as_uint;
 #endif
 
 // Byte sizes.
-const int kWordSize = sizeof(word);
+static const int kWordSize = sizeof(word);
 const int kDoubleSize = sizeof(double);  // NOLINT
 const int kPointerSize = sizeof(void*);  // NOLINT
 

@@ -211,6 +211,62 @@ class World {
   llvm::Function* use_llvm_function = nullptr;
 };
 
+enum ForthInstruction {
+  F_NONE = 1,
+  F_STACK0,  // Top of Dart stack
+  F_STACK1,
+  F_LOAD,
+  F_RETURN,
+  F_PUSH,
+  F_SMI_CHECK,
+  F_IF_ELSE,
+  F_UNTAG,   // Shr 1 to remove Smi tag
+  F_TO_PTR,  // Reinterpret_cast to Object*
+  F_TO_INT,  // Reinterpret_cast to word
+  F_GOTO,
+  F_EQ,    // Equality test
+  F_UGE,   // Greater or equal unsigned
+  F_SLT,   // Less than signed
+  F_UDIV,  // Unsigned integer div
+  F_ADD,
+  F_SHL,      // Shift left.
+  F_ASHR,     // Arithmetic shift right.
+  F_AND,      // Bitwise and.
+  F_NEG,      // Negate.
+  F_NOT,      // Bitwise not.
+  F_DISCARD,  // Discard one value from the Forth stack.
+  F_SMUL_OVERFLOW,
+  F_ASSIGN,
+  F_READ,
+  F_LABEL,
+  F_CONSTANT,
+  F_EXPAND_MACRO
+};
+
+struct ForthByteCode {
+  // ForthByteCode(const char* src) : source(src) {}
+  ForthByteCode(const char* src) : source(src) {}  // NOLINT
+  ForthByteCode(uword c) : constant(c), instruction(F_CONSTANT) {}  // NOLINT
+  ForthByteCode(ForthInstruction insn) : instruction(insn) {}  // NOLINT
+  ForthByteCode(ForthInstruction insn, const char* l1, const char* l2)
+      : instruction(F_IF_ELSE), label1(l1), label2(l2) {
+    ASSERT(insn == F_IF_ELSE);
+  }
+  ForthByteCode(ForthInstruction insn, const char* label)
+      : instruction(F_GOTO), label1(label) {
+    ASSERT(insn == F_GOTO);
+  }
+
+  void Init();
+
+  const char* source = nullptr;
+  uword constant = 0;
+  ForthInstruction instruction = F_NONE;
+  const char* label1 = nullptr;
+  const char* label2 = nullptr;
+  bool initialized = false;
+};
+
 static const int kRegularNameSpace = 0;
 static const int kGCNameSpace = 1;
 
