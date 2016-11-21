@@ -245,9 +245,9 @@ enum ForthInstruction {
 
 struct ForthByteCode {
   // ForthByteCode(const char* src) : source(src) {}
-  ForthByteCode(const char* src) : source(src) {}  // NOLINT
+  ForthByteCode(const char* src) : source(src) {}                   // NOLINT
   ForthByteCode(uword c) : constant(c), instruction(F_CONSTANT) {}  // NOLINT
-  ForthByteCode(ForthInstruction insn) : instruction(insn) {}  // NOLINT
+  ForthByteCode(ForthInstruction insn) : instruction(insn) {}       // NOLINT
   ForthByteCode(ForthInstruction insn, const char* l1, const char* l2)
       : instruction(F_IF_ELSE), label1(l1), label2(l2) {
     ASSERT(insn == F_IF_ELSE);

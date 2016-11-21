@@ -1338,12 +1338,14 @@ class BasicBlockBuilder {
     push(failure_object);
   }
 
-  void DoIdentical() {
+  llvm::Value* DoIdentical(bool make_bools_primitive) {
     // TODO(llvm): Handle about other classes!
+    auto comp = b->CreateICmpEQ(pop(), pop());
+    if (make_bools_primitive) return comp;
     auto true_obj = w->tagged_aspace1[w->program_->true_object()];
     auto false_obj = w->tagged_aspace1[w->program_->false_object()];
-    push(b->CreateSelect(b->CreateICmpEQ(pop(), pop()), true_obj, false_obj,
-                         "identical_result"));
+    push(b->CreateSelect(comp, true_obj, false_obj, "identical_result"));
+    return nullptr;
   }
 
   void CheatSmiOperation(Opcode opcode, int selector, int if_true_bci,
@@ -1400,21 +1402,14 @@ class BasicBlockBuilder {
     }
   }
 
-  void DoInvokeSmiOperation(Opcode opcode, int selector, int if_true_bci = -1,
-                            int if_false_bci = -1) {
-    if (use_llvm_) {
-      CheatSmiOperation(opcode, selector, if_true_bci, if_false_bci);
-      return;
-    }
+  llvm::Value* DoInvokeSmiOperation(Opcode opcode, int selector,
+                                    bool make_bools_primitive) {
     auto bb_smi_receiver =
         llvm::BasicBlock::Create(*context, "smi_receiver", llvm_function_);
     auto bb_smis = llvm::BasicBlock::Create(*context, "smis", llvm_function_);
     auto bb_nonsmi =
         llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
-    llvm::BasicBlock* bb_join;
-    if (if_true_bci == -1) {
-      bb_join = llvm::BasicBlock::Create(*context, "join", llvm_function_);
-    }
+    auto bb_join = llvm::BasicBlock::Create(*context, "join", llvm_function_);
 
     auto tagged_argument = pop();
     auto tagged_receiver = pop();
@@ -1483,7 +1478,7 @@ class BasicBlockBuilder {
     }
 
     llvm::Value* smi_result = NULL;
-    if (if_true_bci == -1) {
+    if (!make_bools_primitive) {
       if (boolify) {
         auto true_obj = w->tagged_aspace1[w->program_->true_object()];
         auto false_obj = w->tagged_aspace1[w->program_->false_object()];
@@ -1492,50 +1487,66 @@ class BasicBlockBuilder {
       } else {
         smi_result = b->CreateIntToPtr(result, w->object_ptr_type);
       }
-      if (no_overflow == NULL) {
-        b->CreateBr(bb_join);
-      } else {
-        b->CreateCondBr(no_overflow, bb_join, bb_nonsmi, assume_true);
-      }
     } else {
-      auto pos = GetBasicBlockAt(if_true_bci);
-      auto neg = GetBasicBlockAt(if_false_bci);
-      b->CreateCondBr(result, pos, neg);
+      smi_result = result;
+    }
+    if (no_overflow == NULL) {
+      b->CreateBr(bb_join);
+    } else {
+      b->CreateCondBr(no_overflow, bb_join, bb_nonsmi, assume_true);
     }
 
     b->SetInsertPoint(bb_nonsmi);
     auto slow_case = w->GetSmiSlowCase(selector);
-    auto nonsmi_result = b->CreateCall(
+    llvm::Value* nonsmi_result = b->CreateCall(
         slow_case, {llvm_process_, tagged_receiver, tagged_argument},
         "slow_case");
 
-    if (if_true_bci == -1) {
-      b->CreateBr(bb_join);
-    } else {
-      // Branch if true.
+    if (make_bools_primitive) {
       auto true_object = w->tagged_aspace1[w->program_->true_object()];
-      auto pos = GetBasicBlockAt(if_true_bci);
-      auto neg = GetBasicBlockAt(if_false_bci);
-      auto cond = b->CreateICmpEQ(nonsmi_result, true_object);
-      b->CreateCondBr(cond, pos, neg);
+      nonsmi_result = b->CreateICmpEQ(nonsmi_result, true_object);
     }
     bb_nonsmi = b->GetInsertBlock();  // The basic block can be changed by
                                       // [DoInvokeMethod]!
+    b->CreateBr(bb_join);
 
-    if (if_true_bci == -1) {
-      b->SetInsertPoint(bb_join);
+    b->SetInsertPoint(bb_join);
+    if (!make_bools_primitive) {
       auto phi = b->CreatePHI(w->object_ptr_type, 2);
       phi->addIncoming(smi_result, bb_smis);
       phi->addIncoming(nonsmi_result, bb_nonsmi);
       push(phi);
+      return nullptr;
+    } else {
+      auto phi = b->CreatePHI(smi_result->getType(), 2);
+      phi->addIncoming(smi_result, bb_smis);
+      phi->addIncoming(nonsmi_result, bb_nonsmi);
+      return phi;
     }
   }
 
-  void DoNegate() {
+  llvm::Value* DoNegate(bool make_bools_primitive,
+                        llvm::Value* numeric_bool_tos) {
+    if (numeric_bool_tos && make_bools_primitive) {
+      return b->CreateNot(numeric_bool_tos, "negate");
+    }
+
     auto true_obj = w->tagged_aspace1[w->program_->true_object()];
     auto false_obj = w->tagged_aspace1[w->program_->false_object()];
+
+    if (numeric_bool_tos) {
+      push(b->CreateSelect(numeric_bool_tos, false_obj, true_obj, "negate"));
+      return nullptr;
+    }
+
     auto comp = b->CreateICmpEQ(pop(), true_obj);
-    push(b->CreateSelect(comp, false_obj, true_obj, "negate"));
+
+    if (make_bools_primitive) {
+      return b->CreateNot(comp, "negate");
+    } else {
+      push(b->CreateSelect(comp, false_obj, true_obj, "negate"));
+      return nullptr;
+    }
   }
 
   void DoInvokeMethod(int bci, int selector, int arity) {
@@ -1645,7 +1656,7 @@ class BasicBlockBuilder {
     return CreateInvokeOrCall(bci, code, args, "method_result");
   }
 
-  void DoInvokeTest(int selector) {
+  llvm::Value* DoInvokeTest(int selector, bool make_bools_primitive) {
     auto receiver = pop();
     auto smi_selector_offset = Selector::IdField::decode(selector)
                                << Smi::kTagSize;
@@ -1656,9 +1667,11 @@ class BasicBlockBuilder {
         LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
 
     auto comp = b->CreateICmpEQ(actual_offset, expected_offset);
+    if (make_bools_primitive) return comp;
     auto true_obj = w->tagged_aspace1[w->program_->true_object()];
     auto false_obj = w->tagged_aspace1[w->program_->false_object()];
     push(b->CreateSelect(comp, true_obj, false_obj, "invoke_compare_result"));
+    return nullptr;
   }
 
   void DoBranch(int bci) {
@@ -1676,13 +1689,16 @@ class BasicBlockBuilder {
 
   void DoBranchIfFalse(int bci, int next_bci) { DoBranchIf(next_bci, bci); }
 
-  void DoCompareAndBranch(int compare_bci, int if_true_bci, int if_false_bci) {
-    // Fused invoke-compare + condition branch instruction.
-    uint8* compare_bcp = function_->bytecode_address_for(compare_bci);
-    Opcode compare_opcode = static_cast<Opcode>(*compare_bcp);
-    int compare_selector = Utils::ReadInt32(compare_bcp + 1);
-    DoInvokeSmiOperation(compare_opcode, compare_selector, if_true_bci,
-                         if_false_bci);
+  void DoBranchIfZero(llvm::Value* boolean, int bci, int next_bci) {
+    auto zero = w->CBit(0);
+    auto pos = GetBasicBlockAt(bci);
+    auto neg = GetBasicBlockAt(next_bci);
+    auto cond = b->CreateICmpEQ(boolean, zero);
+    b->CreateCondBr(cond, pos, neg);
+  }
+
+  void DoBranchIfNonZero(llvm::Value* boolean, int bci, int next_bci) {
+    DoBranchIfZero(boolean, next_bci, bci);
   }
 
   void DoProcessYield() { b->CreateCall(w->libc__exit, {w->CInt(0)}); }
@@ -2002,13 +2018,25 @@ class BasicBlocksExplorer {
     return false;
   }
 
+  bool NextInsnTakesABool(int next_bci) {
+    if (labels.find(next_bci) == labels.end()) {
+      uint8* next_bcp = function_->bytecode_address_for(next_bci);
+      Opcode next_opcode = static_cast<Opcode>(*next_bcp);
+      if (next_opcode == kBranchIfTrueWide ||
+          next_opcode == kBranchIfFalseWide || next_opcode == kNegate) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void BuildBlock(BasicBlockBuilder* b, int bci) {
     b->InsertAtBCI(bci);
     if (catch_blocks_.find(bci) != catch_blocks_.end()) {
       b->DoCatchBlockEntry(bci);
     }
 
-    int postponed_compare_bci = -1;
+    llvm::Value* numeric_bool_tos = nullptr;
     bool last_opcode_was_jump = false;
     bool stop = false;
     do {
@@ -2148,10 +2176,10 @@ class BasicBlocksExplorer {
         }
 
         case kBranchIfTrueWide: {
-          if (postponed_compare_bci >= 0) {
-            b->DoCompareAndBranch(postponed_compare_bci,
-                                  bci + Utils::ReadInt32(bcp + 1), next_bci);
-            postponed_compare_bci = -1;
+          if (numeric_bool_tos) {
+            b->DoBranchIfNonZero(numeric_bool_tos,
+                                 bci + Utils::ReadInt32(bcp + 1), next_bci);
+            numeric_bool_tos = nullptr;
           } else {
             b->DoBranchIf(bci + Utils::ReadInt32(bcp + 1), next_bci);
           }
@@ -2169,10 +2197,10 @@ class BasicBlocksExplorer {
         }
 
         case kBranchIfFalseWide: {
-          if (postponed_compare_bci >= 0) {
-            b->DoCompareAndBranch(postponed_compare_bci, next_bci,
-                                  bci + Utils::ReadInt32(bcp + 1));
-            postponed_compare_bci = -1;
+          if (numeric_bool_tos) {
+            b->DoBranchIfZero(numeric_bool_tos, bci + Utils::ReadInt32(bcp + 1),
+                              next_bci);
+            numeric_bool_tos = nullptr;
           } else {
             b->DoBranchIfFalse(bci + Utils::ReadInt32(bcp + 1), next_bci);
           }
@@ -2261,13 +2289,9 @@ class BasicBlocksExplorer {
           break;
         }
 
+        case kIdenticalNonNumeric:
         case kIdentical: {
-          b->DoIdentical();
-          break;
-        }
-
-        case kIdenticalNonNumeric: {
-          b->DoIdentical();
+          numeric_bool_tos = b->DoIdentical(NextInsnTakesABool(next_bci));
           break;
         }
 
@@ -2292,7 +2316,8 @@ class BasicBlocksExplorer {
         }
 
         case kNegate: {
-          b->DoNegate();
+          numeric_bool_tos =
+              b->DoNegate(NextInsnTakesABool(next_bci), numeric_bool_tos);
           break;
         }
 
@@ -2301,16 +2326,10 @@ class BasicBlocksExplorer {
         case kInvokeGt:
         case kInvokeLe:
         case kInvokeLt: {
-          if (labels.find(next_bci) == labels.end()) {
-            uint8* next_bcp = function_->bytecode_address_for(next_bci);
-            Opcode next_opcode = static_cast<Opcode>(*next_bcp);
-            if (next_opcode == kBranchIfTrueWide ||
-                next_opcode == kBranchIfFalseWide) {
-              postponed_compare_bci = bci;
-              break;
-            }
-          }
-          // Fall through.
+          int selector = Utils::ReadInt32(bcp + 1);
+          numeric_bool_tos = b->DoInvokeSmiOperation(
+              opcode, selector, NextInsnTakesABool(next_bci));
+          break;
         }
 
         case kInvokeBitAnd:
@@ -2319,14 +2338,13 @@ class BasicBlocksExplorer {
         case kInvokeAdd:
         case kInvokeSub: {
           int selector = Utils::ReadInt32(bcp + 1);
-          b->DoInvokeSmiOperation(opcode, selector);
+          b->DoInvokeSmiOperation(opcode, selector, false);
           break;
         }
 
         case kInvokeMod:
         case kInvokeMul:
         case kInvokeTruncDiv:
-
         case kInvokeBitNot:
         case kInvokeBitShr:
         case kInvokeBitShl:
@@ -2340,7 +2358,8 @@ class BasicBlocksExplorer {
 
         case kInvokeTest: {
           int selector = Utils::ReadInt32(bcp + 1);
-          b->DoInvokeTest(selector);
+          numeric_bool_tos =
+              b->DoInvokeTest(selector, NextInsnTakesABool(next_bci));
           break;
         }
 
