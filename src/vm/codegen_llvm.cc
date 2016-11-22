@@ -65,7 +65,10 @@ class ForthFunction {
                 std::vector<ForthByteCode> codes)
       : name_(name), variable_names_(vars), codes_(codes) {}
 
-  void Init() { Init(&codes_); }
+  void Init() {
+    if (!initialized_) Init(&codes_);
+    initialized_ = true;
+  }
 
   void Init(std::vector<ForthByteCode>* codes) {
     for (ForthByteCode& bc : *codes) {
@@ -76,20 +79,73 @@ class ForthFunction {
     }
   }
 
-  void Codegen(World* w, BasicBlockBuilder* b, IRHelper* h) const {
+  void Codegen(World* w, BasicBlockBuilder* b, IRHelper* h) {
     std::vector<llvm::Value*> empty_stack;
     Codegen(w, b, h, &empty_stack);
   }
 
   void Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
-               std::vector<llvm::Value*>* forth_stack) const;
+               std::vector<llvm::Value*>* forth_stack);
 
  private:
   const char* name_;
   std::vector<const char*> variable_names_;
   std::vector<ForthByteCode> codes_;
   std::vector<const char*> labels_;
+  bool initialized_ = false;
 };
+
+static void Push(std::vector<llvm::Value*>* forth_stack, llvm::Value* x) {
+  forth_stack->push_back(x);
+}
+
+static llvm::Value* Pop(std::vector<llvm::Value*>* forth_stack) {
+  ASSERT(forth_stack->size() != 0);
+  auto x = forth_stack->back();
+  forth_stack->pop_back();
+  return x;
+}
+
+// Snippets of code used to implement Dartino byte codes (add, sub, etc.)
+
+// On input stack has argument (top of stack) and receiver.  On exit stack has
+// no-overflow flag (top of stack) and result (invalid on overflow).
+static ForthFunction kInvokeAddMacro("InvokeAdd", {}, {
+    F_SADD_OVERFLOW, F_NOT
+});
+
+static ForthFunction kInvokeSubMacro("InvokeSub", {}, {
+    F_SSUB_OVERFLOW, F_NOT
+});
+
+// If we mul two 0-tagged integers together we get an answer that is 2x too
+// big, so shift one of them down first.
+static ForthFunction kInvokeMulMacro("InvokeMul", {}, {
+    1, F_ASHR, F_SMUL_OVERFLOW, F_NOT
+});
+
+static ForthFunction kInvokeShrMacro("InvokeShr", {"int shift",
+                                                   "int result",
+                                                   "bool no_overflow"}, {
+    "shift!",
+  // Negative shift gives a bounds error.
+    "shift@", (uword)0, F_SLT, { F_IF_ELSE, "oob", "not_negative"},
+  // Check shift is max 63 (126 tagged). TODO(erikcorry): Fix for 32 bit
+  // platform.
+  "not_negative:", "shift@", 126, F_UGE, { F_IF_ELSE, "too_large", "ok"},
+  "too_large:", 126, "shift!", { F_GOTO, "ok" },
+  // The receiver stays on the Forth stack until here, where we use it.
+  // Untag the shift distance by shifting once before using it.
+  "ok:", "shift@", 1, F_ASHR, F_ASHR,
+    1, F_NOT, F_AND, "result!", F_BIT_TRUE, "no_overflow!",
+    { F_GOTO, "done" },
+  "oob:", (uword)0, "result!", F_BIT_FALSE, "no_overflow!",
+    { F_GOTO, "done" },
+  "done:",
+    "result@", "no_overflow@"
+});
+
+// Snippets of code used to implement natives.
 
 static ForthFunction kSmiNegateMacro("SmiNegate", {}, {
     F_STACK0, 0x8000000000000000ul, F_TO_PTR, F_EQ,
@@ -1288,27 +1344,21 @@ class BasicBlockBuilder {
 
   void DoInvokeNative(Native nativeId, int arity) {
     if (nativeId == kListLength) {
-      kListLengthNative.Init();
       kListLengthNative.Codegen(w, this, &h);
       return;
     } else if (nativeId == kListIndexGet) {
-      kListIndexGetNative.Init();
       kListIndexGetNative.Codegen(w, this, &h);
       return;
     } else if (nativeId == kStringLength) {
-      kStringLengthMacro.Init();
       kStringLengthMacro.Codegen(w, this, &h);
       return;
     } else if (nativeId == kSmiNegate) {
-      kSmiNegateMacro.Init();
       kSmiNegateMacro.Codegen(w, this, &h);
       return;
     } else if (nativeId == kSmiMul) {
-      kSmiMulMacro.Init();
       kSmiMulMacro.Codegen(w, this, &h);
       return;
     } else if (nativeId == kSmiBitShr) {
-      kSmiShrMacro.Init();
       kSmiShrMacro.Codegen(w, this, &h);
       return;
     }
@@ -1430,28 +1480,25 @@ class BasicBlockBuilder {
     bool boolify = false;
     llvm::Value* no_overflow = NULL;
     llvm::Value* result = NULL;
-    if (opcode == kInvokeAdd) {
-      if (Flags::wrap_smis) {
-        result = b->CreateAdd(receiver, argument);
-      } else {
-        llvm::Function* f = llvm::Intrinsic::getDeclaration(
-            w->module_, llvm::Intrinsic::sadd_with_overflow, {w->intptr_type});
-        auto s = b->CreateCall(f, {receiver, argument});
-        auto overflow_bit = b->CreateExtractValue(s, {1});
-        no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
-        result = b->CreateExtractValue(s, {0});
-      }
+    if (opcode == kInvokeBitShr ||
+        (!Flags::wrap_smis && (opcode == kInvokeAdd ||
+                               opcode == kInvokeSub ||
+                               opcode == kInvokeMul))) {
+      std::vector<llvm::Value*> stack;
+      Push(&stack, receiver);
+      Push(&stack, argument);
+      if (opcode == kInvokeAdd) kInvokeAddMacro.Codegen(w, this, &h, &stack);
+      if (opcode == kInvokeSub) kInvokeSubMacro.Codegen(w, this, &h, &stack);
+      if (opcode == kInvokeMul) kInvokeMulMacro.Codegen(w, this, &h, &stack);
+      if (opcode == kInvokeBitShr) kInvokeShrMacro.Codegen(w, this, &h, &stack);
+      no_overflow = Pop(&stack);
+      result = Pop(&stack);
+    } else if (opcode == kInvokeAdd) {
+      result = b->CreateAdd(receiver, argument);
     } else if (opcode == kInvokeSub) {
-      if (Flags::wrap_smis) {
-        result = b->CreateSub(receiver, argument);
-      } else {
-        llvm::Function* f = llvm::Intrinsic::getDeclaration(
-            w->module_, llvm::Intrinsic::ssub_with_overflow, {w->intptr_type});
-        auto s = b->CreateCall(f, {receiver, argument});
-        auto overflow_bit = b->CreateExtractValue(s, {1});
-        no_overflow = b->CreateICmpEQ(overflow_bit, w->CBit(0));
-        result = b->CreateExtractValue(s, {0});
-      }
+      result = b->CreateSub(receiver, argument);
+    } else if (opcode == kInvokeMul) {
+      result = b->CreateMul(b->CreateAShr(receiver, w->CWord(1)), argument);
     } else if (opcode == kInvokeBitAnd) {
       result = b->CreateAnd(receiver, argument, "bitwise_smi_and");
     } else if (opcode == kInvokeBitOr) {
@@ -1476,6 +1523,8 @@ class BasicBlockBuilder {
     } else {
       UNREACHABLE();
     }
+
+    bb_smis = b->GetInsertBlock();
 
     llvm::Value* smi_result = NULL;
     if (!make_bools_primitive) {
@@ -2332,6 +2381,8 @@ class BasicBlocksExplorer {
           break;
         }
 
+        case kInvokeBitShr:
+        case kInvokeMul:
         case kInvokeBitAnd:
         case kInvokeBitOr:
         case kInvokeBitXor:
@@ -2342,12 +2393,10 @@ class BasicBlocksExplorer {
           break;
         }
 
-        case kInvokeMod:
-        case kInvokeMul:
-        case kInvokeTruncDiv:
-        case kInvokeBitNot:
-        case kInvokeBitShr:
         case kInvokeBitShl:
+        case kInvokeBitNot:
+        case kInvokeMod:
+        case kInvokeTruncDiv:
 
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
@@ -2664,6 +2713,7 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
       module_(module),
       bits_per_word(0),
       intptr_type(NULL),
+      int1_type(NULL),
       int8_type(NULL),
       int8_ptr_type(NULL),
       int8_ptr_aspace1_type(NULL),
@@ -2705,6 +2755,7 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
       runtime__HandleObjectFromFailure(NULL) {
   llvm::MDBuilder md_builder(*context);
 
+  int1_type = llvm::Type::getInt1Ty(*context);
   int8_type = llvm::Type::getInt8Ty(*context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
   int8_ptr_aspace1_type = llvm::PointerType::get(int8_type, 1);
@@ -3586,17 +3637,6 @@ char* bytecode_string(uint8* bcp) {
   return name("Unknown bytecode format %s", bytecode_format);
 }
 
-static void Push(std::vector<llvm::Value*>* forth_stack, llvm::Value* x) {
-  forth_stack->push_back(x);
-}
-
-static llvm::Value* Pop(std::vector<llvm::Value*>* forth_stack) {
-  ASSERT(forth_stack->size() != 0);
-  auto x = forth_stack->back();
-  forth_stack->pop_back();
-  return x;
-}
-
 static llvm::BasicBlock* ResolveBasicBlock(
     const std::vector<const char*>& labels,
     const std::vector<llvm::BasicBlock*>& blocks, const char* label) {
@@ -3610,7 +3650,8 @@ static llvm::BasicBlock* ResolveBasicBlock(
 }
 
 void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
-                            std::vector<llvm::Value*>* forth_stack) const {
+                            std::vector<llvm::Value*>* forth_stack) {
+  Init();
   llvm::IRBuilder<>* irb = b->b;
   std::vector<llvm::BasicBlock*> blocks;
   for (auto label : labels_) {
@@ -3627,6 +3668,8 @@ void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
     llvm::Value* slot;
     if (!strncmp("int ", var, 4)) {
       slot = irb->CreateAlloca(w->intptr_type, NULL, var + 4);
+    } else if (!strncmp("bool ", var, 5)) {
+      slot = irb->CreateAlloca(w->int1_type, NULL, var + 5);
     } else {
       slot = irb->CreateAlloca(w->object_ptr_type, NULL, var);
     }
@@ -3640,6 +3683,12 @@ void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
         break;
       case F_STACK1:
         Push(forth_stack, irb->CreateLoad(b->stack_[1]));
+        break;
+      case F_BIT_TRUE:
+        Push(forth_stack, w->CBit(1));
+        break;
+      case F_BIT_FALSE:
+        Push(forth_stack, w->CBit(0));
         break;
       case F_LOAD: {
         auto index = Pop(forth_stack);
@@ -3693,11 +3742,17 @@ void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
       case F_NOT:
         Push(forth_stack, irb->CreateNot(Pop(forth_stack)));
         break;
+      case F_SADD_OVERFLOW:
+      case F_SSUB_OVERFLOW:
       case F_SMUL_OVERFLOW: {
         auto rhs = Pop(forth_stack);
         auto lhs = Pop(forth_stack);
+        auto insn = bc.instruction;
+        auto intr = llvm::Intrinsic::smul_with_overflow;
+        if (insn == F_SADD_OVERFLOW) intr = llvm::Intrinsic::sadd_with_overflow;
+        if (insn == F_SSUB_OVERFLOW) intr = llvm::Intrinsic::ssub_with_overflow;
         llvm::Function* f = llvm::Intrinsic::getDeclaration(
-            w->module_, llvm::Intrinsic::smul_with_overflow, {w->intptr_type});
+            w->module_, intr, {w->intptr_type});
         auto s = irb->CreateCall(f, {lhs, rhs});
         Push(forth_stack, irb->CreateExtractValue(s, {0}));  // Result.
         Push(forth_stack, irb->CreateExtractValue(s, {1}));  // Overflow bit.
@@ -3750,6 +3805,7 @@ void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
           ASSERT(i != variable_names_.size());
           const char* var = variable_names_[i];
           if (!strncmp("int ", var, 4)) var += 4;
+          if (!strncmp("bool ", var, 5)) var += 5;
           if (!strncmp(var, bc.source, len)) {
             index = i;
             break;
@@ -3767,7 +3823,6 @@ void ForthFunction::Codegen(World* w, BasicBlockBuilder* b, IRHelper* h,
         Push(forth_stack, w->CWord(bc.constant));
         break;
       case F_EXPAND_MACRO:
-        kArrayLoadMacro.Init();
         kArrayLoadMacro.Codegen(w, b, h, forth_stack);
         break;
       case F_NONE:

@@ -102,6 +102,7 @@ class World {
   // Basically intptr_t of the target. Used for pointer->int, int->pointer
   // conversions.
   llvm::IntegerType* intptr_type;
+  llvm::IntegerType* int1_type;
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
   llvm::PointerType* int8_ptr_aspace1_type;
@@ -215,6 +216,8 @@ enum ForthInstruction {
   F_NONE = 1,
   F_STACK0,  // Top of Dart stack
   F_STACK1,
+  F_BIT_TRUE,   // 1-bit integer 1
+  F_BIT_FALSE,  // 1-bit integer 0
   F_LOAD,
   F_RETURN,
   F_PUSH,
@@ -236,6 +239,8 @@ enum ForthInstruction {
   F_NOT,      // Bitwise not.
   F_DISCARD,  // Discard one value from the Forth stack.
   F_SMUL_OVERFLOW,
+  F_SADD_OVERFLOW,
+  F_SSUB_OVERFLOW,
   F_ASSIGN,
   F_READ,
   F_LABEL,
