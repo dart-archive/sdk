@@ -3044,8 +3044,6 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
   auto handle_gc_type =
       llvm::FunctionType::get(llvm::Type::getVoidTy(*context),
                               {process_ptr_type, int8_ptr_type}, false);
-  auto gc_trampoline_type = llvm::FunctionType::get(
-      llvm::Type::getVoidTy(*context), {process_ptr_type}, false);
   auto handle_allocate_type = llvm::FunctionType::get(
       object_ptr_type, {process_ptr_type, object_ptr_type, intptr_type}, false);
   auto handle_allocate_boxed_type = llvm::FunctionType::get(
@@ -3056,14 +3054,8 @@ World::World(Program* program, llvm::LLVMContext* context, llvm::Module* module)
   runtime__HandleGC =
       llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage,
                              "HandleGCWithFP", module_);
-  dartino_gc_trampoline = llvm::Function::Create(
-      gc_trampoline_type, llvm::Function::ExternalLinkage,
-      "dartino_gc_trampoline", module_);
-  llvm::AttributeSet attr_set = dartino_gc_trampoline->getAttributes();
-  attr_set = attr_set.addAttribute(*context, llvm::AttributeSet::FunctionIndex,
-                                   llvm::Attribute::NoInline);
-  dartino_gc_trampoline->setAttributes(attr_set);
   CreateGCTrampoline();
+  CreateDartinoGetStackMaps();
 
   runtime__HandleAllocate = llvm::Function::Create(
       handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate",
@@ -3234,6 +3226,16 @@ llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
 }
 
 void World::CreateGCTrampoline() {
+  auto gc_trampoline_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(*context), {process_ptr_type}, false);
+  dartino_gc_trampoline = llvm::Function::Create(
+      gc_trampoline_type, llvm::Function::ExternalLinkage,
+      "dartino_gc_trampoline", module_);
+  llvm::AttributeSet attr_set = dartino_gc_trampoline->getAttributes();
+  attr_set = attr_set.addAttribute(*context, llvm::AttributeSet::FunctionIndex,
+                                   llvm::Attribute::NoInline);
+  dartino_gc_trampoline->setAttributes(attr_set);
+
   llvm::IRBuilder<> builder(*context);
   BasicBlockBuilder b(this, NULL, dartino_gc_trampoline, &builder, {});
   b.DoPrologue();
@@ -3252,6 +3254,24 @@ void World::CreateGCTrampoline() {
 
   builder.CreateCall(runtime__HandleGC, args);
   builder.CreateRetVoid();
+}
+
+void World::CreateDartinoGetStackMaps() {
+  auto get_maps_type = llvm::FunctionType::get(int8_ptr_type, {}, false);
+
+  dartino_GetStackMaps = llvm::Function::Create(
+      get_maps_type, llvm::Function::ExternalLinkage,
+      "dartino_GetStackMaps", module_);
+
+  llvm::IRBuilder<> builder(*context);
+  BasicBlockBuilder b(this, NULL, dartino_GetStackMaps, &builder, {});
+  b.DoPrologue();
+
+  auto stack_maps = new llvm::GlobalVariable(
+      *module_, int8_type, false, llvm::GlobalValue::ExternalLinkage,
+      nullptr, "__LLVM_StackMaps");
+
+  builder.CreateRet(stack_maps);
 }
 
 // Makes external function delcarations for a natural native method (native
@@ -3558,11 +3578,16 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
               bias->setMetadata(llvm::LLVMContext::MD_tbaa,
                                 w->invariant_alias_analysis_node);
               auto mark = b.CreateGEP(bias, card1, "mark");
-              // Cast the receiver to a byte and use that to store into the
-              // byte-sized card mark. The receiver is always tagged with 1, so
-              // we know it is not going to be zero.
+              // For the write barrier we need to write a non-zero byte to the
+              // remembered set.  On ARM it's probably faster to write the low
+              // byte of the receiver address, (which is tagged, and therefore
+              // never 0) because it saves having to load the constant "1" into
+              // a register prior to the store instruction.  On x86, however,
+              // the obvious answer (writing '1') is also the best, since the
+              // LShr instruction above naturally overwrites the receiver
+              // register on a 2-register instruction set.
               auto remembered_set_store =
-                  b.CreateStore(b.CreatePtrToInt(receiver, w->int8_type), mark);
+                  b.CreateStore(w->CInt8(1), mark);
               remembered_set_store->setMetadata(
                   llvm::LLVMContext::MD_tbaa,
                   w->remembered_set_alias_analysis_node);

@@ -111,30 +111,29 @@ void StackMap::Visit(TwoSpaceHeap* process_heap, PointerVisitor* visitor,
   }
 }
 
-void StackMap::EnsureComputed() {
+template<typename StackSizeRecord>
+void StackMap::EnsureComputedHelper() {
   if (return_address_to_stack_map_.size() != 0) return;
 
-  ASSERT(__LLVM_StackMaps.version == 1);
-
   StackSizeRecord* stack_sizes =
-      reinterpret_cast<StackSizeRecord*>((&__LLVM_StackMaps) + 1);
+      reinterpret_cast<StackSizeRecord*>(dartino_GetStackMaps() + 1);
 
   HashMap<char*, int> function_to_stack_size;
 
-  for (unsigned i = 0; i < __LLVM_StackMaps.num_functions; i++) {
+  for (unsigned i = 0; i < dartino_GetStackMaps()->num_functions; i++) {
     function_to_stack_size[stack_sizes[i].function_address] =
         stack_sizes[i].stack_size;
   }
 
   StackMapConstant* constants = reinterpret_cast<StackMapConstant*>(
-      stack_sizes + __LLVM_StackMaps.num_functions);
+      stack_sizes + dartino_GetStackMaps()->num_functions);
 
   StackMapRecord* record = reinterpret_cast<StackMapRecord*>(
-      constants + __LLVM_StackMaps.num_constants);
+      constants + dartino_GetStackMaps()->num_constants);
 
   char** table = &dartino_function_table;
 
-  for (unsigned i = 0; i < __LLVM_StackMaps.num_records; i++) {
+  for (unsigned i = 0; i < dartino_GetStackMaps()->num_records; i++) {
     // For patch point ID we just use an integer that identifies the function
     // object.
     char* code = table[record->patch_point_id];
@@ -153,6 +152,18 @@ void StackMap::EnsureComputed() {
     addr += sizeof(part_2->first_live_out) * part_2->num_live_outs;
     addr = Utils::RoundUp(addr, 8);
     record = reinterpret_cast<StackMapRecord*>(addr);
+  }
+}
+
+void StackMap::EnsureComputed() {
+  if (return_address_to_stack_map_.size() != 0) return;
+
+  int version = dartino_GetStackMaps()->version;
+  ASSERT(version <= 2);
+  if (version == 1) {
+    EnsureComputedHelper<StackSizeRecord1>();
+  } else {
+    EnsureComputedHelper<StackSizeRecord2>();
   }
 }
 

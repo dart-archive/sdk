@@ -15,9 +15,10 @@ class Heap;
 class PointerVisitor;
 
 // See http://llvm.org/docs/StackMaps.html
+// There are version1 and version2 versions of these structures.
 
 struct StackMapHeader {
-  uint8 version;  // Currently 1.
+  uint8 version;  // Currently 1 or 2.
   uint8 reserved1;
   uint16 reserved2;
   uint32 num_functions;
@@ -25,9 +26,15 @@ struct StackMapHeader {
   uint32 num_records;
 };
 
-struct StackSizeRecord {
+struct StackSizeRecord1 {
   char* function_address;
   uint64 stack_size;
+};
+
+struct StackSizeRecord2 {
+  char* function_address;
+  uint64 stack_size;
+  uint64 record_count;
 };
 
 struct StackMapConstant {
@@ -83,13 +90,15 @@ class StackMap {
   static void Dump(StackMapRecord* record);
 
  private:
+  template <typename T>
+  static void EnsureComputedHelper();
   static HashMap<char*, StackMapEntry> return_address_to_stack_map_;
 };
 
 }  // namespace dartino
 
 extern "C" {
-extern dartino::StackMapHeader __LLVM_StackMaps;
+extern dartino::StackMapHeader* dartino_GetStackMaps();
 extern char* dartino_function_table;
 }
 

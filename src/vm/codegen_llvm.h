@@ -92,6 +92,7 @@ class World {
   void GiveIdToFunction(llvm::Function* llvm_function);
 
   void CreateGCTrampoline();
+  void CreateDartinoGetStackMaps();
 
   Program* const program_;
   llvm::LLVMContext* context;
@@ -179,6 +180,7 @@ class World {
 
   llvm::Function* runtime__HandleGC;
   llvm::Function* dartino_gc_trampoline;
+  llvm::Function* dartino_GetStackMaps;
   llvm::Function* runtime__HandleAllocate;
   llvm::Function* runtime__HandleAllocateBoxed;
   llvm::Function* runtime__HandleInvokeSelector;
