@@ -46,6 +46,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace dartino {
 
@@ -198,6 +199,7 @@ class World {
   // The actual addresses of constants, ie without the 1-tag.
   std::map<HeapObject*, llvm::Constant*> untagged_aspace0;
   std::map<HeapObject*, llvm::Function*> llvm_functions;
+  std::unordered_set<HeapObject*> functions_that_can_cause_gc;
   std::unordered_map<llvm::Function*, int> function_to_statepoint_id;
   int next_function_id = 0;
 

@@ -942,6 +942,63 @@ class IRHelper {
   llvm::IRBuilder<>* b;
 };
 
+static bool ScanForGC(Function* function) {
+  int bci = 0;
+  while (true) {
+    uint8* bcp = function->bytecode_address_for(bci);
+    Opcode opcode = static_cast<Opcode>(*bcp);
+    switch (opcode) {
+      case kLoadLocal0:
+      case kLoadLocal1:
+      case kLoadLocal2:
+      case kLoadLocal3:
+      case kLoadLocal4:
+      case kLoadLocal5:
+      case kLoadLocal:
+      case kLoadLocalWide:
+
+      case kLoadBoxed:
+      case kLoadStatic:
+      case kLoadField:
+      case kLoadFieldWide:
+      case kStoreLocal:
+      case kStoreBoxed:
+      case kStoreStatic:
+      case kStoreField:
+      case kStoreFieldWide:
+
+      case kLoadLiteralNull:
+      case kLoadLiteralTrue:
+      case kLoadLiteralFalse:
+      case kLoadLiteral0:
+      case kLoadLiteral1:
+      case kLoadLiteral:
+      case kLoadLiteralWide:
+      case kPop:
+      case kDrop:
+      case kReturn:
+      case kReturnNull:
+      case kBranchWide:
+      case kBranchIfTrueWide:
+      case kBranchIfFalseWide:
+
+      case kPopAndBranchWide:
+      case kPopAndBranchBackWide:
+
+      case kIdentical:
+      case kIdenticalNonNumeric:
+        break;
+
+      case kMethodEnd:
+        return false;
+
+      default:
+        return true;
+    }
+    bci = bci + Bytecode::Size(opcode);
+  }
+}
+
 class BasicBlockBuilder {
  public:
   // bcp & fp & empty
@@ -1169,26 +1226,34 @@ class BasicBlockBuilder {
 
   llvm::Value* CreateInvokeOrCall(int bci, llvm::Value* callee,
                                   llvm::ArrayRef<llvm::Value*> args,
+                                  bool can_cause_gc,
                                   const std::string& label = "") {
-    for (auto p : catch_ranges_) {
-      int start = p.first;
-      int end = p.second;
-      if (bci >= start && bci < end) {
-        llvm::BasicBlock* exceptional = bci2bb_[p.second];
-        llvm::BasicBlock* normal = llvm::BasicBlock::Create(
-            *context, name("bb%d", bci), llvm_function_);
-        llvm::Value* val =
-            b->CreateInvoke(callee, normal, exceptional, args, label);
-        b->SetInsertPoint(normal);
-        return val;
+    // Since throwing causes allocation, we know there are no throws in the
+    // call when it can't allocate.
+    if (can_cause_gc) {
+      for (auto p : catch_ranges_) {
+        int start = p.first;
+        int end = p.second;
+        if (bci >= start && bci < end) {
+          llvm::BasicBlock* exceptional = bci2bb_[p.second];
+          llvm::BasicBlock* normal = llvm::BasicBlock::Create(
+              *context, name("bb%d", bci), llvm_function_);
+          llvm::Value* val =
+              b->CreateInvoke(callee, normal, exceptional, args, label);
+          b->SetInsertPoint(normal);
+          return val;
+        }
       }
     }
-    return b->CreateCall(callee, args, label);
+
+    auto call = b->CreateCall(callee, args, label);
+    if (!can_cause_gc) SetNoGC(call);
+    return call;
   }
 
   void DoThrow(int bci) {
     auto ex = pop();
-    CreateInvokeOrCall(bci, w->raise_exception, {llvm_process_, ex});
+    CreateInvokeOrCall(bci, w->raise_exception, {llvm_process_, ex}, true);
     b->CreateUnreachable();
   }
 
@@ -1338,7 +1403,8 @@ class BasicBlockBuilder {
     llvm::Function* llvm_target =
         static_cast<llvm::Function*>(w->llvm_functions[target]);
     ASSERT(llvm_target != NULL);
-    auto result = CreateInvokeOrCall(bci, llvm_target, args, "result");
+    auto result =
+        CreateInvokeOrCall(bci, llvm_target, args, ScanForGC(target), "result");
     push(result);
   }
 
@@ -1610,14 +1676,17 @@ class BasicBlockBuilder {
     ASSERT(index == 0);
 
     Function* fn;
-    if (Flags::assume_no_nsm && (fn = OnlyOneMethodMatches(selector))) {
+    bool gc;
+    if (Flags::assume_no_nsm && (fn = OnlyOneMethodMatches(selector, &gc))) {
       // There's only one method of this name (selector), so since there are
       // assumed to be no NoSuchMethod events, just call it (or inline it).
       auto code = w->llvm_functions[fn];
-      auto result = CreateInvokeOrCall(bci, code, method_args, "method_result");
+      auto result =
+          CreateInvokeOrCall(bci, code, method_args, gc, "method_result");
       push(result);
     } else {
-      auto result = InvokeMethodHelper(bci, selector, method_args);
+      if (!Flags::assume_no_nsm) gc = true;
+      auto result = InvokeMethodHelper(bci, selector, method_args, gc);
       push(result);
     }
   }
@@ -1652,25 +1721,37 @@ class BasicBlockBuilder {
     return entry->offset()->value() == selector_id;
   }
 
-  Function* OnlyOneMethodMatches(int selector) {
+  Function* OnlyOneMethodMatches(int selector, bool* cause_gc) {
+    *cause_gc = false;
     Function* fn = nullptr;
+    int matches = 0;
     Array* dispatch_table = w->program_->dispatch_table();
+    Object* nsm_entry = dispatch_table->get(0);
     for (int i = 0; i < dispatch_table->length(); i++) {
       Object* e = dispatch_table->get(i);
       auto entry = DispatchTableEntry::cast(e);
       if (entry->offset()->value() == Selector::IdField::decode(selector)) {
-        if (fn == nullptr) {
-          fn = entry->target();
-        } else if (fn != entry->target()) {
-          return nullptr;
+        if (entry != nsm_entry &&
+            w->functions_that_can_cause_gc.find(entry->target()) !=
+            w->functions_that_can_cause_gc.end()) {
+          *cause_gc = true;
         }
+        if (matches == 0) {
+          fn = entry->target();
+          matches = 1;
+        } else if (fn != entry->target()) {
+          matches++;
+        }
+        // Early return if there is nothing more to learn.
+        if (matches > 1 && *cause_gc) return nullptr;
       }
     }
-    return fn;
+    return matches == 1 ? fn : nullptr;
   }
 
   llvm::Value* InvokeMethodHelper(int bci, int selector,
-                                  std::vector<llvm::Value*> args) {
+                                  std::vector<llvm::Value*> args,
+                                  bool can_cause_gc) {
     int arity = args.size() - 2;
     auto receiver = args[1];
     auto offset = LookupDispatchTableOffset(receiver, selector);
@@ -1683,7 +1764,8 @@ class BasicBlockBuilder {
                          llvm::MDNode::get(*w->context, llvm::None));
       auto function_type = w->FunctionPtrType(1 + arity);
       auto typed_code = b->CreatePointerCast(code, function_type);
-      return CreateInvokeOrCall(bci, typed_code, args, "method_result");
+      return CreateInvokeOrCall(
+          bci, typed_code, args, can_cause_gc, "method_result");
     }
 
     auto entry = GetDispatchTableEntry(offset);
@@ -1714,7 +1796,7 @@ class BasicBlockBuilder {
 
     auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(entry),
                               w->FunctionPtrType(1 + arity));
-    return CreateInvokeOrCall(bci, code, args, "method_result");
+    return CreateInvokeOrCall(bci, code, args, can_cause_gc, "method_result");
   }
 
   llvm::Value* DoInvokeTest(int selector, bool make_bools_primitive) {
@@ -2601,6 +2683,24 @@ class BasicBlocksExplorer {
   std::vector<std::pair<int, int>> catch_ranges_;
 };
 
+class FunctionsScanner : public HeapObjectVisitor {
+ public:
+  explicit FunctionsScanner(World* world) : w(world) {}
+
+  virtual int Visit(HeapObject* object) {
+    if (object->IsFunction()) {
+      auto function = Function::cast(object);
+      if (ScanForGC(function)) {
+        w->functions_that_can_cause_gc.insert(function);
+      }
+    }
+    return object->Size();
+  }
+
+ private:
+  World* w;
+};
+
 class FunctionsBuilder : public HeapObjectVisitor {
  public:
   explicit FunctionsBuilder(World* world) : w(world) {}
@@ -2613,6 +2713,9 @@ class FunctionsBuilder : public HeapObjectVisitor {
       BasicBlocksExplorer explorer(w, function, llvm_function);
       explorer.Explore();
       explorer.Build();
+      if (ScanForGC(function)) {
+        w->functions_that_can_cause_gc.insert(function);
+      }
     }
     return object->Size();
   }
@@ -3255,7 +3358,7 @@ llvm::Function* World::GetSmiSlowCase(int selector) {
     args[index++] = &arg;
   }
   // TODO(dmitryolsh): revise this 0 as BCI arg
-  llvm::Value* result = b.InvokeMethodHelper(0, selector, args);
+  llvm::Value* result = b.InvokeMethodHelper(0, selector, args, true);
   builder.CreateRet(result);
 
   smi_slow_cases[selector] = function;
@@ -3319,6 +3422,9 @@ void LLVMCodegen::Generate(const char* filename, bool optimize,
 
   NativesBuilder nbuilder(&world);
   nbuilder.BuildNativeDeclarations();
+
+  FunctionsScanner scanner(&world);
+  program_->heap()->IterateObjects(&scanner);
 
   FunctionsBuilder fbuilder(&world);
   program_->heap()->IterateObjects(&fbuilder);
@@ -3443,7 +3549,7 @@ struct RewriteGCIntrinsics : public llvm::FunctionPass {
 
               // Remembered set write barrier.
               auto card1 = b.CreateLShr(
-                  b.CreatePtrToInt(call->getArgOperand(0), w->intptr_type),
+                  b.CreatePtrToInt(receiver, w->intptr_type),
                   w->CWord(GCMetadata::kCardBits), "card1");
               auto bias_gep = h.RememberedSetBiasGEP(process);
               auto bias = b.CreateLoad(bias_gep);
@@ -3587,6 +3693,7 @@ void LLVMCodegen::OptimizeAfterLowering(llvm::Module* module, World* world) {
   fpm.add(llvm::createEarlyCSEPass());
   fpm.add(llvm::createDeadStoreEliminationPass());
   fpm.add(llvm::createLICMPass());
+  fpm.add(llvm::createInstructionCombiningPass());
 
   if (Flags::optimize) {
     for (auto& f : *module) fpm.run(f);
