@@ -1673,33 +1673,45 @@ class BasicBlockBuilder {
                                   std::vector<llvm::Value*> args) {
     int arity = args.size() - 2;
     auto receiver = args[1];
-    auto entry = LookupDispatchTableEntry(receiver, selector);
-    if (!Flags::assume_no_nsm) {
-      auto expected_offset = b->CreatePtrToInt(
-          LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
-      auto smi_selector_offset = Selector::IdField::decode(selector)
-                                 << Smi::kTagSize;
-      auto actual_offset = w->CWord(smi_selector_offset);
-
-      auto bb_lookup_failure = llvm::BasicBlock::Create(
-          *w->context, "bb_lookup_failure", llvm_function_);
-      auto bb_lookup_success = llvm::BasicBlock::Create(
-          *w->context, "bb_lookup_success", llvm_function_);
-      auto bb_start = b->GetInsertBlock();
-      b->CreateCondBr(b->CreateICmpEQ(actual_offset, expected_offset),
-                      bb_lookup_success, bb_lookup_failure);
-
-      b->SetInsertPoint(bb_lookup_failure);
-      // NSM is 0th element in dispatch table.
-      auto nsm_entry = GetDispatchTableEntry(w->CWord(0));
-      b->CreateBr(bb_lookup_success);
-
-      b->SetInsertPoint(bb_lookup_success);
-      auto phi = b->CreatePHI(w->dte_ptr_type, 2);
-      phi->addIncoming(entry, bb_start);
-      phi->addIncoming(nsm_entry, bb_lookup_failure);
-      entry = phi;
+    auto offset = LookupDispatchTableOffset(receiver, selector);
+    if (Flags::assume_no_nsm) {
+      auto gep = b->CreateGEP(w->vtable, offset);
+      auto code = b->CreateLoad(gep);
+      code->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                        llvm::MDNode::get(*w->context, llvm::None));
+      code->setMetadata("never.faults",
+                         llvm::MDNode::get(*w->context, llvm::None));
+      auto function_type = w->FunctionPtrType(1 + arity);
+      auto typed_code = b->CreatePointerCast(code, function_type);
+      return CreateInvokeOrCall(bci, typed_code, args, "method_result");
     }
+
+    auto entry = GetDispatchTableEntry(offset);
+    auto expected_offset = b->CreatePtrToInt(
+        LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
+    auto smi_selector_offset = Selector::IdField::decode(selector)
+                               << Smi::kTagSize;
+    auto actual_offset = w->CWord(smi_selector_offset);
+
+    auto bb_lookup_failure = llvm::BasicBlock::Create(
+        *w->context, "bb_lookup_failure", llvm_function_);
+    auto bb_lookup_success = llvm::BasicBlock::Create(
+        *w->context, "bb_lookup_success", llvm_function_);
+    auto bb_start = b->GetInsertBlock();
+    b->CreateCondBr(b->CreateICmpEQ(actual_offset, expected_offset),
+                    bb_lookup_success, bb_lookup_failure);
+
+    b->SetInsertPoint(bb_lookup_failure);
+    // NSM is 0th element in dispatch table.
+    auto nsm_entry = GetDispatchTableEntry(w->CWord(0));
+    b->CreateBr(bb_lookup_success);
+
+    b->SetInsertPoint(bb_lookup_success);
+    auto phi = b->CreatePHI(w->dte_ptr_type, 2);
+    phi->addIncoming(entry, bb_start);
+    phi->addIncoming(nsm_entry, bb_lookup_failure);
+    entry = phi;
+
     auto code = h.CastToNonGC(LookupDispatchTableCodeFromEntry(entry),
                               w->FunctionPtrType(1 + arity));
     return CreateInvokeOrCall(bci, code, args, "method_result");
@@ -1711,7 +1723,8 @@ class BasicBlockBuilder {
                                << Smi::kTagSize;
 
     auto actual_offset = w->CWord(smi_selector_offset);
-    auto entry = LookupDispatchTableEntry(receiver, selector);
+    auto offset = LookupDispatchTableOffset(receiver, selector);
+    auto entry = GetDispatchTableEntry(offset);
     auto expected_offset = b->CreatePtrToInt(
         LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
 
@@ -1855,7 +1868,7 @@ class BasicBlockBuilder {
     return offset;
   }
 
-  llvm::Value* LookupDispatchTableEntry(llvm::Value* receiver, int selector) {
+  llvm::Value* LookupDispatchTableOffset(llvm::Value* receiver, int selector) {
     llvm::Value* klass;
     bool smi_matches = SmiMatchesSelector(selector);
     if (!Flags::assume_no_nsm || smi_matches) {
@@ -1893,8 +1906,7 @@ class BasicBlockBuilder {
         w->intptr_type, "id_or_transformation_target");
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
-    auto entry = GetDispatchTableEntry(offset);
-    return entry;
+    return offset;
   }
 
   llvm::BasicBlock* GetBasicBlockAt(int bci) {
@@ -3259,6 +3271,28 @@ void World::GiveIdToFunction(llvm::Function* llvm_function) {
   function_to_statepoint_id[llvm_function] = id;
 }
 
+static void BuildVtable(World* w) {
+  // One big vtable for the whole program. Unlike the dispatch table this
+  // just has code pointers, removing a level of indirection.
+  Array* dispatch_table = w->program_->dispatch_table();
+  int length = dispatch_table->length();
+  auto vtable_type = llvm::ArrayType::get(w->int8_ptr_type, length);
+  std::vector<llvm::Constant*> elements;
+  for (int i = 0; i < length; i++) {
+    DispatchTableEntry* entry =
+        DispatchTableEntry::cast(dispatch_table->get(i));
+    Function* target = entry->target();
+    auto code = w->llvm_functions[target];
+    elements.push_back(
+        llvm::ConstantExpr::getPointerCast(code, w->int8_ptr_type));
+  }
+  auto vtable = llvm::ConstantArray::get(vtable_type, elements);
+  vtable = new llvm::GlobalVariable(
+      *w->module_, vtable_type, true, llvm::GlobalValue::ExternalLinkage,
+      vtable, "dartino_vtable");
+  w->vtable = llvm::ConstantExpr::getPointerCast(vtable, w->int8_ptr_ptr_type);
+}
+
 void LLVMCodegen::Generate(const char* filename, bool optimize,
                            bool verify_module) {
   llvm::LLVMContext context;
@@ -3280,6 +3314,8 @@ void LLVMCodegen::Generate(const char* filename, bool optimize,
 
   RootsBuilder rbuilder(&world, &builder);
   world.roots = rbuilder.BuildRoots();
+
+  BuildVtable(&world);
 
   NativesBuilder nbuilder(&world);
   nbuilder.BuildNativeDeclarations();

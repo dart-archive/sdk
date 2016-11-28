@@ -210,6 +210,7 @@ class World {
       std::vector<llvm::Function*>(dartino::Native::kNumberOfNatives, nullptr);
 
   llvm::Function* use_llvm_function = nullptr;
+  llvm::Constant* vtable = nullptr;
 };
 
 enum ForthInstruction {
