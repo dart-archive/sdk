@@ -185,11 +185,12 @@ static ForthFunction kStringLengthMacro("StringLength", {}, {
   "error:", (uword)0, F_TO_PTR, F_PUSH
 });
 
-// arrayLoad: Takes BaseArray and index n the array (in words).  Adds the
-// header size of BaseArray in words, and then performs tagged load.
-// TODO(erikcorry): We should shift by 2, not 3 for 32 bit target.
+// arrayLoad: Takes BaseArray and index n the array (in words).  The index is
+// passed as an integer, but it is scaled like a Smi (2x too big).  Adds the
+// header size of BaseArray in words (also 2x scaled), and then performs tagged
+// load.  TODO(erikcorry): We should shift by 1, not 2 for 32 bit target.
 static ForthFunction kArrayLoadMacro("arrayLoad", {}, {
-  BaseArray::kSize / kWordSize, F_ADD, 3, F_SHL, F_LOAD
+  (BaseArray::kSize * 2) / kWordSize, F_ADD, 2, F_SHL, F_LOAD
 });
 
 static ForthFunction kListLengthNative("ListLength",
@@ -209,7 +210,7 @@ static ForthFunction kListIndexGetNative("ListIndexGet",
     F_STACK1, "index!",
     "index@", "length@", F_UGE, {F_IF_ELSE, "oob", "load"},
   "load:",
-    "list@", "index@", F_UNTAG, "arrayLoad()", F_RETURN,
+    "list@", "index@", F_TO_INT, "arrayLoad()", F_RETURN,
   "wat:",
     Failure::kTaggedWrongArgumentType, F_TO_PTR, "result!",
     {F_GOTO, "error"},
@@ -867,6 +868,8 @@ class IRHelper {
     // right LLVM version everywhere.
     value->setMetadata("never.faults",
                        llvm::MDNode::get(*w->context, llvm::None));
+    value->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                        llvm::MDNode::get(*w->context, llvm::None));
     return value;
   }
 
@@ -1675,11 +1678,75 @@ class BasicBlockBuilder {
     }
     ASSERT(index == 0);
 
-    Function* fn;
     bool gc;
-    if (Flags::assume_no_nsm && (fn = OnlyOneMethodMatches(selector, &gc))) {
+    int first_class_id, last_class_id;
+    Function* fn =
+        OnlyOneMethodMatches(selector, &gc, &first_class_id, &last_class_id);
+    if (Flags::assume_no_nsm && fn != nullptr) {
       // There's only one method of this name (selector), so since there are
       // assumed to be no NoSuchMethod events, just call it (or inline it).
+      auto code = w->llvm_functions[fn];
+      auto result =
+          CreateInvokeOrCall(bci, code, method_args, gc, "method_result");
+      push(result);
+    } else if (fn != nullptr && !SmiMatchesSelector(selector)) {
+      // There is only one method of this name (selector). We can check the ID
+      // and throw if it doesn't match.  This is not quite up to the spec
+      // reaction to a NSM, but it's probably near enough for a performance
+      // evaluation.
+      // We only get in here if Smi doesn't match, so if we have a Smi we can
+      // throw and be done.
+      auto bb_failure =
+          llvm::BasicBlock::Create(*context, "failure", llvm_function_);
+      auto bb_nonsmi =
+          llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
+      auto bb_lookup_success = llvm::BasicBlock::Create(
+          *w->context, "bb_lookup_success", llvm_function_);
+
+      auto receiver = method_args[1];
+      auto is_smi = h.CreateSmiCheck(receiver);
+      b->CreateCondBr(is_smi, bb_failure, bb_nonsmi);
+
+      b->SetInsertPoint(bb_failure);
+      auto ex = w->CInt2Pointer(w->CSmi(42));  // Just throw a Smi for now.
+      CreateInvokeOrCall(bci, w->raise_exception, {llvm_process_, ex}, true);
+      b->CreateUnreachable();
+
+      b->SetInsertPoint(bb_nonsmi);
+      if (first_class_id != -1) {
+        // Only one class range has this method, so we just need to check the
+        // class ID.
+        auto klass = h.LoadClass(receiver);
+        auto classid = h.LoadClassId(klass);
+        auto expected = w->CWord(first_class_id);
+        llvm::Value* comparison;
+        if (first_class_id == last_class_id) {
+          comparison = b->CreateICmpEQ(classid, expected);
+        } else {
+          auto zero_based = b->CreateSub(classid, expected);
+          comparison = b->CreateICmpULE(
+              zero_based, w->CWord(last_class_id - first_class_id));
+        }
+        b->CreateCondBr(comparison, bb_lookup_success, bb_failure);
+      } else {
+        // Several classes have the same method (ie a subtree in the class
+        // hierarchy), so we need to load the dispatch table entry and check
+        // the selector ID on the entry.
+        auto offset =
+            LookupDispatchTableOffset(receiver, selector, /*notasmi=*/true);
+        auto entry = GetDispatchTableEntry(offset);
+        auto expected_offset = b->CreatePtrToInt(
+            LookupDispatchTableOffsetFromEntry(entry), w->intptr_type);
+        auto smi_selector_offset = Selector::IdField::decode(selector)
+                                   << Smi::kTagSize;
+        auto actual_offset = w->CWord(smi_selector_offset);
+        b->CreateCondBr(b->CreateICmpEQ(actual_offset, expected_offset),
+                        bb_lookup_success, bb_failure);
+      }
+
+      // Call directly the single method that can be dispatched to here. Is
+      // often inlined by LLVM.
+      b->SetInsertPoint(bb_lookup_success);
       auto code = w->llvm_functions[fn];
       auto result =
           CreateInvokeOrCall(bci, code, method_args, gc, "method_result");
@@ -1721,20 +1788,36 @@ class BasicBlockBuilder {
     return entry->offset()->value() == selector_id;
   }
 
-  Function* OnlyOneMethodMatches(int selector, bool* cause_gc) {
+  Function* OnlyOneMethodMatches(
+      int selector, bool* cause_gc, int* first_class_id, int* last_class_id) {
     *cause_gc = false;
     Function* fn = nullptr;
     int matches = 0;
+    int class_matches = 0;
+    *first_class_id = *last_class_id = -1;
+    int selector_id = Selector::IdField::decode(selector);
     Array* dispatch_table = w->program_->dispatch_table();
     Object* nsm_entry = dispatch_table->get(0);
     for (int i = 0; i < dispatch_table->length(); i++) {
       Object* e = dispatch_table->get(i);
       auto entry = DispatchTableEntry::cast(e);
-      if (entry->offset()->value() == Selector::IdField::decode(selector)) {
+      if (entry->offset()->value() == selector_id) {
         if (entry != nsm_entry &&
             w->functions_that_can_cause_gc.find(entry->target()) !=
             w->functions_that_can_cause_gc.end()) {
           *cause_gc = true;
+        }
+        class_matches++;
+        int class_id = i - selector_id;
+        if (class_matches == 1) {
+          *first_class_id = class_id;
+          *last_class_id = class_id;
+        } else {
+          if (*first_class_id != -1 && *last_class_id + 1 == class_id) {
+            *last_class_id = class_id;
+          } else {
+            *first_class_id = *last_class_id = -1;
+          }
         }
         if (matches == 0) {
           fn = entry->target();
@@ -1950,10 +2033,10 @@ class BasicBlockBuilder {
     return offset;
   }
 
-  llvm::Value* LookupDispatchTableOffset(llvm::Value* receiver, int selector) {
+  llvm::Value* LookupDispatchTableOffset(
+      llvm::Value* receiver, int selector, bool not_a_smi = false) {
     llvm::Value* klass;
-    bool smi_matches = SmiMatchesSelector(selector);
-    if (!Flags::assume_no_nsm || smi_matches) {
+    if (!not_a_smi && (!Flags::assume_no_nsm || SmiMatchesSelector(selector))) {
       auto bb_smi = llvm::BasicBlock::Create(*context, "smi", llvm_function_);
       auto bb_nonsmi =
           llvm::BasicBlock::Create(*context, "nonsmi", llvm_function_);
@@ -1982,10 +2065,7 @@ class BasicBlockBuilder {
       klass = h.LoadClass(receiver);
     }
 
-    auto classid = b->CreatePtrToInt(
-        h.LoadField(klass, Class::kIdOrTransformationTargetOffset,
-                    "class_id_uncast", true, 0),
-        w->intptr_type, "id_or_transformation_target");
+    auto classid = h.LoadClassId(klass);
     auto selector_offset = w->CWord(Selector::IdField::decode(selector));
     auto offset = b->CreateAdd(selector_offset, classid);
     return offset;

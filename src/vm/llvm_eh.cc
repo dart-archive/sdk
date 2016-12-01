@@ -60,7 +60,11 @@ extern "C" void ThrowException(Process* process, Object* ex) {
   process->set_in_flight_exception(ex);
   auto ret = _Unwind_RaiseException(e);
   if (ret == _URC_END_OF_STACK) {
-    fprintf(stderr, "Uncaught exception.\n");
+    if (ex->IsSmi()) {
+      fprintf(stderr, "Uncaught exception: %d.\n", Smi::cast(ex)->value());
+    } else {
+      fprintf(stderr, "Uncaught exception.\n");
+    }
     exit(255);
   }
   ASSERT(false);
